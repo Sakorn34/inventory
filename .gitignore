@@ -1,0 +1,43 @@
+# ============================================================
+# inventory — ไฟล์ที่มีรหัสผ่าน/secret (ใช้ไฟล์ *.example.php เป็นแม่แบบ)
+# ============================================================
+/connect.php
+/inventory_config.local.php
+/tools/migrate_mdb_to_mariadb.php
+/pickup_log.php
+
+# ฐานข้อมูลเก่า (Access) / log
+/_db/
+/logs/*.log
+
+# ============================================================
+# ส่วนกลาง (เหมือนกันทุกโปรเจค) — repo นี้เป็น Public
+# ============================================================
+
+# ข้อมูลลับทั่วไป
+.env
+*.local.php
+!*.example.php
+**/sftp.json
+**/.vscode/
+*.pem
+*.key
+*credentials*.json
+*token*.json
+
+# ฐานข้อมูล / backup — มีข้อมูลลูกค้า ห้ามขึ้น repo สาธารณะ
+*.sql
+*.sql.zip
+*.mdb
+*.accdb
+*.bak
+*.log
+
+# ไฟล์ Excel/CSV ส่วนใหญ่เป็นข้อมูลจริงของลูกค้า/สินค้า
+*.xlsx
+*.xls
+*.csv
+
+# ไฟล์ระบบ Windows
+Thumbs.db
+desktop.ini

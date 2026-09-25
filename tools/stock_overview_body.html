@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title><?php echo $h($titlePage); ?></title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.6.3/css/font-awesome.min.css">
+<link rel="stylesheet" href="css/inventory-ui.css">
+<script src="js/jquery-3.5.1.min.js"></script>
+<script>
+function sort_product(){
+  var p=document.getElementById("product_name").value,s=document.getElementById("part_status").value;
+  if(p==="All")p="";if(s==="All")s="";
+  if(p&&s)location="stock_overview.php?product="+encodeURIComponent(p)+"&part_status="+encodeURIComponent(s);
+  else if(p)location="stock_overview.php?product="+encodeURIComponent(p);
+  else if(s)location="stock_overview.php?part_status="+encodeURIComponent(s);
+  else location="stock_overview.php";
+}
+function reset_filters(){location="stock_overview.php";}
+</script>
+</head>
+<body class="inv-app">
+<?php require "title-h.php"; ?>
+<main class="inv-main">
+  <header class="inv-page-header">
+    <h1 class="inv-page-title"><?php echo $h($lblOverview); ?></h1>
+    <p class="inv-page-desc"><?php echo $h($lblDesc); ?></p>
+  </header>
+  <section class="inv-card">
+    <div class="inv-card__head"><i class="fa fa-filter"></i> <?php echo $h($lblFilter); ?></div>
+    <div class="inv-card__body">
+      <form class="inv-filters" onsubmit="return false;">
+        <div class="inv-field">
+          <label for="product_name"><?php echo $h($lblCategory); ?> Product</label>
+          <select class="inv-select" id="product_name" name="product_name">
+<?php for ($a = 0; $a < $arrLength; $a++) {
+    $sel = ($getData == $array2[$a] || ($getData === '' && $array2[$a] === 'All')) ? ' selected' : '';
+    echo '<option value="' . $h($array2[$a]) . '"' . $sel . '>' . $h($array[$a]) . '</option>';
+} ?>
+          </select>
+        </div>
+        <div class="inv-field">
+          <label for="part_status"><?php echo $h($lblStatus); ?></label>
+          <select class="inv-select" id="part_status" name="part_status">
+<?php foreach ($statusList as $st) {
+    $sel = ($getStatus === $st) ? ' selected' : '';
+    $lab = ($st === '') ? $lblAllOpt : $st;
+    echo '<option value="' . $h($st) . '"' . $sel . '>' . $h($lab) . '</option>';
+} ?>
+          </select>
+        </div>
+        <div class="inv-filters__actions">
+          <button type="button" class="inv-btn inv-btn--primary" onclick="sort_product();">
+            <i class="fa fa-search"></i> <?php echo $h($lblBtnShow); ?>
+          </button>
+          <button type="button" class="inv-btn inv-btn--ghost" onclick="reset_filters();">
+            <i class="fa fa-refresh"></i> <?php echo $h($lblBtnReset); ?>
+          </button>
+        </div>
+      </form>
+    </div>
+  </section>
+  <section class="inv-card">
+    <div class="inv-card__head"><i class="fa fa-table"></i> <?php echo $h($lblTable); ?></div>
+    <div class="inv-table-wrap">
+      <table class="inv-table">
+        <thead>
+          <tr>
+            <th class="inv-col-num">No.</th>
+            <th><?php echo $h($lblCategory); ?> Product</th>
+            <th><?php echo $h($lblPartName); ?> Part</th>
+            <th class="inv-col-num"><?php echo $h($lblMinStock); ?></th>
+            <th class="inv-col-num"><?php echo $h($lblInStock); ?></th>
+            <th><?php echo $h($lblStatus); ?></th>
+            <th class="inv-col-actions"><?php echo $h($lblEditCol); ?></th>
+          </tr>
+        </thead>
+        <tbody>
+<?php
+if (isset($search)) {
+    $exec = db_exec($connect, $sql) or die('Error Query');
+    $num = 1;
+    $rows = 0;
+    while ($result = db_fetch_array($exec)) {
+        $rows++;
+        $rs = (float) $result['part_amount'] - (float) $result['part_min_alert'];
+        $ps = (string) $result['part_status_purchase'];
+        $low = ($rs <= 0);
+        $qc = $low ? 'inv-qty--low' : 'inv-qty--ok';
+        $bc = $statusBadgeClass($ps);
+        if ($low && ($ps === '' || $ps === $statusNotYet)) {
+            $sl = ($ps !== '') ? $ps : $statusNotYet;
+        } elseif ($low && $ps !== '') {
+            $sl = $ps . ' (' . (string) $result['part_date_purchase'] . ')';
+        } else {
+            $sl = ($ps !== '') ? $ps : $dash;
+        }
+        $pid = (int) $result['part_id'];
+?>
+          <tr>
+            <td class="inv-col-num"><?php echo $num; ?></td>
+            <td><?php echo $h($result['ct_name']); ?></td>
+            <td><a class="inv-link-part" target="_blank" rel="noopener" href="part_edit.php?part_id=<?php echo $pid; ?>"><?php echo $h($result['part_name']); ?></a></td>
+            <td class="inv-col-num"><?php echo $h($result['part_min_alert']); ?></td>
+            <td class="inv-col-num"><span class="<?php echo $qc; ?>"><?php echo $h($result['part_amount']); ?></span></td>
+            <td><span class="inv-badge <?php echo $bc; ?>"><?php echo $h($sl); ?></span></td>
+            <td class="inv-col-actions">
+              <a class="inv-icon-btn" target="_blank" rel="noopener" href="part_edit.php?part_id=<?php echo $pid; ?>" title="<?php echo $h($lblEditTitle); ?>">
+                <i class="fa fa-pencil"></i>
+              </a>
+            </td>
+          </tr>
+<?php
+        $num++;
+    }
+    if ($rows === 0) {
+        echo '<tr><td colspan="7" class="inv-empty"><i class="fa fa-inbox"></i> ' . $h($lblEmpty) . '</td></tr>';
+    }
+} else {
+    echo '<tr><td colspan="7" class="inv-empty">' . $h($lblEmpty) . '</td></tr>';
+}
+?>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</main>
+</body>
+</html>

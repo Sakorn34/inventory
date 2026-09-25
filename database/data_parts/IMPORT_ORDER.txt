@@ -1,0 +1,20 @@
+# ลำดับ import ใน phpMyAdmin (หลัง inventory_schema_access.sql)
+# สร้างเมื่อ: 2026-06-02 15:41:07
+# แหล่ง: inventory_data.sql
+
+01_users.sql  (473 bytes)  — users (5 rows)
+02_categories_product.sql  (417 bytes)  — categories_product (4 rows)
+03_product.sql  (1,122 bytes)  — product (19 rows)
+04_tbl_vendor.sql  (178,480 bytes)  — tbl_vendor (288 rows)
+05_part.sql  (39,574 bytes)  — part (182 rows)
+06_formula_name.sql  (1,000 bytes)  — formula_name (17 rows)
+07_production_formula.sql  (10,120 bytes)  — production_formula (207 rows)
+08_pre_stock_part01.sql  (1,467,789 bytes)  — pre_stock (16,224 rows) part 1
+09_pre_stock_part02.sql  (1,456,397 bytes)  — pre_stock (16,224 rows) part 2
+10_pre_stock_part03.sql  (149,372 bytes)  — pre_stock (16,224 rows) part 3
+11_log_stock_part01.sql  (1,426,198 bytes)  — log_stock (17,025 rows) part 1
+12_log_stock_part02.sql  (1,403,351 bytes)  — log_stock (17,025 rows) part 2
+13_log_stock_part03.sql  (961,142 bytes)  — log_stock (17,025 rows) part 3
+14_setup_log.sql  (1,591 bytes)  — setup_log (5 rows)
+15_setup_pd.sql  (1,416 bytes)  — setup_pd (5 rows)
+16_footer.sql  (140 bytes)  — footer

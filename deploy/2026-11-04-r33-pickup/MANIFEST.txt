@@ -1,0 +1,18 @@
+# MANIFEST — Inventory — โมดูลเบิกของ (pickup + pickup_ma + UI ฟอนต์)
+# สร้างเมื่อ: 2026-11-04 09:07:42
+# ใช้เปรียบเทียบ MD5 บน server หลัง copy (เช่น ผ่าน check_server_files.php)
+
+relative_path | bytes | md5 | modified
+------------------------------------------------------------------------
+www/pickup_overview.php | 15232 | 8e53a0f3c5020ccef56a003aa74bc627 | 2026-11-04 09:05:29
+www/pickup_list_order_detail.php | 38692 | 80bf37d201739686e8a437b009ce2d61 | 2026-11-04 09:05:40
+www/pickup_ma.php | 76297 | 698a914db885358cef6abf1faa466145 | 2026-11-04 09:04:33
+www/pre_pickup_save.php | 20101 | bd556d75ab84aa5e67ac03beed2c5e69 | 2026-11-04 09:04:57
+www/pickup_ma_save.php | 11644 | 1d83ee93e080db882a3a64992dc69351 | 2026-11-04 09:04:56
+www/pickup_save_log.php | 11347 | 73fbe9763678ed6bc7789c30eb3cd3ef | 2026-11-04 09:05:22
+www/stock_add.php | 13651 | e2dba1ed9833db1a94aa1b9c5c7734e7 | 2026-11-04 09:04:53
+www/stock_save.php | 17042 | cbafdf9d8f123fa301d1f0aabfba6db2 | 2026-11-04 09:05:10
+www/part_add.php | 15684 | 6eb20d0d553d04942ee64b899a08e0ad | 2026-11-04 09:04:54
+www/part_save.php | 21355 | 61cb0faaa5b73975fc548136d7546123 | 2026-11-04 09:05:15
+www/inventory_session_actor.php | 8444 | 37fb7aecf8c6b431582e030d97753b2a | 2026-11-04 09:04:28
+www/css/inventory-ui.css | 48587 | 243a5b3dbb799f8d254b6ce47a255076 | 2026-11-04 09:04:28

@@ -1,0 +1,30 @@
+---
+description: เมื่อผู้ใช้แจ้งอัปโหลด deploy pickup แล้ว — บันทึก baseline และ build แพ็กถัดไปแบบ incremental
+alwaysApply: true
+---
+
+# Deploy pickup — คำว่า「อัปโหลดแล้ว」
+
+## ความหมาย
+เมื่อผู้ใช้บอกว่า **「อัปโหลดแล้ว」** (หรือความหมายเดียวกัน เช่น upload ขึ้น server แล้ว) ให้ถือว่า **แพ็ก deploy pickup ล่าสุดที่สร้างไว้ถูก copy ขึ้น production แล้ว**
+
+## หลังผู้ใช้บอกอัปโหลดแล้ว — ต้องทำ
+1. อัปเดต baseline: รัน  
+   `php tools/mark_deploy_pickup_uploaded.php`  
+   หรือระบุแพ็ก:  
+   `php tools/mark_deploy_pickup_uploaded.php 2026-11-03-r7-pickup`  
+   (เขียน `deploy/LAST_UPLOADED.txt` จาก MANIFEST ของแพ็กนั้น)
+2. ตอบผู้ใช้สั้นๆ ว่าบันทึก baseline แล้ว แพ็กถัดไปจะรวมเฉพาะไฟล์ที่แก้หลังจุดนี้
+
+## สร้างแพ็ก deploy ครั้งถัดไป
+- ใช้ **incremental (ค่าเริ่มต้น)**:  
+  `php tools/build_deploy_pickup_package.php <เวอร์ชัน>`  
+  คัดลอกเฉพาะไฟล์ในรายการ deploy ที่ **MD5 ต่างจาก** `deploy/LAST_UPLOADED.txt`
+- ถ้าต้องการชุดเต็มทุกไฟล์:  
+  `php tools/build_deploy_pickup_package.php <เวอร์ชัน> --full`
+- **ไม่สร้างไฟล์ zip**
+- ถ้าไม่มีไฟล์เปลี่ยน ไม่ต้องสร้างแพ็กใหม่ — แจ้งผู้ใช้ว่าไม่มีอะไรต้อง deploy
+
+## อ้างอิง
+- `deploy/LAST_UPLOADED.txt` — MD5 บน server ล่าสุด (ตามที่ผู้ใช้ยืนยัน)
+- `deploy/README.txt` — ขั้นตอน build / upload

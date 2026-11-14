@@ -14,6 +14,7 @@
  */
 
 require_once __DIR__ . '/connect.php';
+require_once __DIR__ . '/inventory_session_actor.php';
 
 header('Content-Type: text/html; charset=UTF-8');
 header('X-Content-Type-Options: nosniff');
@@ -383,7 +384,13 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 $logDate = stock_save_text('log_date', 30);
 $logType = stock_save_text('log_type', 100);
-$logBy = stock_save_text('log_by', 100);
+try {
+    $logBy = inventory_actor_name_for_save(100);
+} catch (RuntimeException $actorError) {
+    stock_save_render_result(stock_save_msg('missing_header'), false);
+    db_close($connect);
+    exit;
+}
 $vendor = stock_save_text('vendor_com', 255);
 $rowCount = stock_save_int('count_sp', 0);
 

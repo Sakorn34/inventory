@@ -1,0 +1,32 @@
+# MANIFEST — Inventory — โมดูลเบิกของ (pickup + pickup_ma + UI ฟอนต์)
+# สร้างเมื่อ: 2026-11-11 09:04:46
+# ใช้เปรียบเทียบ MD5 บน server หลัง copy (เช่น ผ่าน check_server_files.php)
+
+relative_path | bytes | md5 | modified
+------------------------------------------------------------------------
+www/pickup_overview.php | 15522 | 6a9b9730c9b441d9d9e02de490b9ca71 | 2026-11-11 08:58:33
+www/pickup_history.php | 14418 | 8661591ad8eb891656dff5e3511d91d2 | 2026-11-11 09:03:31
+www/pickup_history_lib.php | 8587 | ce47b940c68bbcf75d4964522f8de55c | 2026-11-11 08:58:33
+www/pickup_history_lines.php | 2636 | 60e24a5fb6c472e3eb406c765152ac8b | 2026-11-11 08:58:33
+www/pickup_ma.php | 76833 | 2ac9c2082b042078120f0ed8448a957b | 2026-11-11 08:58:33
+www/pickup_set_formula.php | 8022 | b6b14d26886eaf643af132eb40b8cf64 | 2026-11-11 08:58:33
+www/formula_manage.php | 75942 | b580fe1458d01202629b482b961079df | 2026-11-11 08:58:33
+www/pre_pickup_save.php | 20930 | bb373efd8fd26845c3a3b1d8786d6ceb | 2026-11-11 08:58:33
+www/pickup_ma_save.php | 11344 | bcec7933d5d9692c811c33d4615bbd22 | 2026-11-11 08:58:33
+www/pickup_save_log.php | 10988 | ed543288e440d0948b6831122eb21eca | 2026-11-11 08:58:33
+www/stock_save.php | 16574 | d0f2e0147ef08714bfced62e2a523aa3 | 2026-11-11 08:58:33
+www/part_save.php | 20790 | 6c19e39937c380bb6b252a2a393b79fa | 2026-11-11 08:58:33
+www/inventory_version.php | 1131 | eb7c6facc32b8d671ddaeedf25a429a8 | 2026-11-11 08:45:18
+www/inventory_ui_fonts.php | 675 | 21dd4ef741cb97df16cd7cede2727898 | 2026-11-11 08:45:18
+www/inventory_ui_head.php | 1046 | 06543ea208e90ab53396d7f7cecf9e34 | 2026-11-11 08:58:33
+www/inventory_request_timing.php | 2209 | af6a344ee3308ed6c958293661852150 | 2026-11-11 08:58:33
+www/pickup_document_lines.php | 3943 | 6b09cab069e4d3536e4fc0b8fa145435 | 2026-11-11 08:45:18
+www/pickup_constants.php | 539 | 74c206418362b488bd5e9de312498335 | 2026-11-11 08:45:18
+www/pickup_repair_part_product.php | 16812 | faff0c5456061fd0f32cc343aee36ee6 | 2026-11-11 08:58:33
+www/pickup_prep_board.php | 17892 | 88d9afee580da28145c9bcb1d65ee00c | 2026-11-06 03:18:25
+www/pickup_prep_board_auth.php | 3352 | 89646b74451d9d8028acf37334abe1bf | 2026-11-11 08:45:18
+www/pickup_prep_board_status.php | 2476 | 083f0477c34a78c0cbabbd7180089a59 | 2026-11-11 08:45:18
+www/pickup_prep_api.php | 12826 | 4192315ee19f0fb281c67a37c6d8b467 | 2026-11-11 08:45:18
+www/inventory_session_actor.php | 8222 | 34ebdf4bcadbdcedcc93ee7d5ab74842 | 2026-11-11 08:58:33
+www/css/inventory-ui.css | 51573 | 81ddb4e2673e09e7b18d2a8aa1a53754 | 2026-11-11 09:03:31
+www/css/pickup-prep.css | 8390 | f8050d91d9a7e2b4c6f5bd9b22b4a0e2 | 2026-11-11 08:45:18

@@ -1,0 +1,7 @@
+<?php
+/**
+ * ทางเลือก: เก็บ token หน้ามือถือแยก (copy เป็น pickup_prep_board.token.php บน server)
+ *
+ * return สตริง token โดยตรง — ไม่ commit ไฟล์ .token.php จริง
+ */
+return 'ใส่-random-token-ยาวๆ';

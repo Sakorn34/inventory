@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/connect.php';
-header("Content-Type: text/html; charset=UTF-8");
+require_once __DIR__ . '/inventory_session_actor.php';
+header('Content-Type: text/html; charset=UTF-8');
 @setlocale(LC_TIME, 'th_TH.UTF-8', 'th_TH', 'tha');
 ?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
@@ -460,17 +461,8 @@ $arrLengthCt = count($arrayCt);
   <tr>
   <td align="right" valign="center"> ผู้บันทึก : </td>
   <td>
-    <select class="custom-select" name="part_by" id="part_by">
-      <option value="<?=$resultPart['part_by']; ?>"><?=$resultPart['part_by']; ?></option>
-      <option value="NOI">NOI</option>
-      <option value="NI">NI</option>
-      <option value="PLAM">PLAM</option>
-      <option value="AO">AO</option>
-      <option value="MAX">Max</option>
-      <option value="DAY">DAY</option>
-      <option value="NUT">NUT</option>
-      <option value="BOY">BOY</option>
-    </select>
+    <input type="hidden" name="part_by" id="part_by" value="<?= htmlspecialchars(inventory_actor_name(), ENT_QUOTES, 'UTF-8'); ?>" />
+    <strong><?= htmlspecialchars(inventory_actor_name() !== '' ? inventory_actor_name() : '— ไม่พบชื่อจาก session —', ENT_QUOTES, 'UTF-8'); ?></strong>
     <input type="hidden" name="part_id" id="part_id" value="<?= htmlspecialchars((string) $_GET['part_id'], ENT_QUOTES, 'UTF-8'); ?>">
   </td>
   <td align="center" valign="center">

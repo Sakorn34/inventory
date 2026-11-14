@@ -14,6 +14,7 @@
  */
 
 require_once __DIR__ . '/connect.php';
+require_once __DIR__ . '/inventory_session_actor.php';
 require_once __DIR__ . '/line_stock_alert.php';
 
 header('Content-Type: text/html; charset=UTF-8');
@@ -362,7 +363,7 @@ function part_save_insert($conn)
     $partLink = part_save_text('part_link', 500);
     $partImage = part_save_text('part_image', 500);
     $partLeadtime = part_save_text('part_leadtime', 100);
-    $partBy = part_save_text('part_by', 100);
+    $partBy = inventory_actor_name_for_save(100);
     $partStockNo = part_save_text('part_stock_no', 100);
     $partPurchaseQty = part_save_text('part_puchase_quantity', 50);
     $partTransport = part_save_text('part_transport_company', 100);
@@ -494,7 +495,7 @@ function part_save_update($conn)
     $partLink = part_save_text('part_link', 500);
     $partImage = part_save_text('part_image', 500);
     $partLeadtime = part_save_text('part_leadtime', 100);
-    $partBy = part_save_text('part_by', 100);
+    $partBy = inventory_actor_name_for_save(100);
     $partStatusPurchase = part_save_text('part_status_purchase', 100);
     $partDatePurchase = part_save_text('part_date_purchase', 50);
     $partShipment = part_save_text('part_shipment', 100);

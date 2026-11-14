@@ -1,0 +1,2794 @@
+/**
+ * Inventory UI — ธีมร่วมสำหรับ navbar, ตาราง, ฟอร์มกรอง
+ * ฟอนต์ Sarabun โหลดผ่าน inventory_ui_fonts.php / inventory_ui_head.php
+ */
+
+:root {
+  --inv-bg: #f0f4f8;
+  --inv-surface: #ffffff;
+  --inv-primary: #1e5a8a;
+  --inv-primary-dark: #16466d;
+  --inv-accent: #0d9488;
+  --inv-text: #1e293b;
+  --inv-muted: #64748b;
+  --inv-border: #e2e8f0;
+  --inv-danger: #dc2626;
+  --inv-danger-bg: #fef2f2;
+  --inv-warn: #d97706;
+  --inv-warn-bg: #fffbeb;
+  --inv-success: #059669;
+  --inv-success-bg: #ecfdf5;
+  --inv-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+  --inv-shadow-lg: 0 10px 40px rgba(15, 23, 42, 0.1);
+  --inv-radius: 12px;
+  --inv-nav-h: 64px;
+  --inv-font-family: 'Sarabun', 'TH Sarabun New', 'Segoe UI', Tahoma, sans-serif;
+}
+
+html {
+  font-family: var(--inv-font-family);
+}
+
+body.inv-app {
+  margin: 0;
+  font-family: var(--inv-font-family);
+  font-size: 15px;
+  color: var(--inv-text);
+  background: var(--inv-bg);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+body.inv-app *,
+body.inv-app *::before,
+body.inv-app *::after {
+  box-sizing: border-box;
+}
+
+/* ─ Navbar ─────────────────────────────────────────────────────────────────── */
+.inv-navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  min-height: var(--inv-nav-h);
+  background: linear-gradient(135deg, var(--inv-primary) 0%, var(--inv-primary-dark) 100%);
+  box-shadow: var(--inv-shadow-lg);
+}
+
+.inv-navbar__inner {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-height: var(--inv-nav-h);
+}
+
+.inv-navbar__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #fff;
+  font-size: 1.35rem;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.inv-navbar__brand i {
+  opacity: 0.9;
+  font-size: 1.2rem;
+}
+
+.inv-navbar__links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.35rem;
+  flex: 1;
+  min-width: 0;
+  padding: 0.35rem 0;
+}
+
+.inv-navbar__meta {
+  color: rgba(255, 255, 255, 0.55);
+  flex-shrink: 0;
+  font-size: 0.625rem;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  line-height: 1.35;
+  margin-left: auto;
+  max-width: 16rem;
+  padding-left: 0.75rem;
+  text-align: right;
+  user-select: none;
+}
+
+.inv-navbar__meta-line {
+  margin: 0;
+}
+
+.inv-navbar__meta-line + .inv-navbar__meta-line {
+  margin-top: 0.15rem;
+}
+
+.inv-navbar__meta-line--version {
+  letter-spacing: 0.03em;
+}
+
+.inv-navbar__meta-line--detail {
+  color: rgba(255, 255, 255, 0.48);
+  font-size: 0.58rem;
+}
+
+.inv-nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.75rem;
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.92);
+  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.inv-nav-link:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+}
+
+.inv-nav-link.is-active {
+  background: rgba(255, 255, 255, 0.22);
+  color: #fff;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25);
+}
+
+.inv-nav-link i {
+  font-size: 0.8rem;
+  opacity: 0.85;
+}
+
+.inv-navbar__home {
+  flex-shrink: 0;
+}
+
+.inv-nav-link--home {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* ─ Page layout ────────────────────────────────────────────────────────────── */
+.inv-main {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: calc(var(--inv-nav-h) + 1.5rem) 1.25rem 2.5rem;
+}
+
+.inv-page-header {
+  margin-bottom: 1.25rem;
+}
+
+.inv-page-title {
+  margin: 0 0 0.25rem;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--inv-primary-dark);
+}
+
+.inv-page-desc {
+  margin: 0;
+  color: var(--inv-muted);
+  font-size: 0.95rem;
+}
+
+/* ─ Cards ──────────────────────────────────────────────────────────────────── */
+.inv-card {
+  background: var(--inv-surface);
+  border-radius: var(--inv-radius);
+  box-shadow: var(--inv-shadow);
+  border: 1px solid var(--inv-border);
+  margin-bottom: 1.25rem;
+  overflow: hidden;
+}
+
+.inv-card__head {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--inv-border);
+  background: #f8fafc;
+  font-weight: 600;
+  color: var(--inv-primary-dark);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.inv-card__body {
+  padding: 1.25rem;
+}
+
+.inv-card__subhead {
+  background: #f1f5f9;
+  border-bottom: 1px solid var(--inv-border);
+  padding: 0.75rem 1.25rem;
+}
+
+.inv-card__body--flush {
+  padding: 0;
+}
+
+.inv-card__footer {
+  background: #fafbfc;
+  border-top: 1px solid var(--inv-border);
+  padding: 1rem 1.25rem;
+}
+
+/* ─ Filters ────────────────────────────────────────────────────────────────── */
+.inv-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem 1.5rem;
+  align-items: end;
+  min-width: 0;
+}
+
+.inv-filters .inv-field {
+  min-width: 0;
+}
+
+.inv-field label {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--inv-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.inv-select,
+.inv-input {
+  width: 100%;
+  max-width: 100%;
+  padding: 0.55rem 0.75rem;
+  font-family: inherit;
+  font-size: 0.95rem;
+  color: var(--inv-text);
+  background: #fff;
+  border: 1px solid var(--inv-border);
+  border-radius: 8px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.inv-select:focus,
+.inv-input:focus {
+  outline: none;
+  border-color: var(--inv-primary);
+  box-shadow: 0 0 0 3px rgba(30, 90, 138, 0.15);
+}
+
+textarea.inv-input {
+  display: block;
+  resize: vertical;
+  min-height: 4.5rem;
+}
+
+.inv-filters__actions {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5rem;
+}
+
+.inv-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.55rem 1.1rem;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.1s, box-shadow 0.15s, background 0.15s;
+}
+
+.inv-btn:active {
+  transform: translateY(1px);
+}
+
+.inv-btn--primary {
+  background: linear-gradient(180deg, var(--inv-accent) 0%, #0f766e 100%);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(13, 148, 136, 0.35);
+}
+
+.inv-btn--primary:hover {
+  box-shadow: 0 4px 12px rgba(13, 148, 136, 0.45);
+}
+
+.inv-btn--ghost {
+  background: #f1f5f9;
+  color: var(--inv-text);
+  border: 1px solid var(--inv-border);
+}
+
+.inv-btn--ghost:hover {
+  background: #e2e8f0;
+}
+
+/* ─ Table ──────────────────────────────────────────────────────────────────── */
+.inv-table-wrap {
+  overflow-x: auto;
+}
+
+/* เลื่อนเฉพาะแถวข้อมูล — หัวคอลัมน์คงที่ด้านบนของพื้นที่ scroll */
+.inv-table-wrap--scroll-y {
+  max-height: calc(100vh - var(--inv-nav-h) - 12rem);
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+.inv-table-wrap--scroll-y .inv-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: #e2e8f0;
+  box-shadow: 0 2px 0 var(--inv-border);
+}
+
+.inv-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.inv-table thead {
+  background: linear-gradient(180deg, #f1f5f9 0%, #e2e8f0 100%);
+}
+
+.inv-table th {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  font-weight: 600;
+  color: var(--inv-primary-dark);
+  border-bottom: 2px solid var(--inv-border);
+  white-space: nowrap;
+}
+
+.inv-table th.inv-col-num,
+.inv-table td.inv-col-num {
+  text-align: center;
+  width: 3rem;
+}
+
+.inv-table th.inv-col-center,
+.inv-table td.inv-col-center {
+  text-align: center;
+}
+
+.inv-table th.inv-col-actions,
+.inv-table td.inv-col-actions {
+  text-align: center;
+  vertical-align: middle;
+  width: 4rem;
+}
+
+.inv-table td.inv-col-actions form {
+  display: flex;
+  justify-content: center;
+  margin: 0;
+}
+
+.inv-table tbody tr {
+  border-bottom: 1px solid var(--inv-border);
+  transition: background 0.12s;
+}
+
+.inv-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.inv-table tbody tr:nth-child(even) {
+  background: #fafbfc;
+}
+
+.inv-table tbody tr:nth-child(even):hover {
+  background: #f1f5f9;
+}
+
+.inv-table td {
+  padding: 0.65rem 1rem;
+  vertical-align: middle;
+}
+
+.inv-table a.inv-link-part {
+  color: var(--inv-primary);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.inv-table a.inv-link-part:hover {
+  text-decoration: underline;
+  color: var(--inv-accent);
+}
+
+.inv-history-summary {
+  margin-bottom: 1rem;
+}
+
+.inv-history-limit {
+  margin: 0 0 0.75rem;
+  font-size: 0.85rem;
+}
+
+.inv-pre-id {
+  font-size: 0.85rem;
+  background: #f1f5f9;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+}
+
+.inv-qty--low {
+  color: var(--inv-danger);
+  font-weight: 700;
+}
+
+.inv-qty--ok {
+  color: var(--inv-text);
+}
+
+/* ─ Badges ─────────────────────────────────────────────────────────────────── */
+.inv-badge {
+  display: inline-block;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.inv-badge--danger {
+  background: var(--inv-danger-bg);
+  color: var(--inv-danger);
+}
+
+.inv-badge--warn {
+  background: var(--inv-warn-bg);
+  color: var(--inv-warn);
+}
+
+.inv-badge--success {
+  background: var(--inv-success-bg);
+  color: var(--inv-success);
+}
+
+.inv-badge--muted {
+  background: #f1f5f9;
+  color: var(--inv-muted);
+}
+
+.inv-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 8px;
+  color: var(--inv-primary);
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  text-decoration: none;
+  transition: background 0.15s, color 0.15s;
+}
+
+.inv-icon-btn:hover {
+  background: var(--inv-primary);
+  color: #fff;
+  border-color: var(--inv-primary);
+}
+
+.inv-empty {
+  text-align: center;
+  padding: 2.5rem 1rem;
+  color: var(--inv-muted);
+}
+
+/* ─ Stock dashboard charts ─────────────────────────────────────────────────── */
+.inv-chart-hint {
+  margin: 0 0 1rem;
+  font-size: 0.85rem;
+  color: var(--inv-muted);
+}
+
+.inv-chart-note {
+  margin: 0 0 1rem;
+  padding: 0.65rem 0.85rem;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: var(--inv-primary-dark);
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+}
+
+.inv-dash-pies {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.inv-dash-pie {
+  text-align: center;
+  padding: 0.75rem;
+  border: 1px solid var(--inv-border);
+  border-radius: 10px;
+  background: #fafbfc;
+  cursor: pointer;
+}
+
+.inv-dash-pie:hover {
+  border-color: var(--inv-primary);
+  background: #f8fafc;
+}
+
+.inv-pie-summary__chart-wrap {
+  position: relative;
+  width: 160px;
+  height: 160px;
+  margin: 0 auto;
+}
+
+.inv-pie-summary__chart-wrap canvas {
+  display: block;
+  width: 160px !important;
+  height: 160px !important;
+  max-width: 160px;
+  max-height: 160px;
+}
+
+.inv-dash-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.inv-dash-stat {
+  padding: 0.65rem 0.75rem;
+  border-radius: 10px;
+  border: 1px solid var(--inv-border);
+  background: #f8fafc;
+  text-align: center;
+}
+
+button.inv-dash-stat {
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+button.inv-dash-stat:hover {
+  border-color: var(--inv-primary);
+  box-shadow: var(--inv-shadow);
+}
+
+.inv-dash-stat__val {
+  display: block;
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.inv-dash-stat__lbl {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--inv-text);
+}
+
+.inv-dash-stat__sub {
+  display: block;
+  margin-top: 0.1rem;
+  font-size: 0.75rem;
+  color: var(--inv-muted);
+}
+
+.inv-dash-stat--ok {
+  background: var(--inv-success-bg);
+  border-color: #a7f3d0;
+}
+
+.inv-dash-stat--ok .inv-dash-stat__val {
+  color: var(--inv-success);
+}
+
+.inv-dash-stat--low {
+  background: var(--inv-danger-bg);
+  border-color: #fecaca;
+}
+
+.inv-dash-stat--low .inv-dash-stat__val {
+  color: var(--inv-danger);
+}
+
+.inv-dash-stat--zero {
+  background: var(--inv-warn-bg);
+  border-color: #fde68a;
+}
+
+.inv-dash-stat--zero .inv-dash-stat__val {
+  color: var(--inv-warn);
+}
+
+.inv-dash-stat--neg {
+  background: var(--inv-danger-bg);
+  border-color: #fecaca;
+}
+
+.inv-dash-stat--neg .inv-dash-stat__val {
+  color: var(--inv-danger);
+}
+
+.inv-dash-stat--line {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+.inv-dash-stat--line .inv-dash-stat__val {
+  color: var(--inv-primary);
+}
+
+.inv-dash-stat--total .inv-dash-stat__val {
+  color: var(--inv-primary-dark);
+}
+
+.inv-dash-top {
+  padding: 0.75rem;
+  border: 1px solid var(--inv-border);
+  border-radius: 10px;
+  background: #fff;
+}
+
+.inv-dash-top__chart {
+  position: relative;
+  min-height: 160px;
+}
+
+.inv-chart-box__title {
+  margin: 0 0 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--inv-primary-dark);
+  text-align: center;
+}
+
+.inv-chart-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
+  color: var(--inv-muted);
+  font-size: 0.9rem;
+  gap: 0.5rem;
+}
+
+.inv-report-actions {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding: 1.25rem !important;
+}
+
+.inv-report-filters {
+  align-items: end;
+}
+
+.inv-report-filters .inv-filters__actions {
+  align-items: center;
+  flex-wrap: wrap;
+  grid-column: 1 / -1;
+  justify-content: flex-start;
+}
+
+.inv-report-filters .inv-filters__actions .inv-btn {
+  min-height: 2.65rem;
+  white-space: nowrap;
+}
+
+.inv-field--years {
+  grid-column: 1 / -1;
+}
+
+.inv-field__legend {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--inv-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.inv-year-picks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--inv-border);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.inv-product-picks {
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.inv-field__hint {
+  margin: 0 0 0.35rem;
+  font-size: 0.78rem;
+  color: var(--inv-muted);
+}
+
+.inv-year-pick {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.inv-usage-chart-wrap {
+  position: relative;
+  height: 360px;
+  margin-bottom: 1.25rem;
+}
+
+.inv-usage-year-totals {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.75rem;
+}
+
+.inv-usage-year-card {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--inv-border);
+  border-radius: 10px;
+  background: #f8fafc;
+  text-align: center;
+}
+
+.inv-usage-year-card__year {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--inv-primary-dark);
+}
+
+.inv-usage-year-card__val {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--inv-primary);
+}
+
+.inv-usage-year-card__lbl {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--inv-muted);
+}
+
+.inv-usage-year-card__sub {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.75rem;
+  color: var(--inv-muted);
+}
+
+.inv-usage-year-card--latest {
+  background: var(--inv-danger-bg);
+  border-color: #fca5a5;
+  box-shadow: 0 2px 10px rgba(220, 38, 38, 0.15);
+}
+
+.inv-usage-year-card--latest .inv-usage-year-card__year,
+.inv-usage-year-card--latest .inv-usage-year-card__val {
+  color: var(--inv-danger);
+}
+
+/* ─ Responsive ─────────────────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .inv-navbar__inner {
+    flex-wrap: wrap;
+    padding-bottom: 0.5rem;
+  }
+
+  .inv-navbar__meta {
+    margin-left: 0;
+    max-width: none;
+    order: 2;
+    padding-left: 0;
+    text-align: left;
+    width: 100%;
+  }
+
+  .inv-navbar__meta-line--detail {
+    display: none;
+  }
+
+  .inv-navbar__links {
+    order: 3;
+    width: 100%;
+    justify-content: flex-start;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 0.25rem;
+  }
+
+  .inv-main {
+    padding-top: calc(var(--inv-nav-h) + 2.5rem);
+  }
+}
+
+/* ─ Pickup module (ฟอนต์/ขนาดตัวอักษรเดียวกับ inv-app) ─────────────────────── */
+.inv-app .pickup-result,
+.inv-app .pickup-list-wrap,
+.inv-app .pickup-list-table,
+.inv-app .pickup-table,
+.inv-app .pickup-card,
+.inv-app .pickup-modal__panel {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+
+.inv-app .pickup-list-table th,
+.inv-app .pickup-list-table td,
+.inv-app .pickup-table th,
+.inv-app .pickup-table td {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+.inv-app .pickup-overview input[type="date"],
+.inv-app .amount-input,
+.inv-app .remarks-input,
+.inv-app .pickup-modal__form select,
+.inv-app .pickup-modal__form input[type="number"],
+.inv-app .pickup-modal__form textarea,
+.inv-app .buttonBack,
+.inv-app .buttonSave,
+.inv-app .buttonSaveEdit,
+.inv-app .buttonAdd,
+.inv-app .buttonDelete,
+.inv-app .delete-button,
+.inv-app .pickup-notice {
+  font-family: inherit;
+  font-size: 0.95rem;
+}
+
+.inv-app .inv-table.pickup-list-table {
+  font-size: inherit;
+  table-layout: fixed;
+}
+
+.inv-app .inv-table.pickup-list-table th,
+.inv-app .inv-table.pickup-list-table td {
+  text-align: center;
+}
+
+.inv-app .inv-table.pickup-list-table .col-remarks,
+.inv-app .inv-table.pickup-list-table th.col-remarks {
+  text-align: left;
+}
+
+.inv-app .inv-table.pickup-list-table .pickup-list-type-job {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.inv-app .inv-table.pickup-list-table .col-doc a {
+  color: var(--inv-primary);
+  font-family: ui-monospace, Consolas, monospace;
+  font-weight: 500;
+}
+
+.inv-app .inv-table.pickup-doc-table th,
+.inv-app .inv-table.pickup-doc-table td {
+  text-align: center;
+}
+
+.inv-app .inv-table.pickup-doc-table td:nth-child(2) {
+  text-align: left;
+}
+
+.inv-app .pickup-list-message {
+  border-bottom: 1px solid var(--inv-border);
+  border-radius: 0;
+  margin: 0;
+  padding: 0.75rem 1.25rem;
+}
+
+.inv-app .pickup-list-empty {
+  color: var(--inv-muted);
+  padding: 1.25rem;
+  text-align: center;
+}
+
+.inv-app .pickup-ma-set-card .inv-card__body {
+  display: flex;
+  justify-content: center;
+}
+
+.inv-app.pickup-overview {
+  --pickup-overview-inset-x: 1.5rem;
+}
+
+.inv-app.pickup-overview section.inv-card > .inv-card__head {
+  padding-left: var(--pickup-overview-inset-x);
+  padding-right: var(--pickup-overview-inset-x);
+}
+
+.inv-app.pickup-overview .pickup-overview__list-head {
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.inv-app.pickup-overview .pickup-overview__list-head-title {
+  align-items: center;
+  display: flex;
+  flex: 1 1 auto;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.inv-app.pickup-overview .pickup-overview__list-head-actions {
+  align-items: center;
+  display: flex;
+  flex: 0 0 auto;
+  flex-shrink: 0;
+  gap: 0.5rem;
+}
+
+.inv-app.pickup-overview .pickup-overview__history-link {
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.inv-app.pickup-overview .pickup-overview__sync-btn {
+  flex-shrink: 0;
+  min-width: 2.5rem;
+  padding-left: 0.65rem;
+  padding-right: 0.65rem;
+}
+
+.inv-app.pickup-overview section.inv-card > .inv-card__body:not(.inv-card__body--flush) {
+  padding-left: var(--pickup-overview-inset-x);
+  padding-right: var(--pickup-overview-inset-x);
+}
+
+.inv-app.pickup-overview .pickup-overview__filters {
+  align-items: flex-start;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.inv-app.pickup-overview .pickup-overview__date-range {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 1.25rem;
+}
+
+.inv-app.pickup-overview .pickup-overview__range-hint {
+  color: var(--inv-muted);
+  flex: 1 1 100%;
+  font-size: 0.8rem;
+  margin: 0;
+  max-width: 100%;
+}
+
+.inv-app.pickup-overview .pickup-overview__date-range > .inv-field {
+  flex: 0 0 auto;
+  margin: 0;
+  max-width: 11.5rem;
+  min-width: 0;
+  width: 11.5rem;
+}
+
+.inv-app.pickup-overview .pickup-overview__filters .inv-input[type="date"] {
+  box-sizing: border-box;
+  height: 2.65rem;
+  max-width: 100%;
+  min-height: 2.65rem;
+  width: 100%;
+}
+
+.inv-app.pickup-overview .pickup-overview__lift {
+  margin-left: auto;
+  margin-right: auto;
+  margin-top: 0.75rem;
+  max-width: 36rem;
+  width: 100%;
+}
+
+.inv-app.pickup-overview .pickup-overview__lift-body {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  padding-left: var(--pickup-overview-inset-x);
+  padding-right: var(--pickup-overview-inset-x);
+  text-align: center;
+}
+
+.inv-app.pickup-overview .pickup-overview__lift-form {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+  justify-content: center;
+}
+
+.inv-app.pickup-overview .pickup-overview__lift-label {
+  color: var(--inv-primary, #1a4fd6);
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.pickup-lift-qty-stepper {
+  align-items: stretch;
+  display: inline-flex;
+  flex: 0 0 auto;
+  gap: 0;
+  max-width: 14rem;
+}
+
+.pickup-lift-qty-stepper__btn {
+  background: #f1f5f9;
+  border: 1px solid var(--inv-border, #cbd5e1);
+  color: var(--inv-text, #0f172a);
+  cursor: pointer;
+  flex: 0 0 2.75rem;
+  font-family: inherit;
+  font-size: 1.2rem;
+  font-weight: 600;
+  line-height: 1;
+  min-height: 2.35rem;
+  padding: 0;
+  transition: background 0.15s;
+}
+
+.pickup-lift-qty-stepper__btn:first-child {
+  border-radius: 8px 0 0 8px;
+}
+
+.pickup-lift-qty-stepper__btn:last-child {
+  border-radius: 0 8px 8px 0;
+}
+
+.pickup-lift-qty-stepper__btn:hover {
+  background: #e2e8f0;
+}
+
+.pickup-lift-qty-stepper__input {
+  border-left: none;
+  border-radius: 0;
+  border-right: none;
+  flex: 1 1 auto;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  min-width: 6.75rem;
+  text-align: center;
+  width: auto;
+}
+
+.inv-app.pickup-overview .pickup-overview__lift-input {
+  max-width: none;
+  min-width: 6.75rem;
+  text-align: center;
+  width: auto;
+}
+
+.inv-app.pickup-overview .pickup-overview__lift-hint {
+  color: var(--inv-muted);
+  font-size: 0.8rem;
+  margin: 0.5rem auto 0;
+  max-width: 36rem;
+  text-align: center;
+}
+
+.inv-app.pickup-overview .pickup-overview__lift-ping {
+  border: 0;
+  height: 0;
+  margin: 0;
+  padding: 0;
+  position: absolute;
+  width: 0;
+}
+
+.inv-app.pickup-overview .pickup-overview__lift-status {
+  color: var(--inv-primary, #1a4fd6);
+  font-size: 0.9rem;
+  margin: 0 0 0.5rem;
+  width: 100%;
+}
+
+@keyframes pickup-lift-status-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.3;
+  }
+}
+
+.inv-app.pickup-overview .pickup-overview__lift-status.is-flashing {
+  animation: pickup-lift-status-pulse 0.85s ease-in-out infinite;
+}
+
+/* ─ ยืนยันเรียกช่วยยกของ (ร่วม overview + prep) ───────────────────────────── */
+body.pickup-lift-dialog-open {
+  overflow: hidden;
+}
+
+.pickup-lift-dialog {
+  align-items: center;
+  box-sizing: border-box;
+  display: none;
+  inset: 0;
+  justify-content: center;
+  padding: max(1rem, env(safe-area-inset-top, 0)) 1.25rem max(1rem, env(safe-area-inset-bottom, 0));
+  position: fixed;
+  z-index: 12000;
+}
+
+.pickup-lift-dialog.is-open {
+  display: flex;
+}
+
+.pickup-lift-dialog__backdrop {
+  background: rgba(15, 23, 42, 0.38);
+  backdrop-filter: blur(5px);
+  inset: 0;
+  position: absolute;
+  -webkit-backdrop-filter: blur(5px);
+}
+
+.pickup-lift-dialog__panel {
+  animation: pickup-lift-dialog-in 0.24s ease-out;
+  background: #fff;
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  border-radius: 18px;
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 24px 56px rgba(15, 23, 42, 0.16);
+  max-width: 22.5rem;
+  padding: 1.4rem 1.35rem 1.2rem;
+  position: relative;
+  text-align: center;
+  width: 100%;
+  z-index: 1;
+}
+
+@keyframes pickup-lift-dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.pickup-lift-dialog__visual {
+  align-items: center;
+  background: linear-gradient(165deg, #f8fafc 0%, #ecfdf5 52%, #f0f9ff 100%);
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  border-radius: 16px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  display: flex;
+  justify-content: center;
+  margin: 0 auto 0.9rem;
+  max-width: 12.5rem;
+  min-height: 6.75rem;
+  overflow: hidden;
+  padding: 0.2rem 0.65rem 0;
+  width: 100%;
+}
+
+.pickup-lift-dialog__media,
+.pickup-lift-dialog__gif {
+  display: block;
+  height: auto;
+  margin: 0 auto;
+  max-height: 7.5rem;
+  object-fit: contain;
+  object-position: center bottom;
+  vertical-align: middle;
+  width: 100%;
+}
+
+.pickup-lift-dialog__media--gif {
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pickup-lift-dialog__media,
+  .pickup-lift-dialog__gif {
+    opacity: 0.96;
+  }
+}
+
+.pickup-lift-dialog__title {
+  color: #0f172a;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.35;
+  margin: 0 0 0.45rem;
+}
+
+.pickup-lift-dialog__msg {
+  color: #64748b;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  margin: 0 0 1.15rem;
+  white-space: pre-line;
+}
+
+.pickup-lift-dialog__actions {
+  display: flex;
+  gap: 0.55rem;
+  justify-content: stretch;
+}
+
+.pickup-lift-dialog__btn {
+  border: none;
+  border-radius: 11px;
+  cursor: pointer;
+  flex: 1 1 0;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  min-height: 2.75rem;
+  padding: 0.55rem 0.85rem;
+  transition: background 0.15s, box-shadow 0.15s, transform 0.1s;
+}
+
+.pickup-lift-dialog__btn:active {
+  transform: translateY(1px);
+}
+
+.pickup-lift-dialog__btn--ghost {
+  background: #f1f5f9;
+  color: #334155;
+}
+
+.pickup-lift-dialog__btn--ghost:hover {
+  background: #e2e8f0;
+}
+
+.pickup-lift-dialog__btn--primary {
+  background: linear-gradient(180deg, #0d9488 0%, #0f766e 100%);
+  box-shadow: 0 2px 10px rgba(13, 148, 136, 0.35);
+  color: #fff;
+}
+
+.pickup-lift-dialog__btn--primary:hover {
+  box-shadow: 0 4px 14px rgba(13, 148, 136, 0.42);
+}
+
+.pickup-lift-dialog__btn[hidden] {
+  display: none;
+}
+
+/* ─ Pickup MA (เบิกแยกรายการ) ──────────────────────────────────────────────── */
+.inv-app.pickup-ma {
+  --pickup-ma-card-inset-x: 1.5rem;
+}
+
+.inv-app.pickup-ma,
+.inv-app.pickup-ma table,
+.inv-app.pickup-ma .select-container {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+
+.inv-app.pickup-ma .pickup-ma-doc-card > .inv-card__head {
+  padding-left: var(--pickup-ma-card-inset-x);
+  padding-right: var(--pickup-ma-card-inset-x);
+}
+
+.inv-app.pickup-ma .pickup-ma-purpose-subhead {
+  padding: 1rem var(--pickup-ma-card-inset-x) 1.1rem;
+}
+
+.inv-app.pickup-ma .pickup-ma-doc-card > .inv-card__body {
+  padding-left: var(--pickup-ma-card-inset-x);
+  padding-right: var(--pickup-ma-card-inset-x);
+}
+
+.inv-app.pickup-ma section.inv-card > .inv-card__head {
+  padding-left: var(--pickup-ma-card-inset-x);
+  padding-right: var(--pickup-ma-card-inset-x);
+}
+
+.inv-app.pickup-ma section.inv-card > .inv-card__footer {
+  padding: 1.25rem var(--pickup-ma-card-inset-x);
+}
+
+.inv-app.pickup-ma .pickup-ma-save-row {
+  align-items: flex-end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  justify-content: flex-start;
+  width: 100%;
+}
+
+.inv-app.pickup-ma .pickup-ma-save-row .inv-field {
+  flex: 0 1 auto;
+  margin: 0;
+  max-width: 240px;
+  min-width: 10.5rem;
+}
+
+.inv-app.pickup-ma .pickup-ma-save-row > .inv-btn {
+  flex-shrink: 0;
+}
+
+.inv-app .inv-recorder-field .inv-recorder-value {
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  color: #0f172a;
+  display: flex;
+  font-size: 0.95rem;
+  font-weight: 600;
+  min-height: 40px;
+  padding: 0 12px;
+}
+
+.inv-app .inv-recorder-field .inv-recorder-value.is-empty {
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.inv-app.pickup-ma input[type="text"],
+.inv-app.pickup-ma input[type="date"],
+.inv-app.pickup-ma input[type="number"],
+.inv-app.pickup-ma textarea,
+.inv-app.pickup-ma select,
+.inv-app.pickup-ma input[type="button"],
+.inv-app.pickup-ma button {
+  font-family: inherit;
+  font-size: 0.95rem;
+}
+
+.inv-app.pickup-ma .select-container .label {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.inv-app.pickup-ma #table1 {
+  width: 100%;
+}
+
+.inv-app.pickup-ma section.inv-card > .inv-card__body--flush .inv-table-wrap {
+  padding: 0.75rem var(--pickup-ma-card-inset-x) 1rem;
+}
+
+.inv-app.pickup-ma .pickup-ma-lines-table td {
+  padding: 0.65rem 0.75rem;
+  vertical-align: middle;
+}
+
+.inv-app.pickup-ma .pickup-ma-lines-table td p {
+  margin: 0;
+}
+
+.inv-app.pickup-ma .pickup-ma-lines-table .pickup-ma-line-control {
+  box-sizing: border-box;
+  display: block;
+  max-width: 100%;
+  min-height: 2.65rem;
+  width: 100%;
+}
+
+.inv-app.pickup-ma .pickup-ma-lines-table .pickup-ma-line-qty {
+  margin-left: auto;
+  margin-right: auto;
+  max-width: 5.5rem;
+  text-align: center;
+}
+
+.inv-app.pickup-ma .pickup-ma-lines-table select.pickup-ma-line-control[disabled],
+.inv-app.pickup-ma .pickup-ma-lines-table select.pickup-ma-line-control:disabled {
+  background: #f8fafc;
+  color: var(--inv-muted);
+  cursor: default;
+}
+
+.inv-app.pickup-ma .pickup-ma-doc-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: clip;
+  padding-top: 0.25rem;
+}
+
+.inv-app.pickup-ma .pickup-ma-doc-card__body > * {
+  max-width: 100%;
+  min-width: 0;
+}
+
+.inv-app.pickup-ma .pickup-ma-purpose-label {
+  color: var(--inv-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  margin: 1rem 0 0.5rem;
+  text-transform: uppercase;
+}
+
+.inv-app.pickup-ma .pickup-ma-purpose-label--subhead {
+  margin: 0 0 0.5rem;
+}
+
+.inv-app.pickup-ma .pickup-ma-purpose-mode--invbtn {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.inv-app.pickup-ma .pickup-ma-purpose-btn {
+  font-size: 0.88rem;
+  font-weight: 600;
+  min-height: 2.35rem;
+  padding: 0.45rem 1rem;
+  position: relative;
+  white-space: nowrap;
+}
+
+.inv-app.pickup-ma .pickup-ma-purpose-btn:not(:has(input:checked)) {
+  background: #fff;
+  border: 1px solid #94a3b8;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.07);
+  color: #334155;
+}
+
+.inv-app.pickup-ma .pickup-ma-purpose-btn:not(:has(input:checked)):hover {
+  background: #f8fafc;
+  border-color: #64748b;
+  box-shadow: 0 2px 5px rgba(15, 23, 42, 0.1);
+}
+
+.inv-app.pickup-ma .pickup-ma-purpose-btn input {
+  height: 0;
+  opacity: 0;
+  position: absolute;
+  width: 0;
+}
+
+.inv-app.pickup-ma .pickup-ma-purpose-btn:has(input:checked) {
+  background: linear-gradient(180deg, var(--inv-accent) 0%, #0f766e 100%);
+  border-color: transparent;
+  box-shadow: 0 2px 8px rgba(13, 148, 136, 0.35);
+  color: #fff;
+}
+
+.inv-app.pickup-ma .pickup-ma-purpose-btn:has(input:checked):hover {
+  box-shadow: 0 4px 12px rgba(13, 148, 136, 0.45);
+}
+
+.inv-app.pickup-ma .pickup-ma-doc-fields--h4 {
+  align-items: end;
+  display: grid;
+  gap: 0.75rem 1.25rem;
+  grid-template-columns: minmax(0, 10.5rem) minmax(0, 14rem) minmax(0, 1fr);
+  max-width: 100%;
+  min-width: 0;
+  width: 100%;
+}
+
+.inv-app.pickup-ma .pickup-ma-doc-fields--h4 .inv-field {
+  min-width: 0;
+}
+
+.inv-app.pickup-ma .pickup-ma-doc-fields--h4 .pickup-ma-doc-input {
+  box-sizing: border-box;
+  display: block;
+  height: 2.75rem;
+  line-height: 1.25;
+  margin: 0;
+  max-height: 2.75rem;
+  max-width: 100%;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.75rem;
+  width: 100%;
+}
+
+.inv-app.pickup-ma .pickup-ma-doc-fields--h4 input[type="date"].pickup-ma-doc-input {
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.inv-app.pickup-ma .pickup-ma-doc-fields--no-job {
+  grid-template-columns: minmax(0, 10.5rem) minmax(0, 1fr);
+}
+
+.inv-app.pickup-ma .pickup-ma-doc-fields--h4.pickup-ma-doc-fields--repair {
+  grid-template-columns:
+    minmax(0, 10.5rem)
+    minmax(0, 9.5rem)
+    minmax(0, 18rem)
+    minmax(0, 12rem);
+}
+
+.inv-app.pickup-ma .pickup-ma-doc-fields--h4.pickup-ma-doc-fields--repair .pickup-ma-customer-field {
+  max-width: 18rem;
+}
+
+@media (max-width: 900px) {
+  .inv-app.pickup-ma .pickup-ma-doc-fields--h4,
+  .inv-app.pickup-ma .pickup-ma-doc-fields--no-job,
+  .inv-app.pickup-ma .pickup-ma-doc-fields--h4.pickup-ma-doc-fields--repair {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ─ Pickup unified (U1 — สลับโหมดเซต / แยกรายการ) ─────────────────────────── */
+.inv-app.pickup-unified .pickup-unified-lines-card > .inv-card__head.pickup-unified-lines-head {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem 1.25rem;
+  justify-content: space-between;
+}
+
+.inv-app.pickup-unified .pickup-unified-lines-head__cluster {
+  align-items: center;
+  display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  gap: 0.85rem 1.25rem;
+  min-width: 0;
+}
+
+.inv-app.pickup-unified .pickup-unified-lines-head__title {
+  align-items: center;
+  display: inline-flex;
+  font-weight: 600;
+  gap: 0.45rem;
+}
+
+.inv-app.pickup-unified .pickup-unified-lines-head__actions {
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.inv-app.pickup-unified .pickup-unified-lines-clear {
+  font-size: 0.88rem;
+  min-height: 2.35rem;
+  padding: 0.45rem 0.85rem;
+  white-space: nowrap;
+}
+
+.inv-app.pickup-unified .pickup-unified-lines-clear i {
+  margin-right: 0.35rem;
+}
+
+.inv-app.pickup-unified .pickup-unified-mode--invbtn {
+  display: inline-flex;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.inv-app.pickup-unified .pickup-unified-mode-btn {
+  font-size: 0.88rem;
+  min-height: 2.35rem;
+  padding: 0.45rem 1rem;
+  white-space: nowrap;
+}
+
+.inv-app.pickup-unified .pickup-unified-mode-btn i {
+  opacity: 0.95;
+}
+
+.inv-app.pickup-unified .pickup-unified-body {
+  padding-left: var(--pickup-ma-card-inset-x);
+  padding-right: var(--pickup-ma-card-inset-x);
+  padding-top: 1.1rem;
+}
+
+.inv-app.pickup-unified .pickup-set-bars--hidden {
+  border: 0;
+  clip: rect(0, 0, 0, 0);
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  width: 1px;
+}
+
+.inv-app.pickup-unified .pickup-set-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  margin-bottom: 0.35rem;
+}
+
+.inv-app.pickup-unified .pickup-set-picker--action {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.inv-app.pickup-unified .pickup-set-picker__label--action {
+  user-select: none;
+  visibility: hidden;
+}
+
+.inv-app.pickup-unified .pickup-set-bar-add-ma {
+  min-height: 2.35rem;
+  white-space: nowrap;
+}
+
+.inv-app.pickup-unified .pickup-set-row-remove {
+  align-self: flex-end;
+  flex-shrink: 0;
+  min-height: 2.35rem;
+  min-width: 2.35rem;
+  padding-left: 0.65rem;
+  padding-right: 0.65rem;
+}
+
+.inv-app.pickup-unified .pickup-unified-set-bar {
+  align-items: flex-end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem 0.85rem;
+  margin-bottom: 0;
+}
+
+.inv-app.pickup-unified .pickup-set-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.inv-app.pickup-unified .pickup-set-picker--product {
+  flex: 1 1 14rem;
+  max-width: 22rem;
+}
+
+.inv-app.pickup-unified .pickup-set-picker--qty {
+  flex: 0 0 auto;
+}
+
+.inv-app.pickup-unified .pickup-set-picker__label {
+  color: var(--inv-text-muted, #64748b);
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.2;
+  text-transform: none;
+}
+
+.inv-app.pickup-unified .pickup-set-picker__btn-wrap {
+  cursor: pointer;
+  justify-content: flex-start;
+  max-width: 100%;
+  min-height: 2.35rem;
+  min-width: 0;
+  padding: 0;
+  position: relative;
+  width: 100%;
+}
+
+.inv-app.pickup-unified .pickup-set-picker__btn-wrap:hover {
+  filter: brightness(1.03);
+}
+
+.inv-app.pickup-unified .pickup-set-picker__btn-wrap.is-filled:hover {
+  box-shadow: 0 4px 14px rgba(13, 148, 136, 0.4);
+}
+
+.inv-app.pickup-unified .pickup-set-picker--qty .pickup-set-picker__btn-wrap {
+  min-width: 7.25rem;
+  width: auto;
+}
+
+.inv-app.pickup-unified .pickup-set-picker__btn-wrap::after {
+  color: inherit;
+  content: "\f078";
+  font-family: FontAwesome;
+  font-size: 0.72rem;
+  opacity: 0.75;
+  pointer-events: none;
+  position: absolute;
+  right: 0.85rem;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.inv-app.pickup-unified .pickup-set-picker__select {
+  appearance: none;
+  background: transparent;
+  border: none;
+  box-sizing: border-box;
+  color: inherit;
+  color-scheme: light;
+  cursor: pointer;
+  display: block !important;
+  font-family: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  line-height: 1.25;
+  margin: 0;
+  max-width: 100%;
+  min-height: 2.35rem;
+  min-width: 0;
+  padding: 0.45rem 2.1rem 0.45rem 1rem;
+  position: relative;
+  width: 100%;
+  z-index: 2;
+}
+
+.inv-app.pickup-unified .pickup-set-picker__select option {
+  background-color: #ffffff;
+  color: #0f172a;
+  font-weight: 500;
+}
+
+/* กัน legacy .custom-select ซ่อน select ในแถบเบิกเป็นเซต */
+.inv-app.pickup-unified .pickup-set-picker__btn-wrap .pickup-set-picker__select {
+  opacity: 1;
+  visibility: visible;
+}
+
+.inv-app.pickup-unified .pickup-set-picker__select:focus {
+  outline: none;
+}
+
+.inv-app.pickup-unified .pickup-set-picker__btn-wrap:focus-within {
+  box-shadow: 0 0 0 2px rgba(13, 148, 136, 0.35);
+}
+
+.inv-app.pickup-unified .pickup-set-picker__btn-wrap.inv-btn--primary .pickup-set-picker__select {
+  color: #fff;
+}
+
+.inv-app.pickup-unified .pickup-set-picker__btn-wrap.inv-btn--primary .pickup-set-picker__select option {
+  background-color: #ffffff;
+  color: #0f172a;
+}
+
+.inv-app.pickup-unified .pickup-set-picker__btn-wrap.inv-btn--ghost .pickup-set-picker__select option {
+  background-color: #ffffff;
+  color: #0f172a;
+}
+
+.inv-app.pickup-unified .pickup-set-picker__btn-wrap.inv-btn--primary::after {
+  color: #fff;
+  opacity: 0.9;
+}
+
+.inv-app.pickup-unified .pickup-unified-table-card {
+  background: #fff;
+  border: 1px solid var(--inv-border);
+  border-radius: 10px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  margin-top: 1.35rem;
+  overflow: hidden;
+}
+
+.inv-app.pickup-unified .pickup-unified-table-card .inv-table-wrap {
+  padding: 0;
+}
+
+.inv-app.pickup-unified .pickup-unified-lines-table {
+  margin: 0;
+}
+
+.inv-app.pickup-unified .pickup-unified-lines-table thead th {
+  background: linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
+  border-bottom: 1px solid var(--inv-border);
+  font-size: 0.82rem;
+}
+
+.inv-app.pickup-unified .pickup-unified-lines-table tbody td {
+  border-bottom: 1px solid #e8edf3;
+}
+
+.inv-app.pickup-unified .pickup-unified-lines-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.inv-app.pickup-unified .pickup-ma-part-col .pickup-ma-line-stack-label {
+  color: var(--inv-text-muted, #64748b);
+  font-size: 0.72rem;
+  font-weight: 600;
+  margin: 0.35rem 0 0.15rem;
+  text-transform: none;
+}
+
+.inv-app.pickup-unified .pickup-ma-part-col .pickup-ma-line-stack-label span {
+  display: block;
+}
+
+.inv-app.pickup-unified .pickup-ma-min-val {
+  display: inline-block;
+  font-variant-numeric: tabular-nums;
+  min-width: 2rem;
+  text-align: center;
+  width: 100%;
+}
+
+.inv-app.pickup-unified .pickup-ma-line-status {
+  display: inline-block;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.inv-app.pickup-unified .pickup-ma-stock-col select.pickup-ma-line-control {
+  margin-left: auto;
+  margin-right: auto;
+  max-width: 6.5rem;
+}
+
+@media (max-width: 720px) {
+  .inv-app.pickup-unified .pickup-unified-lines-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .inv-app.pickup-unified .pickup-unified-lines-head__actions {
+    align-self: flex-end;
+    margin-left: 0;
+  }
+
+  .inv-app.pickup-unified .pickup-unified-mode--invbtn {
+    align-self: stretch;
+    justify-content: stretch;
+  }
+
+  .inv-app.pickup-unified .pickup-unified-mode-btn {
+    flex: 1 1 auto;
+    font-size: 0.8rem;
+    justify-content: center;
+    padding-inline: 0.65rem;
+  }
+}
+
+.inv-app.pickup-unified .pickup-unified-lines-card > .pickup-unified-footer {
+  display: block;
+}
+
+.inv-app.pickup-unified .pickup-ma-line-tools {
+  margin-bottom: 0.65rem;
+  padding: 0;
+}
+
+.inv-app.pickup-unified .pickup-ma-line-tools__actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.65rem;
+  justify-content: flex-start;
+}
+
+.inv-app.pickup-unified .pickup-ma-line-tools__actions .inv-btn i {
+  margin-right: 0.35rem;
+}
+
+.inv-app.pickup-unified .pickup-set-selection-summary {
+  align-items: center;
+  background: linear-gradient(180deg, #f0fdfa 0%, #fff 100%);
+  border: 1px solid #99f6e4;
+  border-radius: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+  justify-content: space-between;
+  margin: 0 0 0.65rem;
+  padding: 0.65rem 0.85rem;
+}
+
+.inv-app.pickup-unified .pickup-set-selection-summary.is-empty {
+  display: none;
+}
+
+.inv-app.pickup-unified .pickup-set-selection-summary__main {
+  align-items: baseline;
+  display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.5rem;
+  min-width: 0;
+}
+
+.inv-app.pickup-unified .pickup-set-selection-summary__label {
+  color: var(--inv-text-muted, #64748b);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.inv-app.pickup-unified .pickup-set-selection-summary__title {
+  color: var(--inv-text);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.inv-app.pickup-unified .pickup-set-selection-summary__qty {
+  color: var(--inv-text-muted, #64748b);
+  font-size: 0.88rem;
+  font-weight: 500;
+}
+
+.inv-app.pickup-unified .pickup-set-selection-summary__change {
+  flex-shrink: 0;
+  font-size: 0.88rem;
+  padding: 0.35rem 0.65rem;
+}
+
+.inv-app.pickup-unified .pickup-set-table-foot {
+  background: #fafbfc;
+  border-top: 1px solid var(--inv-border);
+  display: flex;
+  justify-content: flex-start;
+  padding: 0.75rem 0.85rem;
+}
+
+.inv-app.pickup-unified .pickup-set-table-foot .inv-btn i {
+  margin-right: 0.35rem;
+}
+
+.inv-app.pickup-unified .pickup-ma-empty-row .pickup-set-empty {
+  padding: 1.5rem 0.75rem;
+}
+
+.inv-app.pickup-unified .pickup-ma-display-row td {
+  font-size: 0.9rem;
+  vertical-align: middle;
+}
+
+.inv-app.pickup-unified .pickup-ma-slot-store {
+  display: none !important;
+}
+
+/* ─ Pickup modal (popup เพิ่มรายการเบิก) ───────────────────────────────────── */
+.inv-app .pickup-modal {
+  align-items: center;
+  display: none;
+  inset: 0;
+  justify-content: center;
+  position: fixed;
+  z-index: 2000;
+}
+
+.inv-app .pickup-modal__backdrop {
+  background: rgba(15, 23, 42, 0.45);
+  inset: 0;
+  position: absolute;
+}
+
+.inv-app .pickup-modal__panel {
+  background: #fff;
+  border: 1px solid var(--inv-border);
+  border-radius: 12px;
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.18);
+  max-height: 90vh;
+  max-width: 520px;
+  overflow: auto;
+  padding: 1.35rem 1.5rem 1.25rem;
+  position: relative;
+  width: calc(100% - 2rem);
+  z-index: 1;
+}
+
+.inv-app .pickup-modal__title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 0 0 0.35rem;
+  text-align: center;
+}
+
+.inv-app .pickup-modal__subtitle {
+  color: var(--inv-text-muted, #64748b);
+  font-size: 0.88rem;
+  margin: 0 0 1rem;
+  text-align: center;
+}
+
+.inv-app .pickup-modal__form {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.inv-app .pickup-modal__form td {
+  padding: 0.45rem 0.35rem;
+  vertical-align: middle;
+}
+
+.inv-app .pickup-modal__form td:first-child {
+  color: #334155;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: right;
+  text-transform: none;
+  white-space: nowrap;
+  width: 9.5rem;
+}
+
+.inv-app .pickup-modal__form label {
+  text-transform: none;
+}
+
+.inv-app .pickup-modal__form .inv-select,
+.inv-app .pickup-modal__form .inv-input {
+  width: 100%;
+}
+
+.inv-app .pickup-modal__stock {
+  color: var(--inv-primary-dark, #0f766e);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.inv-app .pickup-modal__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.65rem;
+  justify-content: flex-end;
+  margin-top: 1.15rem;
+}
+
+/* ─ Modal เพิ่มรายการเบิก (pickup_ma) ───────────────────────────────────────── */
+.inv-app .pickup-modal--add-line .pickup-add-line-panel {
+  border-radius: 14px;
+  max-width: 440px;
+  overflow: hidden;
+  padding: 0;
+  position: relative;
+}
+
+.inv-app .pickup-add-line-panel__close {
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: var(--inv-text-muted, #64748b);
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 0.35rem 0.5rem;
+  position: absolute;
+  right: 0.85rem;
+  top: 0.85rem;
+  z-index: 2;
+}
+
+.inv-app .pickup-add-line-panel__close:hover {
+  background: #f1f5f9;
+  color: var(--inv-text);
+}
+
+.inv-app .pickup-add-line-panel__head {
+  align-items: flex-start;
+  background: linear-gradient(180deg, #f8fafc 0%, #fff 100%);
+  border-bottom: 1px solid var(--inv-border);
+  display: flex;
+  gap: 0.85rem;
+  padding: 1.25rem 1.35rem 1.1rem;
+}
+
+.inv-app .pickup-add-line-panel__icon {
+  align-items: center;
+  background: linear-gradient(180deg, var(--inv-accent) 0%, #0f766e 100%);
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(13, 148, 136, 0.35);
+  color: #fff;
+  display: inline-flex;
+  flex-shrink: 0;
+  font-size: 1.25rem;
+  height: 2.75rem;
+  justify-content: center;
+  width: 2.75rem;
+}
+
+.inv-app .pickup-add-line-panel__title {
+  font-size: 1.12rem;
+  font-weight: 700;
+  line-height: 1.3;
+  margin: 0 0 0.25rem;
+  text-align: left;
+}
+
+.inv-app .pickup-add-line-panel__desc {
+  color: var(--inv-text-muted, #64748b);
+  font-size: 0.86rem;
+  line-height: 1.4;
+  margin: 0;
+  text-align: left;
+}
+
+.inv-app .pickup-add-line-panel__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 1.15rem 1.35rem 0.5rem;
+}
+
+.inv-app .pickup-add-line-field label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-transform: none;
+}
+
+.inv-app .pickup-add-line-stats {
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: 1fr 1fr;
+}
+
+.inv-app .pickup-add-line-stat {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.65rem 0.75rem;
+}
+
+.inv-app .pickup-add-line-stat__label {
+  color: var(--inv-text-muted, #64748b);
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: none;
+}
+
+.inv-app .pickup-add-line-stat__value {
+  color: var(--inv-text);
+  font-size: 1.05rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.inv-app .pickup-add-line-stat__value--stock {
+  color: var(--inv-primary-dark, #0f766e);
+}
+
+.inv-app .pickup-qty-stepper {
+  align-items: stretch;
+  display: flex;
+  gap: 0;
+  max-width: 12rem;
+}
+
+.inv-app .pickup-qty-stepper__btn {
+  background: #f1f5f9;
+  border: 1px solid var(--inv-border);
+  color: var(--inv-text);
+  cursor: pointer;
+  flex: 0 0 2.65rem;
+  font-family: inherit;
+  font-size: 1.15rem;
+  font-weight: 600;
+  line-height: 1;
+  padding: 0;
+  transition: background 0.15s;
+}
+
+.inv-app .pickup-qty-stepper__btn:first-child {
+  border-radius: 8px 0 0 8px;
+}
+
+.inv-app .pickup-qty-stepper__btn:last-child {
+  border-radius: 0 8px 8px 0;
+}
+
+.inv-app .pickup-qty-stepper__btn:hover {
+  background: #e2e8f0;
+}
+
+.inv-app .pickup-qty-stepper__input {
+  border-left: none;
+  border-radius: 0;
+  border-right: none;
+  flex: 1 1 auto;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  min-width: 0;
+  text-align: center;
+  width: auto;
+}
+
+.inv-app .pickup-add-line-panel__foot {
+  background: #fafbfc;
+  border-top: 1px solid var(--inv-border);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.65rem;
+  justify-content: flex-end;
+  padding: 1rem 1.35rem 1.15rem;
+}
+
+/* ─ Popup รายการอะไหล่ (pickup_overview) ───────────────────────────────────── */
+.inv-app .pickup-doc-preview-panel {
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  max-height: min(90vh, 720px);
+  max-width: 520px;
+  overflow: hidden;
+  padding: 0;
+  position: relative;
+  width: calc(100% - 1.25rem);
+}
+
+.inv-app .pickup-doc-preview-panel__close {
+  position: absolute;
+  right: 0.85rem;
+  top: 0.85rem;
+  z-index: 2;
+}
+
+.inv-app .pickup-doc-preview-content {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.inv-app .pickup-doc-preview-loading {
+  color: var(--inv-text-muted, #64748b);
+  font-size: 0.95rem;
+  padding: 2.5rem 1.25rem;
+  text-align: center;
+}
+
+.inv-app .pickup-doc-preview-head {
+  background: linear-gradient(180deg, #f8fafc 0%, #fff 100%);
+  border-bottom: 1px solid var(--inv-border);
+  padding: 1.15rem 1.25rem 1rem;
+  padding-right: 4.75rem;
+}
+
+.inv-app .pickup-doc-preview-kicker {
+  color: var(--inv-accent, #0d9488);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  margin: 0 0 0.25rem;
+  text-transform: uppercase;
+}
+
+.inv-app .pickup-doc-preview-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1.3;
+  margin: 0 0 0.35rem;
+  word-break: break-word;
+}
+
+.inv-app .pickup-doc-preview-meta {
+  color: var(--inv-text-muted, #64748b);
+  font-size: 0.85rem;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.inv-app .pickup-doc-preview-body {
+  flex: 1 1 auto;
+  max-height: min(52vh, 420px);
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 0.85rem 1.25rem 1rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+.inv-app .pickup-doc-preview-remarks {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  color: var(--inv-text);
+  font-size: 0.85rem;
+  line-height: 1.45;
+  margin: 0 0 0.75rem;
+  padding: 0.55rem 0.65rem;
+}
+
+.inv-app .pickup-doc-preview-count {
+  color: var(--inv-text-muted, #64748b);
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin: 0 0 0.5rem;
+}
+
+.inv-app .pickup-doc-preview-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.inv-app .pickup-doc-preview-line {
+  align-items: flex-start;
+  background: #fff;
+  border: 1px solid #e8edf3;
+  border-radius: 10px;
+  display: flex;
+  gap: 0.65rem;
+  justify-content: space-between;
+  padding: 0.65rem 0.75rem;
+}
+
+.inv-app .pickup-doc-preview-line__check {
+  align-items: center;
+  cursor: pointer;
+  display: flex;
+  flex-shrink: 0;
+  margin: 0.15rem 0 0;
+  padding: 0;
+}
+
+.inv-app .pickup-doc-preview-line__check input {
+  cursor: pointer;
+  height: 1.05rem;
+  margin: 0;
+  width: 1.05rem;
+}
+
+.inv-app .pickup-doc-preview-line__main {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.inv-app .pickup-doc-preview-line__name {
+  font-size: 0.92rem;
+  font-weight: 600;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.inv-app .pickup-doc-preview-line__product {
+  color: var(--inv-text-muted, #64748b);
+  font-size: 0.78rem;
+  line-height: 1.3;
+}
+
+.inv-app .pickup-doc-preview-line__remark {
+  color: #475569;
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.inv-app .pickup-doc-preview-line__qty {
+  background: #ecfdf5;
+  border-radius: 8px;
+  color: #0f766e;
+  flex-shrink: 0;
+  font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  line-height: 1;
+  min-width: 2.25rem;
+  padding: 0.35rem 0.5rem;
+  text-align: center;
+}
+
+.inv-app .pickup-doc-preview-foot {
+  background: #fafbfc;
+  border-top: 1px solid var(--inv-border);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  padding: 0.85rem 1.25rem 1rem;
+}
+
+.inv-app .pickup-doc-preview-foot .inv-btn--primary {
+  text-decoration: none;
+}
+
+.inv-app .pickup-doc-preview-confirm {
+  font-weight: 600;
+}
+
+@media (max-width: 480px) {
+  .inv-app .pickup-doc-preview-panel {
+    max-height: 92vh;
+    width: calc(100% - 0.75rem);
+  }
+
+  .inv-app .pickup-doc-preview-foot {
+    flex-direction: column-reverse;
+  }
+
+  .inv-app .pickup-doc-preview-foot .inv-btn {
+    justify-content: center;
+    width: 100%;
+  }
+}
+
+.inv-app.pickup-unified .pickup-set-empty {
+  color: var(--inv-text-muted, #6b7280);
+  padding: 1.25rem 0.75rem;
+  text-align: center;
+}
+
+.inv-app.pickup-unified .pickup-set-mode-hint {
+  color: var(--inv-text-muted, #64748b);
+  font-size: 0.8rem;
+  line-height: 1.45;
+  margin: 0 0 0.65rem;
+  padding: 0 0.15rem;
+}
+
+.inv-app.pickup-unified .stock-ok {
+  color: var(--inv-success, #059669);
+  font-weight: 600;
+}
+
+.inv-app.pickup-unified .stock-bad {
+  color: var(--inv-danger, #dc2626);
+  font-weight: 600;
+}
+
+.inv-app.pickup-unified .pickup-set-line-action {
+  text-align: center;
+  vertical-align: middle;
+  width: 3rem;
+}
+
+.inv-app.pickup-unified .pickup-set-line-remove {
+  color: var(--inv-danger, #dc2626);
+  min-height: 2rem;
+  min-width: 2rem;
+  padding: 0.25rem 0.5rem;
+}
+
+.inv-app.pickup-unified .pickup-set-line-remove:hover {
+  background: rgba(220, 38, 38, 0.08);
+}
+
+.inv-app.pickup-history .pickup-history-filter-head {
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.inv-app.pickup-history .pickup-history-filter-head__title {
+  align-items: center;
+  display: flex;
+  flex: 1 1 auto;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.inv-app.pickup-history .pickup-history-pending-link {
+  flex-shrink: 0;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.inv-app.pickup-history .pickup-history-pending-link:hover {
+  text-decoration: none;
+}
+
+.inv-app.pickup-history .inv-report-filters {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+}
+
+.inv-app.pickup-history .inv-report-filters .inv-filters__actions {
+  grid-column: auto;
+}
+
+@media (max-width: 900px) {
+  .inv-app.pickup-history .inv-report-filters {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  }
+
+  .inv-app.pickup-history .inv-report-filters .inv-filters__actions {
+    grid-column: 1 / -1;
+  }
+}
+
+.inv-app.pickup-history .pickup-history-doc-id {
+  color: var(--inv-text);
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: 500;
+}
+
+.inv-app.pickup-history .pickup-history-row {
+  cursor: pointer;
+}
+
+.inv-app.pickup-history .pickup-history-row:hover {
+  background: #f0f9ff;
+}
+
+.inv-app.pickup-history .pickup-history-row:focus-visible {
+  outline: 2px solid var(--inv-primary, #1e5a8a);
+  outline-offset: -2px;
+}
+
+.inv-app .pickup-doc-preview-line--readonly {
+  gap: 0.85rem;
+  padding: 0.85rem 1.05rem;
+}
+
+.inv-app .pickup-history-preview__close {
+  font-size: 0.88rem;
+  min-height: 2.25rem;
+  padding: 0.4rem 0.9rem;
+  position: absolute;
+  right: 0.85rem;
+  top: 0.85rem;
+  z-index: 2;
+}
+
+.inv-app .pickup-doc-preview-modal--readonly .pickup-doc-preview-head {
+  padding-right: 4.5rem;
+}
+
+/* ─ Typography lock (Sarabun ทั้งหน้า inv-app; กัน jQuery UI / legacy) ─────── */
+body.inv-app,
+body.inv-app .inv-main,
+body.inv-app .inv-page-header,
+body.inv-app .inv-page-title,
+body.inv-app .inv-page-desc,
+body.inv-app p,
+body.inv-app h1,
+body.inv-app h2,
+body.inv-app h3,
+body.inv-app .ui-widget,
+body.inv-app .ui-widget input,
+body.inv-app .ui-widget select,
+body.inv-app .ui-widget textarea,
+body.inv-app .ui-widget button,
+body.inv-app input,
+body.inv-app select,
+body.inv-app textarea,
+body.inv-app button,
+body.inv-app label,
+body.inv-app table,
+body.inv-app th,
+body.inv-app td,
+body.inv-app .inv-table,
+body.inv-app .inv-navbar,
+body.inv-app .inv-btn,
+body.inv-app .inv-input,
+body.inv-app .inv-select,
+body.inv-app .pickup-set-picker__select,
+body.inv-app .pickup-add-line-panel,
+body.inv-app .pickup-modal__panel,
+body.inv-app option {
+  font-family: var(--inv-font-family);
+}
+
+body.inv-app .ui-widget,
+body.inv-app .ui-widget input,
+body.inv-app .ui-widget select,
+body.inv-app .ui-widget textarea,
+body.inv-app .ui-widget button {
+  font-family: var(--inv-font-family) !important;
+}
+
+/* ─ Part add (เพิ่ม Part) ─────────────────────────────────────────────────── */
+.inv-app.part-add .part-add-section-title {
+  color: var(--inv-primary-dark);
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 1.25rem 0 0.75rem;
+}
+
+.inv-app.part-add .part-add-section-title:first-child {
+  margin-top: 0;
+}
+
+.inv-app.part-add .part-add-grid {
+  display: grid;
+  gap: 1rem 1.25rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.inv-app.part-add .part-add-grid__full {
+  grid-column: 1 / -1;
+}
+
+.inv-app.part-add .part-add-field-check {
+  align-self: end;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  justify-content: flex-end;
+  min-height: 4.25rem;
+}
+
+.inv-app.part-add .part-add-check-label {
+  color: var(--inv-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.inv-app.part-add .part-add-check {
+  align-items: center;
+  color: var(--inv-text);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 0.95rem;
+  font-weight: 500;
+  gap: 0.5rem;
+}
+
+.inv-app.part-add .part-add-footer {
+  align-items: flex-end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: flex-end;
+}
+
+.inv-app.part-add .part-add-footer__by {
+  margin: 0;
+  max-width: 14rem;
+  min-width: 10rem;
+}
+
+/* ─ Stock add (เพิ่ม Stock) ───────────────────────────────────────────────── */
+.inv-app.stock-add .stock-add-head-grid {
+  display: grid;
+  gap: 1rem 1.25rem;
+  grid-template-columns: minmax(0, 11rem) minmax(0, 1fr);
+}
+
+.inv-app.stock-add .inv-search-box {
+  position: relative;
+}
+
+.inv-app.stock-add .inv-search-box__result,
+.inv-app .inv-search-box__result {
+  background: #fff;
+  border: 1px solid var(--inv-border);
+  border-radius: 8px;
+  box-shadow: var(--inv-shadow-lg);
+  left: 0;
+  max-height: 12rem;
+  overflow: auto;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 0.25rem);
+  z-index: 20;
+}
+
+.inv-app.stock-add .inv-search-box__result p,
+.inv-app .inv-search-box__result p {
+  cursor: pointer;
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+}
+
+.inv-app.stock-add .inv-search-box__result p:hover,
+.inv-app .inv-search-box__result p:hover {
+  background: #f1f5f9;
+}
+
+.inv-app.stock-add .stock-add-lines-head {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  justify-content: space-between;
+}
+
+.inv-app.stock-add .stock-add-lines-toolbar {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.inv-app.stock-add .stock-add-table .stock-add-line__control {
+  min-width: 10rem;
+  width: 100%;
+}
+
+.inv-app.stock-add .stock-add-table .stock-add-line__qty {
+  max-width: 6.5rem;
+  min-width: 4.5rem;
+}
+
+.inv-app.stock-add .stock-add-lines-hint {
+  color: var(--inv-muted);
+  font-size: 0.85rem;
+  margin: 0.75rem 1.25rem 1rem;
+}
+
+.inv-app.stock-add .stock-add-footer {
+  align-items: flex-end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: flex-end;
+}
+
+.inv-app.stock-add .stock-add-footer__by {
+  margin: 0;
+  max-width: 14rem;
+  min-width: 10rem;
+}
+
+@media (max-width: 768px) {
+  .inv-app.stock-add .stock-add-head-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .inv-app.stock-add .stock-add-footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .inv-app.stock-add .stock-add-footer__by,
+  .inv-app.stock-add .stock-add-footer .inv-btn {
+    max-width: none;
+    width: 100%;
+  }
+
+  .inv-app.part-add .part-add-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .inv-app.part-add .part-add-footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .inv-app.part-add .part-add-footer__by {
+    max-width: none;
+    width: 100%;
+  }
+
+  .inv-app.part-add .part-add-footer .inv-btn {
+    width: 100%;
+  }
+}

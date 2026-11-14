@@ -1,15 +1,38 @@
 <?php
+/**
+ * หน้ารับของเข้า Stock (นำเข้า)
+ *
+ * กรอกวันที่ Vendor และรายการ Product/Part หลายแถว แล้วส่ง stock_save.php
+ * ใช้ธีม inv-app / inventory-ui.css
+ */
 require_once __DIR__ . '/connect.php';
-header("Content-Type: text/html; charset=UTF-8");
+require_once __DIR__ . '/inventory_session_actor.php';
+header('Content-Type: text/html; charset=UTF-8');
 @setlocale(LC_TIME, 'th_TH.UTF-8', 'th_TH', 'tha');
+
+$h = static function ($s) {
+    return htmlspecialchars((string) $s, ENT_QUOTES, 'UTF-8');
+};
+
+$productIds = array();
+$productNames = array();
+$sqlSP = 'SELECT pd_id, pd_name FROM product ORDER BY pd_name ASC';
+$exeSP = db_exec($connect, $sqlSP);
+if ($exeSP) {
+    while ($resultSP = db_fetch_array($exeSP)) {
+        $productIds[] = $resultSP['pd_id'];
+        $productNames[] = $resultSP['pd_name'];
+    }
+}
+$productCount = count($productIds);
 ?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.6.3/css/font-awesome.min.css">
-<link type="text/css" rel="stylesheet" href="css.css" />
-<link rel="stylesheet" type="text/css" href="css/smoothness/jquery-ui-1.7.2.custom.css"> 
+<link rel="stylesheet" type="text/css" href="css/smoothness/jquery-ui-1.7.2.custom.css">
+<?php require_once __DIR__ . '/inventory_ui_head.php'; ?>
 
 <title>เพิ่ม Stock</title>
 <script type="text/javascript" src="js/jquery-1.3.2.min.js"></script>  
@@ -35,8 +58,7 @@ function save_job(){
 		return;
 	}
 	if(document.getElementById("log_by").value == "" ){ 
-		alert("กรุณาเลือกผู้บันทึก");
-		document.getElementById("log_by").focus();
+		alert("ไม่พบชื่อผู้บันทึกจาก session — กรุณาเข้าสู่ระบบ SSO ใหม่");
 		return;
 	}
 
@@ -157,338 +179,159 @@ function checkEmpty(){
 }
 
 var r_spare = 0;
-//Add ��¡������ͧ���ͧ
+
+function stockAddClearRow(n) {
+	var pd = document.getElementById("pd_sp" + n);
+	var sn = document.getElementById("sn_sp" + n);
+	var amount = document.getElementById("amount_sp" + n);
+	var price = document.getElementById("price_sp" + n);
+	var remarks = document.getElementById("remarks_sp" + n);
+	if (pd) { pd.value = ""; }
+	if (sn) { sn.innerHTML = '<option value="">-- เลือก part --</option>'; }
+	if (amount) { amount.value = ""; }
+	if (price) { price.value = ""; }
+	if (remarks) { remarks.value = ""; }
+}
+
+function stockAddShowRow(n, show) {
+	var row = document.getElementById("stock_add_row_" + n);
+	if (row) {
+		row.style.display = show ? "table-row" : "none";
+	}
+}
+
 function addSpare(mode) {
+	if (r_spare >= 5 && mode === "add") {
+		alert("เพิ่มรายการได้สูงสุด 5 รายการ");
+		return;
+	}
 
-			if(r_spare >= 5 && mode ==  "add"){
-				alert("เพิ่มรายการได้สูงสุด 5 รายการ");
-				return;
-			}
+	$('#log_type').val("นำเข้า");
 
-			$('#log_type').val("นำเข้า");
-			
-			if(mode == "add"){
-				//check fields ���������͹������
-				if(r_spare >= 1 && (document.getElementById("pd_sp"+r_spare).value == "" 
-				|| document.getElementById("sn_sp"+r_spare).value == ""
-				|| document.getElementById("amount_sp"+r_spare).value == ""
-				|| document.getElementById("price_sp"+r_spare).value == "")){
-					alert("กรุณากรอกข้อมูลก่อนคลิกถัดไป");
-					return;
-				}
-				r_spare += 1;
-
-				if(r_spare >= 5){
-					r_spare = 5;
-				}
-				//number_sp1
-				document.getElementById("number_sp"+r_spare).style.display = '';
-				//pd_sp1
-				document.getElementById("pd_sp"+r_spare).style.display = '';
-				document.getElementById("pd_sp"+r_spare).value = "";
-				//sn_sp1
-				document.getElementById("sn_sp"+r_spare).style.display = '';
-				document.getElementById("sn_sp"+r_spare).value = ""; 
-				//amount_sp1
-				document.getElementById("amount_sp"+r_spare).style.display = '';
-				document.getElementById("amount_sp"+r_spare).value = ""; 
-				//price_sp1
-				document.getElementById("price_sp"+r_spare).style.display = '';
-				document.getElementById("price_sp"+r_spare).value = ""; 
-				
-				//remarks_sp1
-				document.getElementById("remarks_sp"+r_spare).style.display = '';
-				document.getElementById("remarks_sp"+r_spare).value = ""; 
-
-				//count row
-				$('#count_sp').val(r_spare);
-			
-			}else{
-				if(r_spare <= 0){
-					r_spare = 0;
-					return;
-				}
-				//number_sp1
-				document.getElementById("number_sp"+r_spare).style.display = 'none';
-				//pd_sp1
-				document.getElementById("pd_sp"+r_spare).style.display = 'none';
-				document.getElementById("pd_sp"+r_spare).value = "";
-				//sn_sp1
-				document.getElementById("sn_sp"+r_spare).style.display = 'none';
-				document.getElementById("sn_sp"+r_spare).value = 0;
-				//amount_sp1
-				document.getElementById("amount_sp"+r_spare).style.display = 'none';
-				document.getElementById("amount_sp"+r_spare).value = ""; 
-				
-				//price_sp1
-				document.getElementById("price_sp"+r_spare).style.display = 'none';
-				document.getElementById("price_sp"+r_spare).value = ""; 
-				
-				//remarks_sp1
-				document.getElementById("remarks_sp"+r_spare).style.display = 'none';
-				document.getElementById("remarks_sp"+r_spare).value = ""; 
-				
-				if(r_spare >= 1){
-					r_spare -= 1;
-				}
-
-				//count row
-				$('#count_sp').val(r_spare);
-			}	
+	if (mode === "add") {
+		if (r_spare >= 1 && (document.getElementById("pd_sp" + r_spare).value === ""
+			|| document.getElementById("sn_sp" + r_spare).value === ""
+			|| document.getElementById("amount_sp" + r_spare).value === ""
+			|| document.getElementById("price_sp" + r_spare).value === "")) {
+			alert("กรุณากรอกข้อมูลก่อนคลิกถัดไป");
+			return;
+		}
+		r_spare += 1;
+		if (r_spare >= 5) {
+			r_spare = 5;
+		}
+		stockAddClearRow(r_spare);
+		stockAddShowRow(r_spare, true);
+		$('#count_sp').val(r_spare);
+	} else {
+		if (r_spare <= 0) {
+			r_spare = 0;
+			return;
+		}
+		stockAddClearRow(r_spare);
+		stockAddShowRow(r_spare, false);
+		if (r_spare >= 1) {
+			r_spare -= 1;
+		}
+		$('#count_sp').val(r_spare);
+	}
 }
 
 </script>
 </head>
+<body class="inv-app stock-add">
+<?php require __DIR__ . '/title-h.php'; ?>
 
-<style>
-.content {
-  max-width: 1200px;
-  margin-top:100px;
-  font-size: 16px; 
-  color:#666666;
-}
+<main class="inv-main">
+  <header class="inv-page-header">
+    <h1 class="inv-page-title">เพิ่ม Stock</h1>
+    <p class="inv-page-desc">บันทึกของเข้าคลัง — กรอกวันที่ Vendor แล้วเพิ่มรายการ Product / Part</p>
+  </header>
 
-input[type="text"] {
-  font-size: 16px;
-  padding: 1px;
-  border: 1px solid #C0C0C0;
-  color:#FF9900;
-}
+  <form id="form_add_stock" name="form_add_stock" method="post" action="stock_save.php">
+    <input type="hidden" id="count_sp" name="count_sp" value="0" />
+    <input type="hidden" id="log_type" name="log_type" value="" />
 
-textarea{
-  font-size: 16px;
-  padding: 1px;
-  border: 1px solid #C0C0C0;
-}
+    <section class="inv-card stock-add-card">
+      <div class="inv-card__head"><i class="fa fa-truck"></i> หัวเอกสาร</div>
+      <div class="inv-card__body">
+        <div class="stock-add-head-grid">
+          <div class="inv-field">
+            <label for="log_date">วันที่</label>
+            <input class="inv-input" type="date" name="log_date" id="log_date" value="<?php echo $h(date('Y-m-d')); ?>" />
+          </div>
+          <div class="inv-field stock-add-vendor-field">
+            <label for="vendor_com">ร้าน Vendor</label>
+            <div class="inv-search-box search-box-user">
+              <input class="inv-input" type="text" autocomplete="off" placeholder="ค้นหาชื่อร้าน Vendor" name="vendor_com" id="vendor_com" required />
+              <div class="result inv-search-box__result"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
 
-select {
-  font-size: 16px;
-  padding: 1px;
-  border: 1px solid #C0C0C0;
-}
-table, td, th {
-	  		border: 0px solid black;
- }
- tr.spaceUnder>td {
-		padding-bottom: 1em;
- }
- tr.spaceUnder05>td {
-		padding-bottom: 0.5em;
- }
- tr.spaceTop>td {
-		padding-top: 1em;
- }
-
-.ex {
-  border-radius: 10px;
-  background:#FFCCCC;
-  padding: 5px 10px 5px 10px;
-   width:max-content;
-  /*border: 3px solid #BADA55; */
-}
-
-.ex2 {
-  border-radius: 10px;
-  background:#CCFFFF;
-  padding: 5px 10px 5px 10px;
-  width:max-content;
-  /*border: 3px solid #BADA55; */
-}
-
-.buttonBack {
-  background-color: #f44336; /* Back */
-  border: none;
-  color: white;
-  padding: 15px 32px;
-  text-align: center;
-  text-decoration: none;
-  display: inline-block;
-  font-size: 16px;
-}
-.buttonSave {
-  background-color: #4CAF50; /* Green */
-  border: none;
-  color: white;
-  padding: 15px 32px;
-  text-align: center;
-  text-decoration: none;
-  display: inline-block;
-  font-size: 16px;
-}
-
- /* The navigation bar */
-.navbar {
-  background-color:#E9E9E9;
-  overflow: hidden;
-  position: fixed; /* Set the navbar to fixed position */
-  top: 0; /* Position the navbar at the top of the page */
-  width: 100%; /* Full width */
-}
-</style>
-<center>
-<body>
-<div class="navbar"><?php require("title-h.php");?></div>
-<div class="content">
-<?php
-/*
-$arrayVD = array();
-$sqlVD = "SELECT vname FROM tbl_vendor WHERE vname LIKE '%".db_escape($connect, iconv( 'UTF-8', 'TIS-620', $_REQUEST["term"]))."%'";
-$exeVD = db_exec($connect, $sqlVD) or die("Error Query [" . $sqlVD . "]");
-while ($resultVD = db_fetch_array($exeVD)) {
-    array_push($arrayVD, $resultVD['vname']);
-}
-$arrLengthVD = count($arrayVD);
-*/
-?>
-<form id="form_add_stock" name="form_add_stock" method="post" action="stock_save.php">
-<table id="table1" width="100%" >
-
-  <tr  class="spaceUnder05">
-  	<td colspan="6" align="center" valign="center" ><b class="ex">เพิ่ม Stock</b></td>
-   </tr>
-   <tr  class="spaceUnder05">
-    <td  align="right" valign="center"><b class="ex">วันที่ : </b></td><td><input type="date" name="log_date" id="log_date" value="<?php echo date("Y-m-d"); ?>" style="width:auto;" /></td>
-	<td align="right" valign="center"><b class="ex">ร้าน Vendor : </b></td>
-    <td  valign="center"><p><div class="search-box-user"><input type="text" autocomplete="off" placeholder="Search vendor company" name="vendor_com" id="vendor_com" style="width:400px;"  required />
-	<div class="result"></div></div>
-    </p></td>
-	<td width="10%">&nbsp;  </td>
-<td  width="10%">&nbsp;  </td>
-   </tr>
-  <tr>
-    <td colspan="7"><hr /></td>
-   </tr>
-   <tr>
-    <td colspan="7"><p class="ex2"><b>รายการของเข้า  &nbsp; &nbsp; 
-	<a href='javascript:addSpare("del");'><i class="fa fa-minus-circle" aria-hidden="true" style="color:#FF0000"> Del </i></a> &nbsp; &nbsp;  
-	<a href='javascript:addSpare("add");'><i class="fa fa-plus-circle" aria-hidden="true" style="color:#339900"> Add </i></a></b></p></td>
-   </tr>
-  <tr> <td colspan="7">
-  <table id="table2" width="100%"  >
-    <td width="5%"><div align="center"><b>No.</b></div></td>
-    <td width="25%"><div align="left"><b>สินค้า/Product</b></div></td>
-    <td width="25%"><div align="left"><b>Part</b></div></td>
-    <td width="10%"><div align="center"><b>จำนวน</b></div></td>
-	<td width="10%"><div align="center"><b>ราคา</b></div></td>
-	<td width="10%"><div align="center"><b>หมายเหตุ</b></div></td>
-  </tr>
-   <tr>
-    <td width="5%" align="center">
-	  <p><label id="number_sp1" style="display:none;">1</label></p>
-	  <p><label id="number_sp2" style="display:none;">2</label></p>
-	  <p><label id="number_sp3" style="display:none;">3</label></p>
-	  <p><label id="number_sp4" style="display:none;">4</label></p>
-	  <p><label id="number_sp5" style="display:none;">5</label></p>
-	  
-	  </td>
-    <td width="25%">
-	
-	 <?php
-			$array = array();
-			$array2 = array();
-			$sqlSP =  "SELECT * FROM product";
-			$exeSP = db_exec($connect,$sqlSP) or die ("Error Query [".$sqlSP."]");
-			while($resultSP = db_fetch_array($exeSP)){ 
-				array_push($array, $resultSP['pd_name']);
-				array_push($array2, $resultSP['pd_id']);
-			}
-			$arrLength = count($array);
-	 ?>
-	 <p><select class="custom-select" id="pd_sp1" name="pd_sp1"  style="display:none" >
-	 			<option value="">--เลือก Product--</option>
-					  <?php for($a=0;$a <= $arrLength;$a++){?>
-							<option value="<?= $array2[$a]; ?>"><?= $array[$a]; ?></option>
-					 <?php } ?>
-	 			</select></p>
-	 <p><select class="custom-select" id="pd_sp2" name="pd_sp2"  style="display:none" >
-	 			<option value="">--เลือก Product--</option>
-					  <?php for($a=0;$a <= $arrLength;$a++){?>
-							<option value="<?= $array2[$a]; ?>"><?= $array[$a]; ?></option>
-					 <?php } ?>
-	 			</select></p>
-	 <p><select class="custom-select" id="pd_sp3" name="pd_sp3"  style="display:none" >
-	 			<option value="">--เลือก Product--</option>
-					  <?php for($a=0;$a <= $arrLength;$a++){?>
-							<option value="<?= $array2[$a]; ?>"><?= $array[$a]; ?></option>
-					 <?php } ?>
-	 			</select></p>
-	 <p><select class="custom-select" id="pd_sp4" name="pd_sp4"  style="display:none" >
-	 			<option value="">--เลือก Product--</option>
-					  <?php for($a=0;$a <= $arrLength;$a++){?>
-							<option value="<?= $array2[$a]; ?>"><?= $array[$a]; ?></option>
-					 <?php } ?>
-	 			</select></p>
-	 <p><select class="custom-select" id="pd_sp5" name="pd_sp5"  style="display:none" >
-	 			<option value="">--เลือก Product--</option>
-					  <?php for($a=0;$a <= $arrLength;$a++){?>
-							<option value="<?= $array2[$a]; ?>"><?= $array[$a]; ?></option>
-					 <?php } ?>
-	 			</select></p>
-	<?php db_close($connect); ?>	
-	
-	</td>
-    <td width="25%" align="left">
-	<!-- serial ����ͧ���ͧ -->
-	<p><select class="custom-select" name="sn_sp1" id="sn_sp1" style="display:none;  width:250px" ><option value="">--เลือก part--</option></select></p>
-	<p><select class="custom-select" name="sn_sp2" id="sn_sp2" style="display:none;  width:250px" ><option value="">--เลือก part--</option></select></p>
-	<p><select class="custom-select" name="sn_sp3" id="sn_sp3" style="display:none;  width:250px" ><option value="">--เลือก part--</option></select></p>
-	<p><select class="custom-select" name="sn_sp4" id="sn_sp4" style="display:none;  width:250px" ><option value="">--เลือก part--</option></select></p>
-	<p><select class="custom-select" name="sn_sp5" id="sn_sp5" style="display:none;  width:250px" ><option value="">--เลือก part--</option></select></p>
-	</td>
-    <td width="10%" align="center">
-	<p><input type="number" name="amount_sp1" id="amount_sp1" min=0 style="display:none;  width:100px" ></p>
-	<p><input type="number" name="amount_sp2" id="amount_sp2" min=0 style="display:none;  width:100px" ></p>
-	<p><input type="number" name="amount_sp3" id="amount_sp3" min=0 style="display:none;  width:100px" ></p>
-	<p><input type="number" name="amount_sp4" id="amount_sp4" min=0  style="display:none;  width:100px" ></p>
-	<p><input type="number" name="amount_sp5" id="amount_sp5" min=0  style="display:none;  width:100px" ></p>
-	</td>
-	 <td width="10%" align="center">
-	<p><input type="number" name="price_sp1" id="price_sp1" min=0  style="display:none;  width:100px" ></p>
-	<p><input type="number" name="price_sp2" id="price_sp2" min=0 style="display:none;  width:100px" ></p>
-	<p><input type="number" name="price_sp3" id="price_sp3" min=0  style="display:none;  width:100px" ></p>
-	<p><input type="number" name="price_sp4" id="price_sp4" min=0 style="display:none;  width:100px" ></p>
-	<p><input type="number" name="price_sp5" id="price_sp5" min=0 style="display:none;  width:100px" ></p>
-	</td>
-	<td width="25%" align="left">
-	<p><input type="text" name="remarks_sp1" id="remarks_sp1" min=0  style="display:none;  width:300px" ></p>
-	<p><input type="text" name="remarks_sp2" id="remarks_sp2" min=0 style="display:none;  width:300px" ></p>
-	<p><input type="text" name="remarks_sp3" id="remarks_sp3" min=0  style="display:none;  width:300px" ></p>
-	<p><input type="text" name="remarks_sp4" id="remarks_sp4" min=0 style="display:none;  width:300px" ></p>
-	<p><input type="text" name="remarks_sp5" id="remarks_sp5" min=0 style="display:none;  width:300px" ></p>
-	</td>
-
-  </td>
-  </table>
-  <tr>
-    <td colspan="6"><hr /></td>
-   </tr>
-  <tr>
-  <p><input type="hidden" id="count_sp" name="count_sp"></p>
-  <p><input type="hidden" id="log_type" name="log_type"></p>
-  	<td  align="right" valign="center"><b class="ex">ผู้บันทึก : </b></td><td>
-	<select class="custom-select" name="log_by" id="log_by" required>
-		<option value="">-- Select --</option>
-		<option value="NOI">NOI</option>
-		<option value="NI">NI</option>
-		<option value="PLAM">PLAM</option>
-		<option value="AO">AO</option>
-		<option value="MAX">Max</option>
-		<option value="DAY">DAY</option>
-		<option value="NUT">NUT</option>
-		<option value="BOY">BOY</option>
-
-    </select> 
-	</td>
-    <td  align="right" witdh="100%" valign="center" ><input type="button" value="Save" onclick="javascript:save_job();"></td>
-   </tr>
-
-</table>
-<br /><br />
-<div align="center"></div>
-<div align="center"></div>
-</form>
-</div>
+    <section class="inv-card stock-add-lines-card">
+      <div class="inv-card__head stock-add-lines-head">
+        <span><i class="fa fa-list"></i> รายการของเข้า</span>
+        <div class="stock-add-lines-toolbar">
+          <button type="button" class="inv-btn inv-btn--ghost stock-add-toolbar-btn" onclick="addSpare('del'); return false;"><i class="fa fa-minus-circle"></i> ลบแถว</button>
+          <button type="button" class="inv-btn inv-btn--primary stock-add-toolbar-btn" onclick="addSpare('add'); return false;"><i class="fa fa-plus-circle"></i> เพิ่มแถว</button>
+        </div>
+      </div>
+      <div class="inv-card__body inv-card__body--flush">
+        <div class="inv-table-wrap">
+          <table class="inv-table stock-add-table" id="table2">
+            <thead>
+              <tr>
+                <th class="inv-col-num">No.</th>
+                <th>Product</th>
+                <th>Part</th>
+                <th class="inv-col-num">จำนวน</th>
+                <th class="inv-col-num">ราคา</th>
+                <th>หมายเหตุ</th>
+              </tr>
+            </thead>
+            <tbody>
+              <?php for ($line = 1; $line <= 5; $line++) { ?>
+              <tr class="stock-add-line" id="stock_add_row_<?php echo (int) $line; ?>" style="display:none">
+                <td class="inv-col-num"><span id="number_sp<?php echo (int) $line; ?>"><?php echo (int) $line; ?></span></td>
+                <td>
+                  <select class="inv-select stock-add-line__control" id="pd_sp<?php echo (int) $line; ?>" name="pd_sp<?php echo (int) $line; ?>">
+                    <option value="">-- เลือก Product --</option>
+                    <?php for ($a = 0; $a < $productCount; $a++) { ?>
+                    <option value="<?php echo $h($productIds[$a]); ?>"><?php echo $h($productNames[$a]); ?></option>
+                    <?php } ?>
+                  </select>
+                </td>
+                <td>
+                  <select class="inv-select stock-add-line__control" name="sn_sp<?php echo (int) $line; ?>" id="sn_sp<?php echo (int) $line; ?>">
+                    <option value="">-- เลือก part --</option>
+                  </select>
+                </td>
+                <td class="inv-col-num">
+                  <input class="inv-input stock-add-line__qty" type="number" name="amount_sp<?php echo (int) $line; ?>" id="amount_sp<?php echo (int) $line; ?>" min="0" />
+                </td>
+                <td class="inv-col-num">
+                  <input class="inv-input stock-add-line__qty" type="number" name="price_sp<?php echo (int) $line; ?>" id="price_sp<?php echo (int) $line; ?>" min="0" step="any" />
+                </td>
+                <td>
+                  <input class="inv-input" type="text" name="remarks_sp<?php echo (int) $line; ?>" id="remarks_sp<?php echo (int) $line; ?>" autocomplete="off" />
+                </td>
+              </tr>
+              <?php } ?>
+            </tbody>
+          </table>
+        </div>
+        <p class="stock-add-lines-hint">กด «เพิ่มแถว» เพื่อกรอกรายการ (สูงสุด 5 แถว)</p>
+      </div>
+      <div class="inv-card__footer stock-add-footer">
+        <?php inventory_render_recorder_field('log_by', 'log_by', 'ผู้บันทึก', 'stock-add-footer__by'); ?>
+        <button type="button" class="inv-btn inv-btn--primary" onclick="save_job();"><i class="fa fa-save"></i> บันทึก</button>
+      </div>
+    </section>
+  </form>
+</main>
 </body>
-</center>
 </html>
 

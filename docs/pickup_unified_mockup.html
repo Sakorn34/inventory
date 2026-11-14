@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>เลือกแบบหน้าเบิกของรวม — mockup (สมจริง inv-app)</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.6.3/css/font-awesome.min.css" />
+  <link rel="stylesheet" href="../css/inventory-ui.css" />
+  <style>
+    .mock-shell { min-height: 100vh; }
+    .mock-tabs {
+      background: var(--inv-surface);
+      border-bottom: 1px solid var(--inv-border);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      padding: 0.75rem 1.25rem;
+      position: sticky;
+      top: 0;
+      z-index: 1100;
+    }
+    .mock-tabs button {
+      background: #f1f5f9;
+      border: 1px solid var(--inv-border);
+      border-radius: 8px;
+      color: var(--inv-text);
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 0.88rem;
+      font-weight: 600;
+      padding: 0.45rem 0.85rem;
+    }
+    .mock-tabs button.is-active {
+      background: var(--inv-primary);
+      border-color: var(--inv-primary-dark);
+      color: #fff;
+    }
+    .mock-tabs__hint {
+      align-self: center;
+      color: var(--inv-muted);
+      flex: 1 1 100%;
+      font-size: 0.85rem;
+      margin: 0.25rem 0 0;
+    }
+    .mock-panel { display: none; }
+    .mock-panel.is-visible { display: block; }
+    .mock-nav-placeholder {
+      background: linear-gradient(135deg, var(--inv-primary) 0%, var(--inv-primary-dark) 100%);
+      color: #fff;
+      font-size: 0.85rem;
+      padding: 0.65rem 1.25rem;
+      text-align: center;
+    }
+    .mock-lead {
+      background: #fffbeb;
+      border: 1px solid #fcd34d;
+      border-radius: 10px;
+      color: #92400e;
+      font-size: 0.92rem;
+      line-height: 1.5;
+      margin: 0 0 1rem;
+      padding: 0.85rem 1rem;
+    }
+    .mock-lead strong { color: #78350f; }
+    .mock-badge-rec {
+      background: #ecfdf5;
+      border: 1px solid #6ee7b7;
+      border-radius: 999px;
+      color: #047857;
+      display: inline-block;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      margin-left: 0.5rem;
+      padding: 0.2rem 0.55rem;
+      text-transform: uppercase;
+      vertical-align: middle;
+    }
+    .pickup-unified-mode {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin-bottom: 1rem;
+    }
+    .pickup-unified-mode button {
+      background: #fff;
+      border: 1px solid var(--inv-border);
+      border-radius: 999px;
+      color: var(--inv-text);
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 0.82rem;
+      font-weight: 600;
+      padding: 0.4rem 1rem;
+    }
+    .pickup-unified-mode button.is-active {
+      background: var(--inv-primary);
+      border-color: var(--inv-primary-dark);
+      color: #fff;
+    }
+    .pickup-unified-body { display: none; }
+    .pickup-unified-body.is-visible { display: block; }
+    .pickup-unified-set-bar {
+      align-items: end;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem 1.25rem;
+      margin-bottom: 0.75rem;
+    }
+    .pickup-unified-set-bar .inv-field { max-width: 14rem; min-width: 10rem; }
+    .pickup-unified-set-bar .inv-field--qty { max-width: 8rem; }
+    .pickup-unified-inner-tabs {
+      border-bottom: 1px solid var(--inv-border);
+      display: flex;
+      gap: 0.25rem;
+      margin-bottom: 1rem;
+    }
+    .pickup-unified-inner-tabs button {
+      background: transparent;
+      border: none;
+      border-bottom: 3px solid transparent;
+      color: var(--inv-muted);
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: -1px;
+      padding: 0.5rem 1rem;
+    }
+    .pickup-unified-inner-tabs button.is-active {
+      border-bottom-color: var(--inv-primary);
+      color: var(--inv-primary-dark);
+    }
+    .pickup-unified-hub {
+      display: grid;
+      gap: 1rem;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      margin-bottom: 1.25rem;
+    }
+    .pickup-unified-hub-card {
+      background: #fff;
+      border: 2px solid var(--inv-border);
+      border-radius: var(--inv-radius);
+      cursor: pointer;
+      padding: 1.25rem;
+      text-align: left;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      width: 100%;
+    }
+    .pickup-unified-hub-card:hover { border-color: var(--inv-primary); }
+    .pickup-unified-hub-card.is-active {
+      border-color: var(--inv-primary);
+      box-shadow: var(--inv-shadow-lg);
+    }
+    .pickup-unified-hub-card h3 {
+      color: var(--inv-primary-dark);
+      font-size: 1.05rem;
+      margin: 0 0 0.35rem;
+    }
+    .pickup-unified-hub-card p {
+      color: var(--inv-muted);
+      font-size: 0.88rem;
+      line-height: 1.45;
+      margin: 0;
+    }
+    .pickup-unified-unlock {
+      align-items: center;
+      background: #f0f9ff;
+      border: 1px dashed #7dd3fc;
+      border-radius: 8px;
+      color: #0369a1;
+      display: flex;
+      flex-wrap: wrap;
+      font-size: 0.88rem;
+      gap: 0.75rem;
+      justify-content: space-between;
+      margin-bottom: 0.75rem;
+      padding: 0.65rem 1rem;
+    }
+    .pickup-unified-unlock button {
+      background: #fff;
+      border: 1px solid #0ea5e9;
+      border-radius: 8px;
+      color: #0369a1;
+      cursor: pointer;
+      font-family: inherit;
+      font-weight: 600;
+      padding: 0.35rem 0.75rem;
+    }
+    .mock-split {
+      display: grid;
+      gap: 1rem;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    }
+    .mock-split__pane {
+      border: 1px dashed var(--inv-border);
+      border-radius: 10px;
+      padding: 0.75rem;
+    }
+    .mock-split__pane h3 {
+      font-size: 0.95rem;
+      margin: 0 0 0.5rem;
+    }
+    .mock-legacy-title {
+      background: #ffcccc;
+      border-radius: 10px;
+      display: inline-block;
+      font-size: 0.9rem;
+      padding: 4px 12px;
+    }
+    .inv-app.pickup-ma .pickup-ma-purpose-subhead { padding: 1rem 1.5rem 1.1rem; }
+    .inv-app.pickup-ma .pickup-ma-doc-card > .inv-card__body { padding-left: 1.5rem; padding-right: 1.5rem; }
+    .inv-app.pickup-ma .pickup-ma-save-row {
+      align-items: flex-end;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem 1rem;
+      justify-content: flex-end;
+      width: 100%;
+    }
+    .stock-ok { color: var(--inv-success); font-weight: 600; }
+    .stock-bad { color: var(--inv-danger); font-weight: 600; }
+    .inv-input--locked { background: #f8fafc; color: var(--inv-muted); }
+    .u1-tune-bar {
+      background: #f8fafc;
+      border: 1px solid var(--inv-border);
+      border-radius: 10px;
+      margin-bottom: 1rem;
+      padding: 0.75rem 1rem;
+    }
+    .u1-tune-bar__label {
+      color: var(--inv-muted);
+      display: block;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.5rem;
+      text-transform: uppercase;
+    }
+    .u1-tune-bar__row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+    }
+    .u1-tune-bar__row button {
+      background: #fff;
+      border: 1px solid var(--inv-border);
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 0.82rem;
+      font-weight: 600;
+      padding: 0.35rem 0.7rem;
+    }
+    .u1-tune-bar__row button.is-active {
+      background: var(--inv-accent);
+      border-color: #0f766e;
+      color: #fff;
+    }
+    .u1-mode-slot:empty { display: none; }
+    .u1-mode-slot--inline {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      justify-content: flex-end;
+      margin-left: auto;
+    }
+    .inv-card__head--split {
+      align-items: center;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+    .mock-checklist {
+      background: var(--inv-surface);
+      border: 1px solid var(--inv-border);
+      border-radius: var(--inv-radius);
+      font-size: 0.9rem;
+      line-height: 1.55;
+      margin-top: 1.25rem;
+      padding: 1rem 1.25rem;
+    }
+    .mock-checklist h2 {
+      font-size: 1rem;
+      margin: 0 0 0.5rem;
+    }
+    .mock-checklist ul { margin: 0; padding-left: 1.2rem; }
+    .mock-checklist li { margin: 0.35rem 0; }
+  </style>
+</head>
+<body class="inv-app pickup-ma mock-shell">
+  <div class="mock-tabs" role="tablist">
+    <button type="button" class="is-active" data-panel="u1">U1 · สลับโหมด (เลือกแล้ว)</button>
+    <button type="button" data-panel="u1-tune">U1 · ปรับตำแหน่ง/รายละเอียด</button>
+    <button type="button" data-panel="u2">U2 · แท็บ</button>
+    <button type="button" data-panel="u3">U3 · เลือกการ์ดก่อน</button>
+    <button type="button" data-panel="u4">U4 · เซต + ปลดแก้ไข</button>
+    <button type="button" data-panel="now">ตอนนี้ · แยก 2 เมนู</button>
+    <p class="mock-tabs__hint">เปิดไฟล์นี้ในเบราว์เซอร์จากโฟลเดอร์ docs/ — คลิกแท็บด้านบนเพื่อเปรียบเทียบ (ยังไม่ใช่ของจริงบน server)</p>
+  </div>
+  <div class="mock-nav-placeholder"><i class="fa fa-cubes"></i> Inventory — เมนูจริงจะเหลือลิงก์「เบิกของ」ลิงก์เดียว (ใน mock นี้ยังไม่เปลี่ยน)</div>
+
+  <!-- ─── U1 ─── -->
+  <div id="panel-u1" class="mock-panel is-visible">
+    <main class="inv-main">
+      <header class="inv-page-header">
+        <h1 class="inv-page-title">เบิกของ <span class="mock-badge-rec">แนะนำ U1</span></h1>
+        <p class="inv-page-desc">หน้าเดียว — สลับ「เป็นเซต / แยกรายการ」ด้วยปุ่ม pill ใต้หัวข้อ หัวเอกสารใช้ร่วมกัน</p>
+      </header>
+      <p class="mock-lead"><strong>สเปกที่เลือกแล้ว:</strong> U1 · ปุ่มสลับโหมด <strong>C ขวาบนการ์ดรายการ</strong> · เซต <strong>โหลดสูตรอัตโนมัติ</strong> · สลับโหมด <strong>ถามยืนยัน</strong></p>
+
+      <div id="u1-slot-title" class="u1-mode-slot"></div>
+      <div id="u1-slot-doc" class="u1-mode-slot"></div>
+      <div class="pickup-unified-mode" data-u1-mode id="u1-mode-switch">
+        <button type="button" class="is-active" data-mode="set"><i class="fa fa-cubes"></i> เบิกเป็นเซต</button>
+        <button type="button" data-mode="ma"><i class="fa fa-list"></i> เบิกแยกรายการ</button>
+      </div>
+
+      <section class="inv-card pickup-ma-doc-card pickup-ma-doc-card--h5">
+        <div class="inv-card__head"><i class="fa fa-file-text-o"></i> หัวเอกสาร (ใช้ร่วมทั้ง 2 โหมด)</div>
+        <div class="inv-card__subhead pickup-ma-purpose-subhead">
+          <p class="pickup-ma-purpose-label pickup-ma-purpose-label--subhead">วัตถุประสงค์</p>
+          <div class="pickup-ma-purpose-segmented">
+            <label class="pickup-ma-segment pickup-ma-segment--pill"><input type="radio" checked /><span>เบิกซ่อมลูกค้า</span></label>
+            <label class="pickup-ma-segment pickup-ma-segment--pill"><input type="radio" /><span>เบิกเสียระหว่างผลิต</span></label>
+            <label class="pickup-ma-segment pickup-ma-segment--pill"><input type="radio" /><span>เบิกเสียระหว่างขนส่ง</span></label>
+            <label class="pickup-ma-segment pickup-ma-segment--pill"><input type="radio" /><span>เบิกผลิต</span></label>
+            <label class="pickup-ma-segment pickup-ma-segment--pill"><input type="radio" /><span>เบิกตาม PO</span></label>
+            <label class="pickup-ma-segment pickup-ma-segment--pill"><input type="radio" /><span>เบิกอื่นๆ</span></label>
+          </div>
+        </div>
+        <div class="inv-card__body pickup-ma-doc-card__body">
+          <div class="pickup-ma-doc-fields pickup-ma-doc-fields--h4">
+            <div class="inv-field"><label>วันที่เบิก</label><input class="inv-input pickup-ma-doc-input" type="date" value="2026-11-03" /></div>
+            <div class="inv-field"><label>เลขที่ใบงาน</label><input class="inv-input pickup-ma-doc-input" type="text" value="69-0588" /></div>
+            <div class="inv-field"><label>หมายเหตุ</label><input class="inv-input pickup-ma-doc-input" type="text" value="Thai DNT แหลมฉบัง" /></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="inv-card" id="u1-lines-card">
+        <div class="inv-card__head inv-card__head--split" id="u1-lines-head">
+          <span><i class="fa fa-list"></i> <span data-u1-lines-title>รายการเบิก — โหมด「เป็นเซต」</span></span>
+          <div id="u1-slot-lines" class="u1-mode-slot u1-mode-slot--inline"></div>
+        </div>
+        <div class="inv-card__body pickup-unified-body is-visible" data-u1-body="set">
+          <div class="pickup-unified-set-bar">
+            <div class="inv-field"><label>Product (ชุด)</label><select class="inv-select"><option>bitVisitor Plus</option></select></div>
+            <div class="inv-field inv-field--qty"><label>จำนวนชุด</label><input class="inv-input" type="number" value="2" /></div>
+            <span style="align-self:center;color:var(--inv-muted);font-size:0.85rem"><i class="fa fa-magic"></i> โหลดสูตรอัตโนมัติเมื่อเลือก Product / จำนวนชุด</span>
+          </div>
+          <div class="inv-table-wrap">
+            <table class="inv-table">
+              <thead><tr><th class="inv-col-num">#</th><th>Part</th><th class="inv-col-num">ขั้นต่ำสั่ง</th><th class="inv-col-num">Stock</th><th class="inv-col-num">จำนวนเบิก</th><th>สถานะ</th></tr></thead>
+              <tbody>
+                <tr><td class="inv-col-num">1</td><td>Board Main ASSY</td><td class="inv-col-num">0</td><td class="inv-col-num">12</td><td class="inv-col-num">2</td><td class="stock-ok">OK</td></tr>
+                <tr><td class="inv-col-num">2</td><td>Power cable</td><td class="inv-col-num">5</td><td class="inv-col-num">3</td><td class="inv-col-num">2</td><td class="stock-bad">Stock ไม่พอ</td></tr>
+                <tr><td class="inv-col-num">3</td><td>LCD Panel</td><td class="inv-col-num">0</td><td class="inv-col-num">6</td><td class="inv-col-num">2</td><td class="stock-ok">OK</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="inv-card__body pickup-unified-body" data-u1-body="ma">
+          <p style="color:var(--inv-muted);font-size:0.88rem;margin:0 0 0.75rem;">โหมดแยกรายการ — เลือก Product/Part เองทีละแถว (เหมือน pickup_ma วันนี้)</p>
+          <div class="inv-table-wrap">
+            <table class="inv-table">
+              <thead><tr><th class="inv-col-num">#</th><th>Product</th><th>Part</th><th class="inv-col-num">จำนวน</th><th class="inv-col-num">Stock</th></tr></thead>
+              <tbody>
+                <tr><td class="inv-col-num">1</td><td><select class="inv-select"><option>bitScan</option></select></td><td><select class="inv-select"><option>Cable USB</option></select></td><td class="inv-col-num"><input class="inv-input" type="number" value="2" style="max-width:5rem;margin:0 auto" /></td><td class="inv-col-num">8</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p style="margin-top:0.75rem"><a href="#"><i class="fa fa-plus-circle"></i> Add</a> · <a href="#" style="color:var(--inv-danger)"><i class="fa fa-minus-circle"></i> Del</a></p>
+        </div>
+        <div class="inv-card__footer">
+          <div class="pickup-ma-save-row">
+            <div class="inv-field"><label>ผู้บันทึก</label><select class="inv-select"><option>Ken</option></select></div>
+            <button type="button" class="inv-btn inv-btn--primary">Save</button>
+          </div>
+        </div>
+      </section>
+      <div class="mock-checklist">
+        <h2><i class="fa fa-check-circle"></i> สรุปการออกแบบ U1 (รอบนี้)</h2>
+        <ul>
+          <li><strong>ตำแหน่งสลับโหมด:</strong> C · ขวาบนการ์ด「รายการเบิก」</li>
+          <li><strong>โหมดเซต:</strong> โหลดรายการจากสูตรอัตโนมัติเมื่อเลือก Product / เปลี่ยนจำนวนชุด</li>
+          <li><strong>สลับโหมด:</strong> ถามยืนยันก่อนล้างตาราง (หัวเอกสารคงเดิม)</li>
+          <li><strong>โครงการ์ด:</strong> หัวเอกสาร 1 การ์ด + รายการ 1 การ์ด + footer Save (ยังเปิดปรับได้)</li>
+        </ul>
+      </div>
+    </main>
+  </div>
+
+  <!-- ─── U1 ปรับแต่ง ─── -->
+  <div id="panel-u1-tune" class="mock-panel">
+    <main class="inv-main">
+      <header class="inv-page-header">
+        <h1 class="inv-page-title">U1 — ลองตำแหน่งและรายละเอียด</h1>
+        <p class="inv-page-desc">กดตัวเลือกด้านล่าง แล้วเลื่อนลงดูหน้าตาเดียวกับแท็บ U1 (ใช้องค์ประกอบชุดเดียวกัน)</p>
+      </header>
+      <div class="u1-tune-bar">
+        <span class="u1-tune-bar__label">1) วางปุ่ม「เป็นเซต / แยกรายการ」ที่ไหน</span>
+        <div class="u1-tune-bar__row" data-u1-placement>
+          <button type="button" data-place="title">A · ใต้หัวข้อหน้า</button>
+          <button type="button" data-place="doc">B · ในการ์ดหัวเอกสาร (ใต้ชื่อการ์ด)</button>
+          <button type="button" class="is-active" data-place="lines">C · ขวาบนการ์ดรายการ (เลือกแล้ว)</button>
+        </div>
+      </div>
+      <div class="u1-tune-bar">
+        <span class="u1-tune-bar__label">2) โหมดเซต — แถว Product</span>
+        <div class="u1-tune-bar__row" data-u1-setbar>
+          <button type="button" class="is-active" data-setbar="row">แถวเดียว: Product + จำนวนชุด + โหลดสูตร</button>
+          <button type="button" data-setbar="compact">กะทัดรัด: Product กว้าง + จำนวนชุด · โหลดอัตโนมัติเมื่อเปลี่ยน Product</button>
+        </div>
+      </div>
+      <p class="mock-lead" style="margin-top:0"><strong>เคล็ด:</strong> เปิดแท็บนี้แล้วสลับ A/B/C — ปุ่มสลับโหมดจะย้ายตำแหน่งบนแท็บ U1 ด้วย (สลับไปดูที่แท็บ U1 ได้)</p>
+      <p style="color:var(--inv-muted);font-size:0.9rem">การย้าย A/B/C ใช้ร่วมกับแท็บ「U1 · สลับโหมด」 — กด A/B/C แล้วกลับไปแท็บ U1 จะเห็นตำแหน่งใหม่</p>
+    </main>
+  </div>
+
+  <!-- ─── U2 ─── -->
+  <div id="panel-u2" class="mock-panel">
+    <main class="inv-main">
+      <header class="inv-page-header">
+        <h1 class="inv-page-title">เบิกของ — แบบ U2 (แท็บ)</h1>
+        <p class="inv-page-desc">หัวเอกสารอยู่ด้านบน · ด้านล่างมีแท็บ「ชุดจาก Product」กับ「เลือกเอง」</p>
+      </header>
+      <p class="mock-lead"><strong>ต่างจาก U1:</strong> สลับด้วย<strong>แท็บ</strong>แนวนอน ไม่ใช่ pill — เหมาะถ้าทีมชอบแยก “สองโหมด” ชัดเป็นสองแผ่น</p>
+
+      <section class="inv-card pickup-ma-doc-card pickup-ma-doc-card--h5">
+        <div class="inv-card__head"><i class="fa fa-file-text-o"></i> หัวเอกสาร</div>
+        <div class="inv-card__subhead pickup-ma-purpose-subhead">
+          <div class="pickup-ma-purpose-segmented">
+            <label class="pickup-ma-segment pickup-ma-segment--pill"><input type="radio" checked /><span>เบิกผลิต</span></label>
+            <label class="pickup-ma-segment pickup-ma-segment--pill"><input type="radio" /><span>เบิกตาม PO</span></label>
+            <label class="pickup-ma-segment pickup-ma-segment--pill"><input type="radio" /><span>เบิกอื่นๆ</span></label>
+          </div>
+        </div>
+        <div class="inv-card__body pickup-ma-doc-card__body">
+          <div class="pickup-ma-doc-fields pickup-ma-doc-fields--h4">
+            <div class="inv-field"><label>วันที่เบิก</label><input class="inv-input" type="date" value="2026-11-03" /></div>
+            <div class="inv-field"><label>หมายเหตุ</label><input class="inv-input" type="text" /></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="inv-card">
+        <div class="inv-card__body" style="padding-top:1rem">
+          <div class="pickup-unified-inner-tabs" data-u2-tabs>
+            <button type="button" class="is-active" data-tab="set">ชุดจาก Product (เซต)</button>
+            <button type="button" data-tab="ma">เลือกรายการเอง</button>
+          </div>
+          <div data-u2-panel="set">
+            <div class="pickup-unified-set-bar">
+              <div class="inv-field"><label>Product</label><select class="inv-select"><option>bitVisitor M</option></select></div>
+              <div class="inv-field inv-field--qty"><label>จำนวนชุด</label><input class="inv-input" type="number" value="1" /></div>
+            </div>
+            <div class="inv-table-wrap"><table class="inv-table"><thead><tr><th>#</th><th>Part</th><th>เบิก</th><th>Stock</th></tr></thead><tbody><tr><td>1</td><td>Display module</td><td>1</td><td>5</td></tr></tbody></table></div>
+          </div>
+          <div data-u2-panel="ma" hidden>
+            <div class="inv-table-wrap"><table class="inv-table"><thead><tr><th>#</th><th>Product</th><th>Part</th><th>จำนวน</th></tr></thead><tbody><tr><td>1</td><td><select class="inv-select"><option>printer</option></select></td><td><select class="inv-select"><option>Roll paper</option></select></td><td><input class="inv-input" type="number" value="3" style="width:4rem" /></td></tr></tbody></table></div>
+          </div>
+        </div>
+        <div class="inv-card__footer"><div class="pickup-ma-save-row"><div class="inv-field"><label>ผู้บันทึก</label><select class="inv-select"><option>ICE</option></select></div><button class="inv-btn inv-btn--primary">Save</button></div></div>
+      </section>
+    </main>
+  </div>
+
+  <!-- ─── U3 ─── -->
+  <div id="panel-u3" class="mock-panel">
+    <main class="inv-main">
+      <header class="inv-page-header">
+        <h1 class="inv-page-title">เบิกของ — แบบ U3 (เลือกการ์ดก่อน)</h1>
+        <p class="inv-page-desc">เข้าหน้าแล้วเลือกวิธีจากการ์ด 2 ใบ จากนั้นค่อยกรอกฟอร์มด้านล่าง</p>
+      </header>
+      <p class="mock-lead"><strong>ข้อดี:</strong> อธิบายง่ายสำหรับคนใหม่ · <strong>ข้อเสีย:</strong> คลิกมากขึ้น 1 ขั้น — ใช้ถี่อาจช้ากว่า U1</p>
+
+      <div class="pickup-unified-hub" data-u3-hub>
+        <button type="button" class="pickup-unified-hub-card is-active" data-hub="set">
+          <h3><i class="fa fa-cubes"></i> เบิกเป็นเซต</h3>
+          <p>เลือก Product แล้วดึงรายการ Part ตามสูตรผลิต — เหมาะเบิกตาม BOM</p>
+        </button>
+        <button type="button" class="pickup-unified-hub-card" data-hub="ma">
+          <h3><i class="fa fa-list"></i> เบิกแยกรายการ</h3>
+          <p>เพิ่ม Product + Part เองทีละบรรทัด — เหมาะเบิกไม่ตรงชุด</p>
+        </button>
+      </div>
+
+      <section class="inv-card" data-u3-detail="set">
+        <div class="inv-card__head">รายละเอียด — เซต</div>
+        <div class="inv-card__body">
+          <div class="pickup-unified-set-bar">
+            <div class="inv-field"><label>Product</label><select class="inv-select"><option>bitStamp-F</option></select></div>
+            <div class="inv-field"><label>จำนวนชุด</label><input class="inv-input" type="number" value="4" /></div>
+          </div>
+          <div class="inv-table-wrap"><table class="inv-table"><thead><tr><th>Part</th><th>เบิก</th></tr></thead><tbody><tr><td>Stamp head</td><td>4</td></tr><tr><td>Ink roll</td><td>4</td></tr></tbody></table></div>
+        </div>
+      </section>
+      <section class="inv-card" data-u3-detail="ma" hidden>
+        <div class="inv-card__head">รายละเอียด — แยกรายการ</div>
+        <div class="inv-card__body"><p class="inv-page-desc">ตาราง Add/Del แบบ pickup_ma …</p></div>
+      </section>
+    </main>
+  </div>
+
+  <!-- ─── U4 ─── -->
+  <div id="panel-u4" class="mock-panel">
+    <main class="inv-main">
+      <header class="inv-page-header">
+        <h1 class="inv-page-title">เบิกของ — แบบ U4 (เซต + ปลดแก้ไข)</h1>
+        <p class="inv-page-desc">เริ่มจากสูตร แล้วกด「ปรับรายการเอง」ถ้าต้องแก้จำนวนหรือ part</p>
+      </header>
+      <p class="mock-lead"><strong>ใช้เมื่อ:</strong> ส่วนใหญ่เบิกตามชุด แต่บางครั้งต้องแก้ไม่กี่บรรทัด — ซับซ้อนกว่า U1 เล็กน้อย (phase 2)</p>
+
+      <section class="inv-card pickup-ma-doc-card pickup-ma-doc-card--h5">
+        <div class="inv-card__head"><i class="fa fa-file-text-o"></i> หัวเอกสาร</div>
+        <div class="inv-card__body"><div class="pickup-ma-doc-fields pickup-ma-doc-fields--h4"><div class="inv-field"><label>วันที่</label><input class="inv-input" type="date" value="2026-11-03" /></div></div></div>
+      </section>
+      <section class="inv-card">
+        <div class="inv-card__head">รายการจากสูตร (ล็อก)</div>
+        <div class="inv-card__body">
+          <div class="pickup-unified-unlock">
+            <span>โหลดจาก <strong>bitVisitor Plus</strong> × 2 ชุด — จำนวนเบิกคำนวณจากสูตร</span>
+            <button type="button"><i class="fa fa-unlock-alt"></i> ปรับรายการเอง</button>
+          </div>
+          <div class="inv-table-wrap">
+            <table class="inv-table">
+              <thead><tr><th>Part</th><th>เบิก</th><th>Stock</th></tr></thead>
+              <tbody>
+                <tr><td>Board Main</td><td><input class="inv-input inv-input--locked" type="number" value="2" readonly /></td><td>12</td></tr>
+                <tr><td>USB board</td><td><input class="inv-input" type="number" value="2" /></td><td>8</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p style="font-size:0.85rem;color:var(--inv-muted);margin:0.75rem 0 0">หลังกดปลดล็อก → แถวแก้ได้ + Add/Del แบบ MA</p>
+        </div>
+        <div class="inv-card__footer"><div class="pickup-ma-save-row"><div class="inv-field"><label>ผู้บันทึก</label><select class="inv-select"><option>TOM</option></select></div><button class="inv-btn inv-btn--primary">Save</button></div></div>
+      </section>
+    </main>
+  </div>
+
+  <!-- ─── ตอนนี้ ─── -->
+  <div id="panel-now" class="mock-panel">
+    <main class="inv-main">
+      <header class="inv-page-header">
+        <h1 class="inv-page-title">ระบบตอนนี้ (แยก 2 เมนู)</h1>
+        <p class="inv-page-desc">อ้างอิง production ปัจจุบัน — ยังไม่รวมหน้า</p>
+      </header>
+      <div class="mock-split">
+        <div class="mock-split__pane">
+          <h3><span class="mock-legacy-title">เบิกของเป็นเซต</span></h3>
+          <p style="font-size:0.85rem;color:var(--inv-muted)">production_pre_pickup.php · ตารางเก่า · เลือก Product + จำนวนชุด</p>
+          <div style="margin-top:0.5rem;font-size:0.8rem;background:#f8fafc;padding:0.5rem;border-radius:6px">วัตถุประสงค์ radio แถวเดียว · ไม่มี inv-card H5</div>
+        </div>
+        <div class="mock-split__pane">
+          <h3><i class="fa fa-check-circle" style="color:var(--inv-success)"></i> เบิกแยกรายการ</h3>
+          <p style="font-size:0.85rem;color:var(--inv-muted)">pickup_ma.php · inv-app H5 · Add/Del รายการ</p>
+          <div style="margin-top:0.5rem;font-size:0.8rem;background:#ecfdf5;padding:0.5rem;border-radius:6px">หัวเอกสาร + pill · ตาราง inv-select</div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    (function () {
+      var tabs = document.querySelectorAll(".mock-tabs button[data-panel]");
+      tabs.forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          var id = btn.getAttribute("data-panel");
+          tabs.forEach(function (b) { b.classList.toggle("is-active", b === btn); });
+          document.querySelectorAll(".mock-panel").forEach(function (p) {
+            p.classList.toggle("is-visible", p.id === "panel-" + id);
+          });
+        });
+      });
+
+      function u1GetModeSwitch() {
+        return document.querySelector("[data-u1-mode]");
+      }
+      function u1BindModeSwitch() {
+        var u1Mode = u1GetModeSwitch();
+        if (!u1Mode || u1Mode._bound) return;
+        u1Mode._bound = true;
+        u1Mode.addEventListener("click", function (e) {
+          var t = e.target.closest("button[data-mode]");
+          if (!t) return;
+          if (!t.classList.contains("is-active")) {
+            var ok = window.confirm("สลับโหมดจะล้างรายการในตาราง (หัวเอกสารยังอยู่) — ต้องการสลับหรือไม่?");
+            if (!ok) return;
+          }
+          u1Mode.querySelectorAll("button").forEach(function (b) { b.classList.toggle("is-active", b === t); });
+          var mode = t.getAttribute("data-mode");
+          document.querySelectorAll("[data-u1-body]").forEach(function (el) {
+            el.classList.toggle("is-visible", el.getAttribute("data-u1-body") === mode);
+          });
+          var titleEl = document.querySelector("[data-u1-lines-title]");
+          if (titleEl) titleEl.textContent = "รายการเบิก — โหมด「" + (mode === "set" ? "เป็นเซต" : "แยกรายการ") + "」";
+        });
+      }
+      function u1MoveModeSwitch(place) {
+        var sw = u1GetModeSwitch();
+        if (!sw) return;
+        var slotTitle = document.getElementById("u1-slot-title");
+        var slotDoc = document.getElementById("u1-slot-doc");
+        var slotLines = document.getElementById("u1-slot-lines");
+        var linesHead = document.getElementById("u1-lines-head");
+        if (slotTitle) slotTitle.innerHTML = "";
+        if (slotDoc) slotDoc.innerHTML = "";
+        if (slotLines) slotLines.innerHTML = "";
+        if (place === "doc" && slotDoc) {
+          slotDoc.appendChild(sw);
+        } else if (place === "lines" && slotLines) {
+          slotLines.appendChild(sw);
+        } else if (slotTitle) {
+          slotTitle.appendChild(sw);
+        }
+        if (linesHead && slotLines && !linesHead.contains(slotLines)) {
+          linesHead.appendChild(slotLines);
+        }
+        u1BindModeSwitch();
+      }
+      u1MoveModeSwitch("lines");
+      u1BindModeSwitch();
+
+      var placement = document.querySelector("[data-u1-placement]");
+      if (placement) {
+        placement.addEventListener("click", function (e) {
+          var t = e.target.closest("button[data-place]");
+          if (!t) return;
+          placement.querySelectorAll("button").forEach(function (b) { b.classList.toggle("is-active", b === t); });
+          u1MoveModeSwitch(t.getAttribute("data-place"));
+        });
+      }
+
+      var setbar = document.querySelector("[data-u1-setbar]");
+      if (setbar) {
+        setbar.addEventListener("click", function (e) {
+          var t = e.target.closest("button[data-setbar]");
+          if (!t) return;
+          setbar.querySelectorAll("button").forEach(function (b) { b.classList.toggle("is-active", b === t); });
+          var bar = document.querySelector("#panel-u1 .pickup-unified-set-bar");
+          if (!bar) return;
+          var btn = bar.querySelector(".inv-btn--ghost");
+          if (t.getAttribute("data-setbar") === "compact") {
+            if (btn) btn.style.display = "none";
+            bar.querySelector(".inv-field--qty label").textContent = "จำนวนชุด (โหลดสูตรอัตโนมัติ)";
+          } else {
+            if (btn) btn.style.display = "";
+            bar.querySelector(".inv-field--qty label").textContent = "จำนวนชุด";
+          }
+        });
+      }
+
+      var u2 = document.querySelector("[data-u2-tabs]");
+      if (u2) {
+        u2.addEventListener("click", function (e) {
+          var t = e.target.closest("button[data-tab]");
+          if (!t) return;
+          u2.querySelectorAll("button").forEach(function (b) { b.classList.toggle("is-active", b === t); });
+          var tab = t.getAttribute("data-tab");
+          document.querySelectorAll("[data-u2-panel]").forEach(function (p) {
+            p.hidden = p.getAttribute("data-u2-panel") !== tab;
+          });
+        });
+      }
+
+      var u3 = document.querySelector("[data-u3-hub]");
+      if (u3) {
+        u3.addEventListener("click", function (e) {
+          var c = e.target.closest("[data-hub]");
+          if (!c) return;
+          u3.querySelectorAll(".pickup-unified-hub-card").forEach(function (x) { x.classList.toggle("is-active", x === c); });
+          var hub = c.getAttribute("data-hub");
+          document.querySelectorAll("[data-u3-detail]").forEach(function (d) {
+            d.hidden = d.getAttribute("data-u3-detail") !== hub;
+          });
+        });
+      }
+    })();
+  </script>
+</body>
+</html>

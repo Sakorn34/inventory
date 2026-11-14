@@ -1,0 +1,1256 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>เลือก layout หัวเอกสาร — pickup_ma (mockup)</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.6.3/css/font-awesome.min.css">
+  <link rel="stylesheet" href="../css/inventory-ui.css" />
+  <style>
+    .mock-shell {
+      min-height: 100vh;
+    }
+    .mock-tabs {
+      background: var(--inv-surface);
+      border-bottom: 1px solid var(--inv-border);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      padding: 0.75rem 1.25rem;
+      position: sticky;
+      top: 0;
+      z-index: 1100;
+    }
+    .mock-tabs button {
+      background: #f1f5f9;
+      border: 1px solid var(--inv-border);
+      border-radius: 8px;
+      color: var(--inv-text);
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 600;
+      padding: 0.45rem 0.85rem;
+    }
+    .mock-tabs button.is-active {
+      background: var(--inv-primary);
+      border-color: var(--inv-primary-dark);
+      color: #fff;
+    }
+    .mock-tabs .mock-tabs__hint {
+      align-self: center;
+      color: var(--inv-muted);
+      font-size: 0.85rem;
+      margin-left: auto;
+    }
+    .mock-panel {
+      display: none;
+    }
+    .mock-panel.is-visible {
+      display: block;
+    }
+    .mock-nav-placeholder {
+      background: linear-gradient(135deg, var(--inv-primary) 0%, var(--inv-primary-dark) 100%);
+      color: #fff;
+      font-size: 0.85rem;
+      padding: 0.65rem 1.25rem;
+      text-align: center;
+    }
+    /* ชุด set สีเขียว (เหมือนของจริง) */
+    .pickup-ma .select-container {
+      align-items: center;
+      background-color: rgb(214, 241, 239);
+      border-radius: 10px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+      display: inline-flex;
+      gap: 12px;
+      padding: 8px 12px;
+    }
+    .pickup-ma .select-container .label {
+      color: rgb(4, 100, 89);
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .pickup-ma .select-container select {
+      background-color: #e8f5e9;
+      border: 2px solid #4caf50;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.95rem;
+      min-width: 160px;
+      padding: 6px 8px;
+    }
+    .pickup-ma .set-row-center {
+      display: flex;
+      justify-content: center;
+    }
+    .pickup-ma .pickup-ma-doc-card__body {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+    .pickup-ma .pickup-ma-doc-filters__row {
+      align-items: end;
+      display: grid;
+      gap: 1rem 1.5rem;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      width: 100%;
+    }
+    .pickup-ma .pickup-ma-doc-filters__row .pickup-ma-doc-input {
+      height: 2.65rem;
+      min-height: 2.65rem;
+      width: 100%;
+    }
+    .pickup-ma .pickup-ma-purpose-grid {
+      gap: 0.75rem 2rem;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      width: 100%;
+    }
+    .pickup-ma .purpose-grid {
+      display: grid;
+      gap: 0.65rem 1.25rem;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      max-width: 640px;
+    }
+    .pickup-ma .purpose-grid label {
+      align-items: center;
+      cursor: pointer;
+      display: flex;
+      font-size: 0.95rem;
+      gap: 0.5rem;
+    }
+    .pickup-ma .line-toolbar {
+      align-items: center;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      justify-content: space-between;
+    }
+    .pickup-ma .line-toolbar a {
+      color: var(--inv-accent);
+      font-weight: 600;
+      text-decoration: none;
+    }
+    .pickup-ma .line-toolbar a.del { color: var(--inv-danger); }
+    .pickup-ma .save-row {
+      align-items: center;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      justify-content: space-between;
+    }
+    .pickup-ma .save-row .inv-field {
+      margin: 0;
+      max-width: 220px;
+    }
+    .pickup-ma .mock-save-btn {
+      background: linear-gradient(180deg, var(--inv-accent) 0%, #0f766e 100%);
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 1rem;
+      font-weight: 700;
+      min-width: 120px;
+      padding: 0.65rem 1.5rem;
+    }
+    .pickup-ma .layout-b-grid {
+      align-items: start;
+      display: grid;
+      gap: 1.25rem;
+      grid-template-columns: minmax(280px, 360px) 1fr;
+    }
+    @media (max-width: 960px) {
+      .pickup-ma .layout-b-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    /* แบบปัจจุบัน — จำลอง table layout โล่ง */
+    .mock-current-table {
+      width: 100%;
+    }
+    .mock-current-table td:first-child {
+      text-align: right;
+      vertical-align: top;
+      white-space: nowrap;
+      width: 140px;
+    }
+    .mock-current-table td {
+      padding: 0.5rem 0.75rem;
+    }
+    .mock-current-table .purpose-inline label {
+      display: inline-block;
+      margin-right: 1rem;
+      white-space: nowrap;
+    }
+    .mock-badge-current {
+      background: #fef3c7;
+      border: 1px solid #fcd34d;
+      border-radius: 8px;
+      color: #92400e;
+      display: inline-block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      padding: 0.35rem 0.75rem;
+    }
+    .mock-badge-live {
+      background: #ecfdf5;
+      border: 1px solid #6ee7b7;
+      border-radius: 8px;
+      color: #065f46;
+      display: inline-block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      padding: 0.35rem 0.75rem;
+    }
+    .mock-badge-pick {
+      background: #eff6ff;
+      border: 1px solid #93c5fd;
+      border-radius: 8px;
+      color: #1e40af;
+      display: inline-block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      padding: 0.35rem 0.75rem;
+    }
+    .pickup-ma-purpose-label {
+      color: var(--inv-muted);
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      margin: 1rem 0 0.5rem;
+      text-transform: uppercase;
+    }
+    .header-h1__top {
+      display: grid;
+      gap: 1rem 1.5rem;
+      grid-template-columns: 11.5rem 17rem;
+      max-width: 100%;
+    }
+    .header-h2-row {
+      align-items: end;
+      display: grid;
+      gap: 1rem 1.5rem;
+      grid-template-columns: 11.5rem 17rem minmax(0, 1fr);
+      max-width: 100%;
+    }
+    .header-h2-row .inv-input,
+    .header-h2-row textarea.inv-input {
+      height: 2.65rem;
+      min-height: 2.65rem;
+      resize: vertical;
+      width: 100%;
+    }
+    .header-h3-fields {
+      display: grid;
+      gap: 1rem 1.5rem;
+      grid-template-columns: 11.5rem 17rem;
+    }
+    .header-h3-remarks {
+      margin-top: 0.25rem;
+    }
+    .inv-card__subhead {
+      background: #f1f5f9;
+      border-bottom: 1px solid var(--inv-border);
+      padding: 0.75rem 1.25rem;
+    }
+    .segmented-purpose {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+    }
+    .segmented-purpose span {
+      background: #fff;
+      border: 1px solid var(--inv-border);
+      border-radius: 6px;
+      color: var(--inv-text);
+      cursor: default;
+      font-size: 0.82rem;
+      padding: 0.35rem 0.65rem;
+      white-space: nowrap;
+    }
+    .segmented-purpose span.is-on {
+      background: var(--inv-primary);
+      border-color: var(--inv-primary-dark);
+      color: #fff;
+      font-weight: 600;
+    }
+    .header-h4-fields {
+      display: grid;
+      gap: 1rem 1.5rem;
+      grid-template-columns: 11.5rem 17rem minmax(0, 1fr);
+      max-width: 100%;
+    }
+    .header-h4-fields .inv-input,
+    .header-h4-fields textarea.inv-input {
+      height: 2.65rem;
+      min-height: 2.65rem;
+      width: 100%;
+    }
+    @media (max-width: 900px) {
+      .header-h1__top,
+      .header-h2-row,
+      .header-h3-fields,
+      .header-h4-fields {
+        grid-template-columns: 1fr;
+      }
+    }
+    .stock-pill {
+      background: var(--inv-success-bg);
+      border-radius: 6px;
+      color: var(--inv-success);
+      display: inline-block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 0.2rem 0.5rem;
+    }
+    .mock-tabs__group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+    }
+    .mock-tabs__label {
+      align-self: center;
+      color: var(--inv-muted);
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      margin-right: 0.25rem;
+      text-transform: uppercase;
+    }
+    .set-in-filter-row {
+      align-items: flex-end;
+      border-bottom: 1px solid var(--inv-border);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      justify-content: space-between;
+      margin-bottom: 1.25rem;
+      padding-bottom: 1.25rem;
+    }
+    .purpose-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      max-width: 100%;
+    }
+    .purpose-chip {
+      background: #f1f5f9;
+      border: 1px solid var(--inv-border);
+      border-radius: 999px;
+      cursor: default;
+      font-size: 0.88rem;
+      padding: 0.4rem 0.9rem;
+    }
+    .purpose-chip.is-on {
+      background: #ecfdf5;
+      border-color: var(--inv-accent);
+      color: #0f766e;
+      font-weight: 600;
+    }
+    .mock-table-scroll {
+      max-height: 280px;
+      overflow: auto;
+    }
+    .mock-sticky-save {
+      background: var(--inv-surface);
+      border-top: 1px solid var(--inv-border);
+      bottom: 0;
+      box-shadow: 0 -4px 16px rgba(15, 23, 42, 0.08);
+      margin-top: 1rem;
+      padding: 1rem 0;
+      position: sticky;
+      z-index: 5;
+    }
+    .mock-meta-row {
+      color: var(--inv-muted);
+      display: flex;
+      flex-wrap: wrap;
+      font-size: 0.85rem;
+      gap: 1rem;
+      justify-content: flex-end;
+      margin-bottom: 0.75rem;
+      padding: 0 1.25rem;
+    }
+    .inv-card__head .select-container {
+      box-shadow: none;
+    }
+    .pickup-ma-segment--pill {
+      border-radius: 999px;
+      font-size: 0.8rem;
+      padding: 0.35rem 0.85rem;
+    }
+    .pickup-ma-doc-card__head-stack .inv-card__head {
+      border-bottom: none;
+    }
+    .pickup-ma-doc-card__head-stack .inv-card__subhead {
+      border-top: none;
+      padding-top: 0;
+    }
+    .header-h6-top {
+      display: grid;
+      gap: 1rem 1.5rem;
+      grid-template-columns: 11.5rem 17rem;
+    }
+    .header-h6-remarks {
+      margin-top: 1rem;
+    }
+    .header-h6-remarks textarea {
+      min-height: 4.5rem;
+    }
+  </style>
+</head>
+<body class="inv-app pickup-ma mock-shell">
+  <div class="mock-tabs" role="tablist">
+    <button type="button" class="is-active" data-panel="live">บนเว็บจริง (H5)</button>
+    <span class="mock-tabs__label">ปรับแต่ง H5</span>
+    <div class="mock-tabs__group">
+      <button type="button" data-panel="h5">H5 · pill</button>
+      <button type="button" data-panel="h6">H6 · หมายเหตุ 2 แถว</button>
+      <button type="button" data-panel="h7">H7 · segment ในหัว</button>
+    </div>
+    <span class="mock-tabs__label">แบบอื่น (อ้างอิง)</span>
+    <div class="mock-tabs__group">
+      <button type="button" data-panel="h1">H1</button>
+      <button type="button" data-panel="h2">H2</button>
+      <button type="button" data-panel="h3">H3</button>
+      <button type="button" data-panel="h4">H4 mock</button>
+    </div>
+    <span class="mock-tabs__label">เก่า / อื่น</span>
+    <div class="mock-tabs__group">
+      <button type="button" data-panel="legacy">Legacy table</button>
+      <button type="button" data-panel="a2">A2</button>
+      <button type="button" data-panel="a3">A3 chips</button>
+      <button type="button" data-panel="b">B</button>
+      <button type="button" data-panel="c">C</button>
+    </div>
+    <span class="mock-tabs__hint">เลือก H5–H7 ถ้าอยากปรับจาก H4 ที่ลง production แล้ว</span>
+  </div>
+
+  <div class="mock-nav-placeholder"><i class="fa fa-cubes"></i> Inventory — แถบเมนู (placeholder)</div>
+
+  <!-- ─── บนเว็บจริง (pickup_ma.php ขณะนี้) ─── -->
+  <div id="panel-live" class="mock-panel is-visible">
+    <main class="inv-main">
+      <header class="inv-page-header">
+        <h1 class="inv-page-title">เบิกแยกรายการ</h1>
+        <p class="inv-page-desc">บันทึกการเบิกอะไหล่ทีละรายการ — กรอกหัวเอกสารแล้วเพิ่มรายการด้านล่าง</p>
+      </header>
+      <span class="mock-badge-live">✓ ใช้งานจริงใน pickup_ma.php — layout H5 (pill)</span>
+      <section class="inv-card pickup-ma-doc-card pickup-ma-doc-card--h5">
+        <div class="inv-card__head"><i class="fa fa-file-text-o"></i> หัวเอกสาร</div>
+        <div class="inv-card__subhead pickup-ma-purpose-subhead">
+          <p class="pickup-ma-purpose-label pickup-ma-purpose-label--subhead">วัตถุประสงค์</p>
+          <div class="pickup-ma-purpose-segmented">
+            <label class="pickup-ma-segment pickup-ma-segment--pill"><input type="radio" checked /><span>เบิกซ่อมลูกค้า</span></label>
+            <label class="pickup-ma-segment pickup-ma-segment--pill"><input type="radio" /><span>เบิกเสียระหว่างผลิต</span></label>
+            <label class="pickup-ma-segment pickup-ma-segment--pill"><input type="radio" /><span>เบิกเสียระหว่างขนส่ง</span></label>
+            <label class="pickup-ma-segment pickup-ma-segment--pill"><input type="radio" /><span>เบิกผลิต</span></label>
+            <label class="pickup-ma-segment pickup-ma-segment--pill"><input type="radio" /><span>เบิกตาม PO</span></label>
+            <label class="pickup-ma-segment pickup-ma-segment--pill"><input type="radio" /><span>เบิกอื่นๆ</span></label>
+          </div>
+        </div>
+        <div class="inv-card__body pickup-ma-doc-card__body">
+          <div class="pickup-ma-doc-fields pickup-ma-doc-fields--h4">
+            <div class="inv-field"><label>วันที่เบิก</label><input class="inv-input pickup-ma-doc-input" type="date" value="2026-11-03" /></div>
+            <div class="inv-field"><label>เลขที่ใบงาน</label><input class="inv-input pickup-ma-doc-input" type="text" value="69-0588" /></div>
+            <div class="inv-field pickup-ma-remarks-field"><label>หมายเหตุ</label><textarea class="inv-input pickup-ma-doc-input" rows="1">Thai DNT แหลมฉบัง</textarea></div>
+          </div>
+        </div>
+      </section>
+      <section class="inv-card">
+        <div class="inv-card__head line-toolbar">
+          <span><i class="fa fa-list"></i> รายการเบิก</span>
+          <span><a href="#" class="del"><i class="fa fa-minus-circle"></i> Del</a> &nbsp; <a href="#"><i class="fa fa-plus-circle"></i> Add</a></span>
+        </div>
+        <div class="inv-card__body inv-card__body--flush">
+          <div class="inv-table-wrap"><table class="inv-table"><thead><tr><th class="inv-col-num">ลำดับ</th><th>Product</th><th>Part</th><th class="inv-col-num">จำนวน</th><th class="inv-col-num">Stock</th></tr></thead><tbody>
+            <tr><td class="inv-col-num">1</td><td><select class="inv-select"><option>bitVisitor plus</option></select></td><td><select class="inv-select"><option>Board Main</option></select></td><td class="inv-col-num"><input type="number" value="1" style="width:64px;text-align:center" /></td><td class="inv-col-num"><span class="stock-pill">12</span></td></tr>
+          </tbody></table></div>
+        </div>
+        <div class="inv-card__footer save-row">
+          <div class="inv-field"><label>ผู้บันทึก</label><select class="inv-select"><option>ICE</option></select></div>
+          <button type="button" class="mock-save-btn">Save</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- ─── Legacy table ─── -->
+  <div id="panel-legacy" class="mock-panel">
+    <main class="inv-main">
+      <header class="inv-page-header">
+        <h1 class="inv-page-title">เบิกแยกรายการ</h1>
+        <p class="inv-page-desc">บันทึกการเบิกอะไหล่ทีละรายการ — เลือกชุด set หรือกรอกฟอร์มด้านล่าง</p>
+      </header>
+      <span class="mock-badge-current">ปัญหา: ฟอร์มใน &lt;table&gt; กว้างเต็มการ์ด → label/input ห่างกัน</span>
+
+      <section class="inv-card pickup-ma-set-card">
+        <div class="inv-card__head"><i class="fa fa-th-large"></i> เลือกชุด set</div>
+        <div class="inv-card__body">
+          <div class="select-container">
+            <div class="label">เลือกชุด set</div>
+            <select><option>--- เลือกของ ---</option></select>
+          </div>
+        </div>
+      </section>
+
+      <section class="inv-card">
+        <div class="inv-card__head"><i class="fa fa-edit"></i> ฟอร์มบันทึกการเบิก</div>
+        <div class="inv-card__body">
+          <table class="mock-current-table">
+            <tr>
+              <td><b>วันที่เบิก :</b></td>
+              <td><input class="inv-input" type="date" value="2026-11-03" style="width:auto" /></td>
+            </tr>
+            <tr>
+              <td><b>วัตถุประสงค์ :</b></td>
+              <td class="purpose-inline">
+                <label><input type="radio" checked /> เบิกซ่อมลูกค้า</label>
+                <label><input type="radio" /> เบิกเสียระหว่างผลิต</label>
+                <label><input type="radio" /> เบิกเสียระหว่างขนส่ง</label><br />
+                <label><input type="radio" /> เบิกผลิต</label>
+                <label><input type="radio" /> เบิกตาม PO</label>
+                <label><input type="radio" /> เบิกอื่นๆ</label>
+              </td>
+            </tr>
+            <tr>
+              <td><b>เลขที่ใบงาน :</b></td>
+              <td><input class="inv-input" type="text" style="max-width:200px" placeholder="69-xxxx" /></td>
+            </tr>
+            <tr>
+              <td><b>หมายเหตุ :</b></td>
+              <td><textarea class="inv-input" rows="3" style="max-width:480px;width:100%"></textarea></td>
+            </tr>
+          </table>
+          <hr style="border:0;border-top:1px solid var(--inv-border);margin:1.25rem 0" />
+          <p style="background:#CCFFFF;border-radius:10px;display:inline-block;padding:6px 12px;font-weight:600">
+            รายการเบิก &nbsp; <a href="#" class="del"><i class="fa fa-minus-circle"></i> Del</a> &nbsp;
+            <a href="#"><i class="fa fa-plus-circle"></i> Add</a>
+          </p>
+          <div class="inv-table-wrap" style="margin-top:1rem">
+            <table class="inv-table">
+              <thead>
+                <tr>
+                  <th class="inv-col-num">ลำดับ</th>
+                  <th>Product</th>
+                  <th>Part</th>
+                  <th class="inv-col-num">จำนวนเบิก</th>
+                  <th class="inv-col-num">Stock</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="inv-col-num">1</td>
+                  <td><select class="inv-select"><option>bitVisitor plus</option></select></td>
+                  <td><select class="inv-select"><option>Board Main V2</option></select></td>
+                  <td class="inv-col-num"><input type="number" value="2" style="width:64px;text-align:center" /></td>
+                  <td class="inv-col-num"><span class="stock-pill">48</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <table class="mock-current-table" style="margin-top:1.5rem">
+            <tr>
+              <td><b style="background:#FFCCCC;padding:4px 10px;border-radius:8px">ผู้บันทึก :</b></td>
+              <td><select class="inv-select" style="max-width:160px"><option>ICE</option></select></td>
+              <td><button type="button" class="mock-save-btn">Save</button></td>
+            </tr>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- ─── แบบ A ─── -->
+  <div id="panel-a" class="mock-panel">
+    <main class="inv-main">
+      <header class="inv-page-header">
+        <h1 class="inv-page-title">เบิกแยกรายการ</h1>
+        <p class="inv-page-desc">แบบ A — แยกการ์ดชัด: ทางลัด set → หัวเอกสาร → ตารางรายการ</p>
+      </header>
+
+      <section class="inv-card">
+        <div class="inv-card__head"><i class="fa fa-th-large"></i> ทางลัด — เลือกชุด set</div>
+        <div class="inv-card__body set-row-center">
+          <div class="select-container">
+            <div class="label">เลือกชุด set</div>
+            <select>
+              <option>--- เลือกของ ---</option>
+              <option>bitScan</option>
+              <option>bitVisitor plus</option>
+            </select>
+          </div>
+        </div>
+      </section>
+
+      <section class="inv-card">
+        <div class="inv-card__head"><i class="fa fa-file-text-o"></i> ข้อมูลหัวเอกสาร</div>
+        <div class="inv-card__body">
+          <div class="inv-filters">
+            <div class="inv-field">
+              <label>วันที่เบิก</label>
+              <input class="inv-input" type="date" value="2026-11-03" />
+            </div>
+            <div class="inv-field">
+              <label>เลขที่ใบงาน</label>
+              <input class="inv-input" type="text" placeholder="69-0588" />
+            </div>
+          </div>
+          <p style="margin:1rem 0 0.5rem;font-size:0.8rem;font-weight:600;color:var(--inv-muted);text-transform:uppercase">วัตถุประสงค์</p>
+          <div class="purpose-grid">
+            <label><input type="radio" name="pA" checked /> เบิกซ่อมลูกค้า</label>
+            <label><input type="radio" name="pA" /> เบิกเสียระหว่างผลิต</label>
+            <label><input type="radio" name="pA" /> เบิกเสียระหว่างขนส่ง</label>
+            <label><input type="radio" name="pA" /> เบิกผลิต</label>
+            <label><input type="radio" name="pA" /> เบิกตาม PO</label>
+            <label><input type="radio" name="pA" /> เบิกอื่นๆ</label>
+          </div>
+          <div class="inv-field" style="margin-top:1rem;max-width:640px">
+            <label>หมายเหตุ</label>
+            <textarea class="inv-input" rows="3">เดลต้า อีเลคโทรนิคส์ (โรงชิหวง)</textarea>
+          </div>
+        </div>
+      </section>
+
+      <section class="inv-card">
+        <div class="inv-card__head line-toolbar">
+          <span><i class="fa fa-list"></i> รายการเบิก</span>
+          <span>
+            <a href="#" class="del"><i class="fa fa-minus-circle"></i> Del</a> &nbsp;
+            <a href="#"><i class="fa fa-plus-circle"></i> Add</a>
+          </span>
+        </div>
+        <div class="inv-card__body inv-card__body--flush">
+          <div class="inv-table-wrap">
+            <table class="inv-table">
+              <thead>
+                <tr>
+                  <th class="inv-col-num">ลำดับ</th>
+                  <th>Product</th>
+                  <th>Part</th>
+                  <th class="inv-col-num">จำนวนเบิก</th>
+                  <th class="inv-col-num">Stock</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="inv-col-num">1</td>
+                  <td><select class="inv-select"><option>bitVisitor plus</option></select></td>
+                  <td><select class="inv-select"><option>Board Main ASSY</option></select></td>
+                  <td class="inv-col-num"><input type="number" value="1" style="width:64px;text-align:center" /></td>
+                  <td class="inv-col-num"><span class="stock-pill">12</span></td>
+                </tr>
+                <tr>
+                  <td class="inv-col-num">2</td>
+                  <td><select class="inv-select"><option>bitScan</option></select></td>
+                  <td><select class="inv-select"><option>Scanner Cable</option></select></td>
+                  <td class="inv-col-num"><input type="number" value="3" style="width:64px;text-align:center" /></td>
+                  <td class="inv-col-num"><span class="stock-pill">5</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="inv-card__footer save-row">
+          <div class="inv-field">
+            <label>ผู้บันทึก</label>
+            <select class="inv-select"><option>ICE</option><option>TOM</option></select>
+          </div>
+          <button type="button" class="mock-save-btn">Save</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- ─── A2: รวม set + หัวเอกสาร การ์ดเดียว ─── -->
+  <div id="panel-a2" class="mock-panel">
+    <main class="inv-main">
+      <header class="inv-page-header">
+        <h1 class="inv-page-title">เบิกแยกรายการ</h1>
+        <p class="inv-page-desc">A2 — 2 การ์ด: หัวเอกสาร → ตารางรายการ (ไม่มีทางลัด set)</p>
+      </header>
+      <section class="inv-card pickup-ma-doc-card">
+        <div class="inv-card__head"><i class="fa fa-file-text-o"></i> หัวเอกสาร</div>
+        <div class="inv-card__body pickup-ma-doc-card__body">
+          <div class="pickup-ma-doc-filters pickup-ma-doc-filters__row">
+            <div class="inv-field"><label>วันที่เบิก</label><input class="inv-input pickup-ma-doc-input" type="date" value="2026-11-03" /></div>
+            <div class="inv-field"><label>เลขที่ใบงาน</label><input class="inv-input pickup-ma-doc-input" type="text" value="69-0588" /></div>
+            <div class="inv-field pickup-ma-remarks-field"><label>หมายเหตุ</label><textarea class="inv-input pickup-ma-doc-input" rows="1">Thai DNT แหลมฉบัง</textarea></div>
+          </div>
+          <p style="margin:1rem 0 0.5rem;font-size:0.8rem;font-weight:600;color:var(--inv-muted);text-transform:uppercase">วัตถุประสงค์</p>
+          <div class="pickup-ma-purpose-grid">
+            <label><input type="radio" checked /> เบิกซ่อมลูกค้า</label>
+            <label><input type="radio" /> เบิกเสียระหว่างผลิต</label>
+            <label><input type="radio" /> เบิกเสียระหว่างขนส่ง</label>
+            <label><input type="radio" /> เบิกผลิต</label>
+            <label><input type="radio" /> เบิกตาม PO</label>
+            <label><input type="radio" /> เบิกอื่นๆ</label>
+          </div>
+        </div>
+      </section>
+      <section class="inv-card">
+        <div class="inv-card__head line-toolbar">
+          <span><i class="fa fa-list"></i> รายการเบิก</span>
+          <span><a href="#" class="del"><i class="fa fa-minus-circle"></i> Del</a> &nbsp; <a href="#"><i class="fa fa-plus-circle"></i> Add</a></span>
+        </div>
+        <div class="inv-card__body inv-card__body--flush">
+          <div class="inv-table-wrap"><table class="inv-table"><thead><tr><th class="inv-col-num">ลำดับ</th><th>Product</th><th>Part</th><th class="inv-col-num">จำนวน</th><th class="inv-col-num">Stock</th></tr></thead><tbody>
+            <tr><td class="inv-col-num">1</td><td><select class="inv-select"><option>bitVisitor plus</option></select></td><td><select class="inv-select"><option>Board Main</option></select></td><td class="inv-col-num"><input type="number" value="1" style="width:64px;text-align:center" /></td><td class="inv-col-num"><span class="stock-pill">12</span></td></tr>
+            <tr><td class="inv-col-num">2</td><td><select class="inv-select"><option>bitScan</option></select></td><td><select class="inv-select"><option>Cable USB</option></select></td><td class="inv-col-num"><input type="number" value="2" style="width:64px;text-align:center" /></td><td class="inv-col-num"><span class="stock-pill">8</span></td></tr>
+          </tbody></table></div>
+        </div>
+        <div class="inv-card__footer save-row">
+          <div class="inv-field"><label>ผู้บันทึก</label><select class="inv-select"><option>ICE</option></select></div>
+          <button type="button" class="mock-save-btn">Save</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- ─── A3: วัตถุประสงค์แบบ chip ─── -->
+  <div id="panel-a3" class="mock-panel">
+    <main class="inv-main">
+      <header class="inv-page-header">
+        <h1 class="inv-page-title">เบิกแยกรายการ</h1>
+        <p class="inv-page-desc">A3 — เหมือน A แต่ «วัตถุประสงค์» เป็น chip คลิกเลือก อ่านเร็ว ไม่กินความสูง</p>
+      </header>
+      <section class="inv-card">
+        <div class="inv-card__head"><i class="fa fa-th-large"></i> ทางลัด set</div>
+        <div class="inv-card__body set-row-center">
+          <div class="select-container"><div class="label">เลือกชุด set</div><select><option>--- เลือกของ ---</option></select></div>
+        </div>
+      </section>
+      <section class="inv-card">
+        <div class="inv-card__head"><i class="fa fa-file-text-o"></i> ข้อมูลหัวเอกสาร</div>
+        <div class="inv-card__body">
+          <div class="inv-filters">
+            <div class="inv-field"><label>วันที่เบิก</label><input class="inv-input" type="date" value="2026-11-03" /></div>
+            <div class="inv-field"><label>เลขที่ใบงาน</label><input class="inv-input" type="text" /></div>
+          </div>
+          <p style="margin:1rem 0 0.5rem;font-size:0.8rem;font-weight:600;color:var(--inv-muted);text-transform:uppercase">วัตถุประสงค์ (chip)</p>
+          <div class="purpose-chips">
+            <span class="purpose-chip is-on">เบิกซ่อมลูกค้า</span>
+            <span class="purpose-chip">เบิกเสียระหว่างผลิต</span>
+            <span class="purpose-chip">เบิกเสียระหว่างขนส่ง</span>
+            <span class="purpose-chip">เบิกผลิต</span>
+            <span class="purpose-chip">เบิกตาม PO</span>
+            <span class="purpose-chip">เบิกอื่นๆ</span>
+          </div>
+          <p style="margin:0.75rem 0 0;font-size:0.8rem;color:var(--inv-muted)">implement จริง: chip = radio ซ่อน หรือปุ่ม toggle — ค่า myCheck เดิมไม่เปลี่ยน</p>
+          <div class="inv-field" style="margin-top:1rem;max-width:640px"><label>หมายเหตุ</label><textarea class="inv-input" rows="2"></textarea></div>
+        </div>
+      </section>
+      <section class="inv-card">
+        <div class="inv-card__head line-toolbar"><span><i class="fa fa-list"></i> รายการเบิก</span><span><a href="#"><i class="fa fa-plus-circle"></i> Add</a></span></div>
+        <div class="inv-card__body inv-card__body--flush">
+          <div class="inv-table-wrap"><table class="inv-table"><thead><tr><th class="inv-col-num">#</th><th>Product</th><th>Part</th><th class="inv-col-num">Qty</th><th class="inv-col-num">Stock</th></tr></thead><tbody>
+            <tr><td class="inv-col-num">1</td><td>bitVisitor plus</td><td>Board Main</td><td class="inv-col-num">1</td><td class="inv-col-num"><span class="stock-pill">12</span></td></tr>
+          </tbody></table></div>
+        </div>
+        <div class="inv-card__footer save-row"><div class="inv-field"><label>ผู้บันทึก</label><select class="inv-select"><option>TOM</option></select></div><button type="button" class="mock-save-btn">Save</button></div>
+      </section>
+    </main>
+  </div>
+
+  <!-- ─── A4: ตาราง scroll + save ติดล่างจอ ─── -->
+  <div id="panel-a4" class="mock-panel">
+    <main class="inv-main">
+      <header class="inv-page-header">
+        <h1 class="inv-page-title">เบิกแยกรายการ</h1>
+        <p class="inv-page-desc">A4 — หัวเอกสารกระชับ + ตารางสูง scroll (sticky header) + แถบ Save ติดล่างเมื่อเลื่อน</p>
+      </header>
+      <section class="inv-card">
+        <div class="inv-card__head line-toolbar">
+          <span><i class="fa fa-th-large"></i> set + หัวเอกสาร</span>
+          <div class="select-container"><div class="label">set</div><select><option>bitScan</option></select></div>
+        </div>
+        <div class="inv-card__body">
+          <div class="inv-filters">
+            <div class="inv-field"><label>วันที่</label><input class="inv-input" type="date" value="2026-11-03" /></div>
+            <div class="inv-field"><label>ใบงาน</label><input class="inv-input" type="text" /></div>
+          </div>
+          <div class="purpose-grid" style="margin-top:0.75rem">
+            <label><input type="radio" checked /> เบิกซ่อมลูกค้า</label>
+            <label><input type="radio" /> เบิกผลิต</label>
+            <label><input type="radio" /> เบิกตาม PO</label>
+            <label><input type="radio" /> เบิกอื่นๆ</label>
+          </div>
+        </div>
+      </section>
+      <section class="inv-card">
+        <div class="inv-card__head line-toolbar"><span><i class="fa fa-list"></i> รายการเบิก (5 แถวตัวอย่าง)</span><span><a href="#"><i class="fa fa-plus-circle"></i> Add</a></span></div>
+        <div class="mock-meta-row">เลื่อนตารางด้านล่าง — หัวคอลัมน์ sticky เหมือน stock_overview</div>
+        <div class="inv-card__body inv-card__body--flush">
+          <div class="inv-table-wrap inv-table-wrap--scroll-y mock-table-scroll">
+            <table class="inv-table"><thead><tr><th class="inv-col-num">#</th><th>Product</th><th>Part</th><th class="inv-col-num">Qty</th><th class="inv-col-num">Stock</th></tr></thead><tbody>
+              <tr><td class="inv-col-num">1</td><td>bitScan</td><td>Scanner Head</td><td class="inv-col-num">1</td><td class="inv-col-num"><span class="stock-pill">4</span></td></tr>
+              <tr><td class="inv-col-num">2</td><td>bitScan</td><td>Main Board</td><td class="inv-col-num">1</td><td class="inv-col-num"><span class="stock-pill">2</span></td></tr>
+              <tr><td class="inv-col-num">3</td><td>printer</td><td>Roll Paper</td><td class="inv-col-num">10</td><td class="inv-col-num"><span class="stock-pill">120</span></td></tr>
+              <tr><td class="inv-col-num">4</td><td>bitVisitor M</td><td>LCD Panel</td><td class="inv-col-num">1</td><td class="inv-col-num"><span class="stock-pill">6</span></td></tr>
+              <tr><td class="inv-col-num">5</td><td>bitVisitor plus</td><td>Power Supply</td><td class="inv-col-num">2</td><td class="inv-col-num"><span class="stock-pill">21</span></td></tr>
+            </tbody></table>
+          </div>
+        </div>
+      </section>
+      <div class="mock-sticky-save save-row" style="padding-left:1.25rem;padding-right:1.25rem">
+        <div class="inv-field"><label>ผู้บันทึก</label><select class="inv-select"><option>ICE</option></select></div>
+        <button type="button" class="mock-save-btn">Save — ติดล่างหน้าจอ</button>
+      </div>
+    </main>
+  </div>
+
+  <!-- ─── A5: set อยู่มุมหัวการ์ดหัวเอกสาร (ไม่มีการ์ด set แยก) ─── -->
+  <div id="panel-a5" class="mock-panel">
+    <main class="inv-main">
+      <header class="inv-page-header">
+        <h1 class="inv-page-title">เบิกแยกรายการ</h1>
+        <p class="inv-page-desc">A5 — ตัดการ์ด set แยก: dropdown ชุด set อยู่มุมขวาหัวการ์ด «ข้อมูลหัวเอกสาร»</p>
+      </header>
+      <section class="inv-card">
+        <div class="inv-card__head line-toolbar">
+          <span><i class="fa fa-file-text-o"></i> ข้อมูลหัวเอกสาร</span>
+          <div class="select-container" style="margin:0">
+            <div class="label">ชุด set</div>
+            <select><option>--- เลือกของ ---</option><option selected>bitVisitor plus</option></select>
+          </div>
+        </div>
+        <div class="inv-card__body">
+          <div class="inv-filters">
+            <div class="inv-field"><label>วันที่เบิก</label><input class="inv-input" type="date" value="2026-11-03" /></div>
+            <div class="inv-field"><label>เลขที่ใบงาน</label><input class="inv-input" type="text" placeholder="69-xxxx" /></div>
+            <div class="inv-field" style="grid-column:1/-1;max-width:640px"><label>หมายเหตุ</label><textarea class="inv-input" rows="2"></textarea></div>
+          </div>
+          <div class="purpose-grid" style="margin-top:1rem">
+            <label><input type="radio" checked /> เบิกซ่อมลูกค้า</label>
+            <label><input type="radio" /> เบิกเสียระหว่างผลิต</label>
+            <label><input type="radio" /> เบิกเสียระหว่างขนส่ง</label>
+            <label><input type="radio" /> เบิกผลิต</label>
+            <label><input type="radio" /> เบิกตาม PO</label>
+            <label><input type="radio" /> เบิกอื่นๆ</label>
+          </div>
+        </div>
+      </section>
+      <section class="inv-card">
+        <div class="inv-card__head line-toolbar"><span><i class="fa fa-list"></i> รายการเบิก</span><span><a href="#" class="del"><i class="fa fa-minus-circle"></i> Del</a> &nbsp; <a href="#"><i class="fa fa-plus-circle"></i> Add</a></span></div>
+        <div class="inv-card__body inv-card__body--flush">
+          <div class="inv-table-wrap"><table class="inv-table"><thead><tr><th class="inv-col-num">ลำดับ</th><th>Product</th><th>Part</th><th class="inv-col-num">จำนวน</th><th class="inv-col-num">Stock</th></tr></thead><tbody>
+            <tr><td class="inv-col-num">1</td><td><select class="inv-select"><option>bitVisitor plus</option></select></td><td><select class="inv-select"><option>Board Main ASSY</option></select></td><td class="inv-col-num">1</td><td class="inv-col-num"><span class="stock-pill">12</span></td></tr>
+          </tbody></table></div>
+        </div>
+        <div class="inv-card__footer save-row"><div class="inv-field"><label>ผู้บันทึก</label><select class="inv-select"><option>ICE</option></select></div><button type="button" class="mock-save-btn">Save</button></div>
+      </section>
+    </main>
+  </div>
+
+  <!-- ─── แบบ B ─── -->
+  <div id="panel-b" class="mock-panel">
+    <main class="inv-main">
+      <header class="inv-page-header">
+        <h1 class="inv-page-title">เบิกแยกรายการ</h1>
+        <p class="inv-page-desc">แบบ B — ซ้าย: หัวฟอร์ม | ขวา: ตารางรายการ (จอกว้าง)</p>
+      </header>
+      <div class="layout-b-grid">
+        <section class="inv-card">
+          <div class="inv-card__head"><i class="fa fa-edit"></i> ข้อมูลการเบิก</div>
+          <div class="inv-card__body">
+            <div class="select-container" style="width:100%;justify-content:space-between;margin-bottom:1rem">
+              <div class="label">เลือกชุด set</div>
+              <select><option>--- เลือกของ ---</option></select>
+            </div>
+            <div class="inv-field">
+              <label>วันที่เบิก</label>
+              <input class="inv-input" type="date" value="2026-11-03" />
+            </div>
+            <p style="margin:1rem 0 0.5rem;font-size:0.8rem;font-weight:600;color:var(--inv-muted);text-transform:uppercase">วัตถุประสงค์</p>
+            <div class="purpose-grid" style="grid-template-columns:1fr">
+              <label><input type="radio" checked /> เบิกซ่อมลูกค้า</label>
+              <label><input type="radio" /> เบิกผลิต</label>
+              <label><input type="radio" /> เบิกอื่นๆ</label>
+            </div>
+            <div class="inv-field" style="margin-top:1rem">
+              <label>เลขที่ใบงาน</label>
+              <input class="inv-input" type="text" />
+            </div>
+            <div class="inv-field">
+              <label>หมายเหตุ</label>
+              <textarea class="inv-input" rows="4"></textarea>
+            </div>
+          </div>
+        </section>
+        <section class="inv-card">
+          <div class="inv-card__head line-toolbar">
+            <span><i class="fa fa-list"></i> รายการ Part</span>
+            <span><a href="#"><i class="fa fa-plus-circle"></i> Add</a></span>
+          </div>
+          <div class="inv-card__body inv-card__body--flush">
+            <div class="inv-table-wrap">
+              <table class="inv-table">
+                <thead>
+                  <tr>
+                    <th class="inv-col-num">#</th>
+                    <th>Product</th>
+                    <th>Part</th>
+                    <th class="inv-col-num">Qty</th>
+                    <th class="inv-col-num">Stock</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="inv-col-num">1</td>
+                    <td><select class="inv-select"><option>printer</option></select></td>
+                    <td><select class="inv-select"><option>Printer 80mm Head</option></select></td>
+                    <td class="inv-col-num">1</td>
+                    <td class="inv-col-num"><span class="stock-pill">7</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="inv-card__footer save-row">
+            <div class="inv-field">
+              <label>ผู้บันทึก</label>
+              <select class="inv-select"><option>TOM</option></select>
+            </div>
+            <button type="button" class="mock-save-btn">Save</button>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <!-- ─── แบบ C ─── -->
+  <div id="panel-c" class="mock-panel">
+    <main class="inv-main">
+      <header class="inv-page-header">
+        <h1 class="inv-page-title">เบิกแยกรายการ</h1>
+        <p class="inv-page-desc">แบบ C — การ์ดเดียว แบ่งส่วนด้วยหัวข้อย่อย</p>
+      </header>
+      <section class="inv-card">
+        <div class="inv-card__head"><i class="fa fa-edit"></i> ฟอร์มเบิกแยกรายการ</div>
+        <div class="inv-card__body">
+          <div class="select-container" style="width:100%;max-width:420px">
+            <div class="label">เลือกชุด set</div>
+            <select style="flex:1"><option>bitVisitor M</option></select>
+          </div>
+          <hr style="border:0;border-top:1px solid var(--inv-border);margin:1.25rem 0" />
+          <div class="inv-filters">
+            <div class="inv-field"><label>วันที่เบิก</label><input class="inv-input" type="date" value="2026-11-03" /></div>
+            <div class="inv-field"><label>เลขที่ใบงาน</label><input class="inv-input" type="text" /></div>
+          </div>
+          <div class="purpose-grid" style="margin-top:1rem">
+            <label><input type="radio" checked /> เบิกซ่อมลูกค้า</label>
+            <label><input type="radio" /> เบิกผลิต</label>
+            <label><input type="radio" /> เบิกตาม PO</label>
+            <label><input type="radio" /> เบิกอื่นๆ</label>
+          </div>
+          <div class="inv-field" style="margin-top:1rem;max-width:560px">
+            <label>หมายเหตุ</label>
+            <textarea class="inv-input" rows="2"></textarea>
+          </div>
+          <hr style="border:0;border-top:1px solid var(--inv-border);margin:1.25rem 0" />
+          <div class="line-toolbar" style="margin-bottom:0.75rem">
+            <strong>รายการเบิก</strong>
+            <a href="#"><i class="fa fa-plus-circle"></i> Add</a>
+          </div>
+          <div class="inv-table-wrap">
+            <table class="inv-table">
+              <thead>
+                <tr>
+                  <th class="inv-col-num">ลำดับ</th>
+                  <th>Product</th>
+                  <th>Part</th>
+                  <th class="inv-col-num">จำนวน</th>
+                  <th class="inv-col-num">Stock</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="inv-col-num">1</td>
+                  <td>bitVisitor plus</td>
+                  <td>Power Supply 12V</td>
+                  <td class="inv-col-num">2</td>
+                  <td class="inv-col-num"><span class="stock-pill">21</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="save-row" style="margin-top:1.25rem;padding-top:1rem;border-top:1px solid var(--inv-border)">
+            <div class="inv-field">
+              <label>ผู้บันทึก</label>
+              <select class="inv-select"><option>ICE</option></select>
+            </div>
+            <button type="button" class="mock-save-btn">Save</button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- ─── H1: วันที่+งาน แถว 1 / หมายเหตุ แถว 2 ─── -->
+  <div id="panel-h1" class="mock-panel">
+    <main class="inv-main">
+      <header class="inv-page-header">
+        <h1 class="inv-page-title">เบิกแยกรายการ</h1>
+        <p class="inv-page-desc">H1 — แนะนำ: ช่องสั้นเท่าที่ใช้ หมายเหตุ บรรทัดเต็ม อ่านง่าย ไม่บีบ textarea</p>
+      </header>
+      <span class="mock-badge-pick">H1 · ฟอร์ม 2 แถว แบบ stock_overview</span>
+      <section class="inv-card pickup-ma-doc-card">
+        <div class="inv-card__head"><i class="fa fa-file-text-o"></i> หัวเอกสาร</div>
+        <div class="inv-card__body pickup-ma-doc-card__body">
+          <div class="header-h1__top">
+            <div class="inv-field"><label>วันที่เบิก</label><input class="inv-input" type="date" value="2026-11-03" /></div>
+            <div class="inv-field"><label>เลขที่ใบงาน</label><input class="inv-input" type="text" value="69-0588" /></div>
+          </div>
+          <div class="inv-field header-h1-remarks" style="margin-top:1rem">
+            <label>หมายเหตุ</label>
+            <textarea class="inv-input" rows="2">Thai DNT แหลมฉบัง</textarea>
+          </div>
+          <p class="pickup-ma-purpose-label">วัตถุประสงค์</p>
+          <div class="pickup-ma-purpose-grid">
+            <label><input type="radio" checked /> เบิกซ่อมลูกค้า</label>
+            <label><input type="radio" /> เบิกเสียระหว่างผลิต</label>
+            <label><input type="radio" /> เบิกเสียระหว่างขนส่ง</label>
+            <label><input type="radio" /> เบิกผลิต</label>
+            <label><input type="radio" /> เบิกตาม PO</label>
+            <label><input type="radio" /> เบิกอื่นๆ</label>
+          </div>
+        </div>
+      </section>
+      <section class="inv-card">
+        <div class="inv-card__head line-toolbar"><span><i class="fa fa-list"></i> รายการเบิก</span><span><a href="#" class="del"><i class="fa fa-minus-circle"></i> Del</a> &nbsp; <a href="#"><i class="fa fa-plus-circle"></i> Add</a></span></div>
+        <div class="inv-card__body inv-card__body--flush"><div class="inv-table-wrap"><table class="inv-table"><thead><tr><th class="inv-col-num">#</th><th>Product</th><th>Part</th><th class="inv-col-num">จำนวน</th><th class="inv-col-num">Stock</th></tr></thead><tbody><tr><td class="inv-col-num">1</td><td>bitVisitor plus</td><td>Board Main</td><td class="inv-col-num">1</td><td class="inv-col-num"><span class="stock-pill">12</span></td></tr></tbody></table></div></div>
+        <div class="inv-card__footer save-row"><div class="inv-field"><label>ผู้บันทึก</label><select class="inv-select"><option>ICE</option></select></div><button type="button" class="mock-save-btn">Save</button></div>
+      </section>
+    </main>
+  </div>
+
+  <!-- ─── H2: แถวเดียว สัดส่วนคงที่ ─── -->
+  <div id="panel-h2" class="mock-panel">
+    <main class="inv-main">
+      <header class="inv-page-header">
+        <h1 class="inv-page-title">เบิกแยกรายการ</h1>
+        <p class="inv-page-desc">H2 — แถวเดียว: วันที่แคบ · เลขที่งานกลาง · หมายเหตุ กินที่เหลือ (ความสูงเท่ากัน)</p>
+      </header>
+      <span class="mock-badge-pick">H2 · สมดุลแบบ ERP — ไม่บังคับ 3 คอลัมน์เท่ากัน</span>
+      <section class="inv-card pickup-ma-doc-card">
+        <div class="inv-card__head"><i class="fa fa-file-text-o"></i> หัวเอกสาร</div>
+        <div class="inv-card__body pickup-ma-doc-card__body">
+          <div class="header-h2-row">
+            <div class="inv-field"><label>วันที่เบิก</label><input class="inv-input" type="date" value="2026-11-03" /></div>
+            <div class="inv-field"><label>เลขที่ใบงาน</label><input class="inv-input" type="text" value="69-0588" /></div>
+            <div class="inv-field"><label>หมายเหตุ</label><textarea class="inv-input" rows="1">Thai DNT แหลมฉบัง</textarea></div>
+          </div>
+          <p class="pickup-ma-purpose-label">วัตถุประสงค์</p>
+          <div class="pickup-ma-purpose-grid">
+            <label><input type="radio" checked /> เบิกซ่อมลูกค้า</label>
+            <label><input type="radio" /> เบิกเสียระหว่างผลิต</label>
+            <label><input type="radio" /> เบิกเสียระหว่างขนส่ง</label>
+            <label><input type="radio" /> เบิกผลิต</label>
+            <label><input type="radio" /> เบิกตาม PO</label>
+            <label><input type="radio" /> เบิกอื่นๆ</label>
+          </div>
+        </div>
+      </section>
+      <section class="inv-card">
+        <div class="inv-card__head line-toolbar"><span><i class="fa fa-list"></i> รายการเบิก</span><span><a href="#" class="del"><i class="fa fa-minus-circle"></i> Del</a> &nbsp; <a href="#"><i class="fa fa-plus-circle"></i> Add</a></span></div>
+        <div class="inv-card__body inv-card__body--flush"><div class="inv-table-wrap"><table class="inv-table"><thead><tr><th class="inv-col-num">#</th><th>Product</th><th>Part</th><th class="inv-col-num">จำนวน</th><th class="inv-col-num">Stock</th></tr></thead><tbody><tr><td class="inv-col-num">1</td><td>bitScan</td><td>Cable USB</td><td class="inv-col-num">2</td><td class="inv-col-num"><span class="stock-pill">8</span></td></tr></tbody></table></div></div>
+        <div class="inv-card__footer save-row"><div class="inv-field"><label>ผู้บันทึก</label><select class="inv-select"><option>ICE</option></select></div><button type="button" class="mock-save-btn">Save</button></div>
+      </section>
+    </main>
+  </div>
+
+  <!-- ─── H3: วัตถุประสงค์ chip ด้านบน ─── -->
+  <div id="panel-h3" class="mock-panel">
+    <main class="inv-main">
+      <header class="inv-page-header">
+        <h1 class="inv-page-title">เบิกแยกรายการ</h1>
+        <p class="inv-page-desc">H3 — เลือกวัตถุประสงค์ก่อน (chip) แล้วค่อยกรอกหัวเอกสาร — เหมาะมือถือ</p>
+      </header>
+      <span class="mock-badge-pick">H3 · ลดความสูงการ์ด · ไม่ใช้ radio grid</span>
+      <section class="inv-card pickup-ma-doc-card">
+        <div class="inv-card__head"><i class="fa fa-file-text-o"></i> หัวเอกสาร</div>
+        <div class="inv-card__body pickup-ma-doc-card__body">
+          <p class="pickup-ma-purpose-label" style="margin-top:0">วัตถุประสงค์</p>
+          <div class="purpose-chips" style="margin-bottom:1.25rem">
+            <span class="purpose-chip is-on">เบิกซ่อมลูกค้า</span>
+            <span class="purpose-chip">เบิกเสียระหว่างผลิต</span>
+            <span class="purpose-chip">เบิกเสียระหว่างขนส่ง</span>
+            <span class="purpose-chip">เบิกผลิต</span>
+            <span class="purpose-chip">เบิกตาม PO</span>
+            <span class="purpose-chip">เบิกอื่นๆ</span>
+          </div>
+          <div class="header-h3-fields">
+            <div class="inv-field"><label>วันที่เบิก</label><input class="inv-input" type="date" value="2026-11-03" /></div>
+            <div class="inv-field"><label>เลขที่ใบงาน</label><input class="inv-input" type="text" value="69-0588" /></div>
+          </div>
+          <div class="inv-field header-h3-remarks" style="margin-top:1rem">
+            <label>หมายเหตุ</label>
+            <textarea class="inv-input" rows="2">Thai DNT แหลมฉบัง</textarea>
+          </div>
+        </div>
+      </section>
+      <section class="inv-card">
+        <div class="inv-card__head line-toolbar"><span><i class="fa fa-list"></i> รายการเบิก</span><span><a href="#" class="del"><i class="fa fa-minus-circle"></i> Del</a> &nbsp; <a href="#"><i class="fa fa-plus-circle"></i> Add</a></span></div>
+        <div class="inv-card__body inv-card__body--flush"><div class="inv-table-wrap"><table class="inv-table"><thead><tr><th class="inv-col-num">#</th><th>Product</th><th>Part</th><th class="inv-col-num">จำนวน</th><th class="inv-col-num">Stock</th></tr></thead><tbody><tr><td class="inv-col-num">1</td><td>printer</td><td>Roll paper</td><td class="inv-col-num">3</td><td class="inv-col-num"><span class="stock-pill">40</span></td></tr></tbody></table></div></div>
+        <div class="inv-card__footer save-row"><div class="inv-field"><label>ผู้บันทึก</label><select class="inv-select"><option>ICE</option></select></div><button type="button" class="mock-save-btn">Save</button></div>
+      </section>
+    </main>
+  </div>
+
+  <!-- ─── H4: แถบวัตถุประสงค์ในการ์ด ─── -->
+  <div id="panel-h4" class="mock-panel">
+    <main class="inv-main">
+      <header class="inv-page-header">
+        <h1 class="inv-page-title">เบิกแยกรายการ</h1>
+        <p class="inv-page-desc">H4 — วัตถุประสงค์เป็นแถบในการ์ด (segment) · ฟิลด์หัวเอกสารแถวเดียวด้านล่าง</p>
+      </header>
+      <span class="mock-badge-pick">H4 · ดูเป็นมืออาชีพ · แยก «เลือกประเภท» กับ «ข้อมูล» ชัด</span>
+      <section class="inv-card pickup-ma-doc-card">
+        <div class="inv-card__head"><i class="fa fa-file-text-o"></i> หัวเอกสาร</div>
+        <div class="inv-card__subhead">
+          <span class="pickup-ma-purpose-label" style="margin:0 0 0.5rem;display:block">วัตถุประสงค์</span>
+          <div class="segmented-purpose">
+            <span class="is-on">เบิกซ่อมลูกค้า</span>
+            <span>เบิกเสียระหว่างผลิต</span>
+            <span>เบิกเสียระหว่างขนส่ง</span>
+            <span>เบิกผลิต</span>
+            <span>เบิกตาม PO</span>
+            <span>เบิกอื่นๆ</span>
+          </div>
+        </div>
+        <div class="inv-card__body pickup-ma-doc-card__body">
+          <div class="header-h4-fields">
+            <div class="inv-field"><label>วันที่เบิก</label><input class="inv-input" type="date" value="2026-11-03" /></div>
+            <div class="inv-field"><label>เลขที่ใบงาน</label><input class="inv-input" type="text" value="69-0588" /></div>
+            <div class="inv-field"><label>หมายเหตุ</label><textarea class="inv-input" rows="1">Thai DNT แหลมฉบัง</textarea></div>
+          </div>
+        </div>
+      </section>
+      <section class="inv-card">
+        <div class="inv-card__head line-toolbar"><span><i class="fa fa-list"></i> รายการเบิก</span><span><a href="#" class="del"><i class="fa fa-minus-circle"></i> Del</a> &nbsp; <a href="#"><i class="fa fa-plus-circle"></i> Add</a></span></div>
+        <div class="inv-card__body inv-card__body--flush"><div class="inv-table-wrap"><table class="inv-table"><thead><tr><th class="inv-col-num">#</th><th>Product</th><th>Part</th><th class="inv-col-num">จำนวน</th><th class="inv-col-num">Stock</th></tr></thead><tbody><tr><td class="inv-col-num">1</td><td>bitVisitor M</td><td>Display</td><td class="inv-col-num">1</td><td class="inv-col-num"><span class="stock-pill">5</span></td></tr></tbody></table></div></div>
+        <div class="inv-card__footer save-row"><div class="inv-field"><label>ผู้บันทึก</label><select class="inv-select"><option>ICE</option></select></div><button type="button" class="mock-save-btn">Save</button></div>
+      </section>
+    </main>
+  </div>
+
+  <!-- ─── H5: H4 + segment แบบ pill ─── -->
+  <div id="panel-h5" class="mock-panel">
+    <main class="inv-main">
+      <header class="inv-page-header">
+        <h1 class="inv-page-title">เบิกแยกรายการ</h1>
+        <p class="inv-page-desc">H5 — เหมือน H4 แต่ปุ่มวัตถุประสงค์เป็น pill (มุมมน)</p>
+      </header>
+      <span class="mock-badge-pick">H5 · นุ่มตากว่า segment สี่เหลี่ยม</span>
+      <section class="inv-card pickup-ma-doc-card pickup-ma-doc-card--h4">
+        <div class="inv-card__head"><i class="fa fa-file-text-o"></i> หัวเอกสาร</div>
+        <div class="inv-card__subhead pickup-ma-purpose-subhead">
+          <p class="pickup-ma-purpose-label pickup-ma-purpose-label--subhead">วัตถุประสงค์</p>
+          <div class="pickup-ma-purpose-segmented">
+            <label class="pickup-ma-segment pickup-ma-segment--pill"><input type="radio" checked /><span>เบิกซ่อมลูกค้า</span></label>
+            <label class="pickup-ma-segment pickup-ma-segment--pill"><input type="radio" /><span>เบิกเสียระหว่างผลิต</span></label>
+            <label class="pickup-ma-segment pickup-ma-segment--pill"><input type="radio" /><span>เบิกเสียระหว่างขนส่ง</span></label>
+            <label class="pickup-ma-segment pickup-ma-segment--pill"><input type="radio" /><span>เบิกผลิต</span></label>
+            <label class="pickup-ma-segment pickup-ma-segment--pill"><input type="radio" /><span>เบิกตาม PO</span></label>
+            <label class="pickup-ma-segment pickup-ma-segment--pill"><input type="radio" /><span>เบิกอื่นๆ</span></label>
+          </div>
+        </div>
+        <div class="inv-card__body pickup-ma-doc-card__body">
+          <div class="pickup-ma-doc-fields pickup-ma-doc-fields--h4">
+            <div class="inv-field"><label>วันที่เบิก</label><input class="inv-input pickup-ma-doc-input" type="date" value="2026-11-03" /></div>
+            <div class="inv-field"><label>เลขที่ใบงาน</label><input class="inv-input pickup-ma-doc-input" type="text" value="69-0588" /></div>
+            <div class="inv-field"><label>หมายเหตุ</label><textarea class="inv-input pickup-ma-doc-input" rows="1">Thai DNT แหลมฉบัง</textarea></div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- ─── H6: segment H4 + หมายเหตุ แถวเต็ม ─── -->
+  <div id="panel-h6" class="mock-panel">
+    <main class="inv-main">
+      <header class="inv-page-header">
+        <h1 class="inv-page-title">เบิกแยกรายการ</h1>
+        <p class="inv-page-desc">H6 — แถบวัตถุประสงค์เหมือน H4 · วันที่+งาน แถวบน · หมายเหตุ กว้างแถวล่าง</p>
+      </header>
+      <span class="mock-badge-pick">H6 · หมายเหตุ อ่านง่าย ไม่บีบในช่องเดียวกับวันที่</span>
+      <section class="inv-card pickup-ma-doc-card pickup-ma-doc-card--h4">
+        <div class="inv-card__head"><i class="fa fa-file-text-o"></i> หัวเอกสาร</div>
+        <div class="inv-card__subhead pickup-ma-purpose-subhead">
+          <p class="pickup-ma-purpose-label pickup-ma-purpose-label--subhead">วัตถุประสงค์</p>
+          <div class="pickup-ma-purpose-segmented">
+            <label class="pickup-ma-segment"><input type="radio" checked /><span>เบิกซ่อมลูกค้า</span></label>
+            <label class="pickup-ma-segment"><input type="radio" /><span>เบิกเสียระหว่างผลิต</span></label>
+            <label class="pickup-ma-segment"><input type="radio" /><span>เบิกเสียระหว่างขนส่ง</span></label>
+            <label class="pickup-ma-segment"><input type="radio" /><span>เบิกผลิต</span></label>
+            <label class="pickup-ma-segment"><input type="radio" /><span>เบิกตาม PO</span></label>
+            <label class="pickup-ma-segment"><input type="radio" /><span>เบิกอื่นๆ</span></label>
+          </div>
+        </div>
+        <div class="inv-card__body pickup-ma-doc-card__body">
+          <div class="header-h6-top">
+            <div class="inv-field"><label>วันที่เบิก</label><input class="inv-input" type="date" value="2026-11-03" /></div>
+            <div class="inv-field"><label>เลขที่ใบงาน</label><input class="inv-input" type="text" value="69-0588" /></div>
+          </div>
+          <div class="inv-field header-h6-remarks">
+            <label>หมายเหตุ</label>
+            <textarea class="inv-input" rows="2">Thai DNT แหลมฉบัง</textarea>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- ─── H7: segment รวมในหัวการ์ด ─── -->
+  <div id="panel-h7" class="mock-panel">
+    <main class="inv-main">
+      <header class="inv-page-header">
+        <h1 class="inv-page-title">เบิกแยกรายการ</h1>
+        <p class="inv-page-desc">H7 — หัวการ์ด 2 ชั้น: ชื่อ + แถบวัตถุประสงค์ติดกัน (ลดความสูง subhead แยก)</p>
+      </header>
+      <span class="mock-badge-pick">H7 · กระชับแนวตั้ง</span>
+      <section class="inv-card pickup-ma-doc-card pickup-ma-doc-card--h4 pickup-ma-doc-card__head-stack">
+        <div class="inv-card__head"><i class="fa fa-file-text-o"></i> หัวเอกสาร</div>
+        <div class="inv-card__subhead pickup-ma-purpose-subhead">
+          <div class="pickup-ma-purpose-segmented">
+            <label class="pickup-ma-segment"><input type="radio" checked /><span>เบิกซ่อมลูกค้า</span></label>
+            <label class="pickup-ma-segment"><input type="radio" /><span>เบิกเสียระหว่างผลิต</span></label>
+            <label class="pickup-ma-segment"><input type="radio" /><span>เบิกเสียระหว่างขนส่ง</span></label>
+            <label class="pickup-ma-segment"><input type="radio" /><span>เบิกผลิต</span></label>
+            <label class="pickup-ma-segment"><input type="radio" /><span>เบิกตาม PO</span></label>
+            <label class="pickup-ma-segment"><input type="radio" /><span>เบิกอื่นๆ</span></label>
+          </div>
+        </div>
+        <div class="inv-card__body pickup-ma-doc-card__body">
+          <div class="pickup-ma-doc-fields pickup-ma-doc-fields--h4">
+            <div class="inv-field"><label>วันที่เบิก</label><input class="inv-input pickup-ma-doc-input" type="date" value="2026-11-03" /></div>
+            <div class="inv-field"><label>เลขที่ใบงาน</label><input class="inv-input pickup-ma-doc-input" type="text" value="69-0588" /></div>
+            <div class="inv-field"><label>หมายเหตุ</label><textarea class="inv-input pickup-ma-doc-input" rows="1">Thai DNT แหลมฉบัง</textarea></div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    (function () {
+      var buttons = document.querySelectorAll('.mock-tabs button[data-panel]');
+      var panels = document.querySelectorAll('.mock-panel');
+      buttons.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var id = btn.getAttribute('data-panel');
+          buttons.forEach(function (b) { b.classList.toggle('is-active', b === btn); });
+          panels.forEach(function (p) {
+            p.classList.toggle('is-visible', p.id === 'panel-' + id);
+          });
+        });
+      });
+    })();
+  </script>
+</body>
+</html>

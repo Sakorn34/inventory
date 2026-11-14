@@ -1,0 +1,19 @@
+# MANIFEST — Inventory — โมดูลเบิกของ (pickup + pickup_ma + UI ฟอนต์)
+# สร้างเมื่อ: 2026-11-12 13:07:15
+# ใช้เปรียบเทียบ MD5 บน server หลัง copy (เช่น ผ่าน check_server_files.php)
+
+relative_path | bytes | md5 | modified
+------------------------------------------------------------------------
+www/pickup_prep_board.php | 18818 | c966b57e9559aeebc832f9d1990556d7 | 2026-11-12 12:58:09
+www/pickup_lift_call_fragment.php | 8325 | 8c88a6af17f11b2477ef5c695038128c | 2026-11-12 13:07:02
+www/css/inventory-ui.css | 60471 | 17df154171b63f8fac6f0b7ce77c67e6 | 2026-11-12 13:02:08
+www/css/pickup-prep.css | 17659 | 835052c548d82483b423a77dec0ac2fd | 2026-11-12 13:02:13
+www/js/pickup-lift-call.js | 12617 | c2ebfcd8e3d23565db71af44cc9dcb4a | 2026-11-12 13:07:03
+www/images/pickup-lift-walk.gif | 298349 | 5f5371eb0425171b12190f5285dde3fd | 2026-11-12 12:57:52
+www/images/pickup-lift-walk-1.gif | 298349 | 5f5371eb0425171b12190f5285dde3fd | 2026-11-12 12:57:52
+www/images/pickup-lift-walk-2.gif | 298349 | 5f5371eb0425171b12190f5285dde3fd | 2026-11-12 12:57:52
+www/images/pickup-lift-walk-3.gif | 298349 | 5f5371eb0425171b12190f5285dde3fd | 2026-11-12 12:57:52
+www/images/pickup-lift-walk-4.gif | 298349 | 5f5371eb0425171b12190f5285dde3fd | 2026-11-12 12:57:52
+www/images/pickup-lift-walk-5.gif | 298349 | 5f5371eb0425171b12190f5285dde3fd | 2026-11-12 12:57:52
+www/images/pickup-lift-walk-6.gif | 298349 | 5f5371eb0425171b12190f5285dde3fd | 2026-11-12 12:57:52
+www/images/pickup-lift-walk-7.gif | 298349 | 5f5371eb0425171b12190f5285dde3fd | 2026-11-12 12:57:52

@@ -1,0 +1,17 @@
+# MANIFEST — Inventory — โมดูลเบิกของ (pickup + pickup_ma + UI ฟอนต์)
+# สร้างเมื่อ: 2026-11-03 13:49:43
+# ใช้เปรียบเทียบ MD5 บน server หลัง copy (เช่น ผ่าน check_server_files.php)
+
+relative_path | bytes | md5 | modified
+------------------------------------------------------------------------
+www/pickup_overview.php | 13866 | 066b5e3763b214bf355efe6bbcf62cf5 | 2026-11-03 13:46:53
+www/pickup_list_order.php | 15291 | c0af6c2f6ad362074bbcc01256e08833 | 2026-11-03 13:46:49
+www/pickup_list_order_detail.php | 38217 | 28a6d907df57395416b9ecb8c106d106 | 2026-11-03 13:31:24
+www/pickup_ma.php | 58169 | fec7c2f51edeb2810bf53f15a56fcfd0 | 2026-11-03 13:30:05
+www/title-h.php | 7079 | 08ea41bb90bc0457a30769c299cb43f2 | 2026-11-03 13:42:52
+www/inventory_version.php | 1131 | e445c901274b312e13bbcfbe88d286e4 | 2026-11-03 13:39:23
+www/inventory_ui_fonts.php | 675 | 21dd4ef741cb97df16cd7cede2727898 | 2026-11-03 13:29:54
+www/inventory_ui_head.php | 871 | a612632192f995936cc68252109000f8 | 2026-11-03 13:31:23
+www/pickup_document_lines.php | 3791 | f534e63d7a962bf4297fd9189990be92 | 2026-11-03 13:23:36
+www/pickup_constants.php | 539 | 74c206418362b488bd5e9de312498335 | 2026-11-03 13:46:47
+www/css/inventory-ui.css | 46676 | 872bd21c761b1b129109f7e2a22a1494 | 2026-11-03 13:46:54

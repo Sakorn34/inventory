@@ -15,6 +15,8 @@
  */
 
 require_once __DIR__ . '/connect.php';
+require_once __DIR__ . '/inventory_session_actor.php';
+require_once __DIR__ . '/pickup_repair_part_product.php';
 
 header('Content-Type: text/html; charset=UTF-8');
 header('X-Content-Type-Options: nosniff');
@@ -177,6 +179,71 @@ function pre_pickup_save_fetch_formula_parts($conn, $productId)
 }
 
 /**
+ * อ่านชื่อ Product จาก pd_id
+ *
+ * @param mysqli $conn connection ฐานข้อมูล
+ * @param int $productId pd_id
+ * @return string
+ */
+function pre_pickup_save_product_name($conn, $productId)
+{
+    $stmt = pre_pickup_save_execute(
+        $conn,
+        'SELECT `pd_name` FROM `product` WHERE `pd_id` = ? LIMIT 1',
+        'i',
+        array($productId)
+    );
+    mysqli_stmt_bind_result($stmt, $pdName);
+    $name = '';
+    if (mysqli_stmt_fetch($stmt)) {
+        $name = trim((string) $pdName);
+    }
+    mysqli_stmt_close($stmt);
+
+    return $name;
+}
+
+/**
+ * ดึงรายการ part ชุดซ่อมจาก part.part_product (LIKE ชื่อ Product)
+ *
+ * @param mysqli $conn connection ฐานข้อมูล
+ * @param int $productId id ของ Product
+ * @return array รายการ part พร้อมชื่อ Product สำหรับ pre_product
+ */
+function pre_pickup_save_fetch_repair_parts($conn, $productId)
+{
+    $productName = pre_pickup_save_product_name($conn, $productId);
+    if ($productName === '') {
+        return array();
+    }
+
+    $scope = pickup_repair_part_scope_bind($conn, $productId, $productName);
+    $stmt = pre_pickup_save_execute(
+        $conn,
+        'SELECT DISTINCT part.`part_id`, part.`part_name`
+         FROM `part`
+         INNER JOIN `repair_formula` rf ON rf.`part_id` = part.`part_id`
+         WHERE ' . $scope['where'] . '
+         ORDER BY part.`part_name` ASC',
+        $scope['types'],
+        $scope['params']
+    );
+
+    mysqli_stmt_bind_result($stmt, $partId, $partName);
+    $rows = array();
+    while (mysqli_stmt_fetch($stmt)) {
+        $rows[] = array(
+            'part_id' => (int) $partId,
+            'part_name' => (string) $partName,
+            'product_name' => $productName,
+        );
+    }
+    mysqli_stmt_close($stmt);
+
+    return $rows;
+}
+
+/**
  * บันทึกรายการ pre_stock หนึ่งแถว
  *
  * @param mysqli $conn connection ฐานข้อมูล
@@ -200,7 +267,7 @@ function pre_pickup_save_insert_row($conn, $row)
             $row['pre_amount'],
             $row['pre_by'],
             $row['pre_remarks'],
-            '',
+            $row['ts_mtn_number'],
             'NO',
             'pre',
         )
@@ -229,6 +296,169 @@ function pre_pickup_save_notify($preBy)
     line_messaging_push_text($message, 'inventory LINE pickup');
 }
 
+/**
+ * อ่านรายการ Product + จำนวนชุดจาก request (รองรับหลายชุดและแบบเดิมชุดเดียว)
+ *
+ * @return array<int, array{product_id:int, amount:float}>
+ */
+function pre_pickup_save_collect_sets()
+{
+    $sets = array();
+    $products = isset($_GET['pre_product']) ? $_GET['pre_product'] : null;
+    $amounts = isset($_GET['pre_amount']) ? $_GET['pre_amount'] : null;
+
+    if (is_array($products) && is_array($amounts)) {
+        $count = min(count($products), count($amounts));
+        for ($i = 0; $i < $count; $i++) {
+            $productId = pre_pickup_save_positive_int($products[$i]);
+            if ($productId <= 0) {
+                continue;
+            }
+            $sets[] = array(
+                'product_id' => $productId,
+                'amount' => pre_pickup_save_amount($amounts[$i]),
+            );
+        }
+
+        return $sets;
+    }
+
+    $productId = pre_pickup_save_positive_int($products);
+    if ($productId > 0) {
+        $sets[] = array(
+            'product_id' => $productId,
+            'amount' => pre_pickup_save_amount($amounts),
+        );
+    }
+
+    return $sets;
+}
+
+/**
+ * รวมรายการ part จากหลายชุด Product — รวมจำนวนเบิก part เดียวกัน
+ *
+ * @param array<int, array{part_id:int, part_name:string, product_name:string, pick_qty:float}> $merged map part_id
+ * @param array<int, array{part_id:int, part_name:string, product_name:string}> $parts รายการ part หนึ่งชุด
+ * @param float $baseAmount จำนวนชุดของ Product นั้น
+ * @return void ไม่มี return value
+ */
+function pre_pickup_save_merge_parts(&$merged, $parts, $baseAmount)
+{
+    foreach ($parts as $part) {
+        $partId = (int) $part['part_id'];
+        $pickQty = pre_pickup_save_part_amount($partId, $baseAmount);
+        if (!isset($merged[$partId])) {
+            $merged[$partId] = array(
+                'part_id' => $partId,
+                'part_name' => (string) $part['part_name'],
+                'product_name' => (string) $part['product_name'],
+                'pick_qty' => $pickQty,
+            );
+            continue;
+        }
+
+        $merged[$partId]['pick_qty'] += $pickQty;
+    }
+}
+
+/**
+ * ดึงชื่อ part จาก part_id สำหรับรายการที่เพิ่มแยกจากหน้าเบิก
+ *
+ * @param mysqli $conn connection ฐานข้อมูล
+ * @param int $partId id part
+ * @return string ชื่อ part หรือค่าว่าง
+ */
+function pre_pickup_save_part_name($conn, $partId)
+{
+    $stmt = pre_pickup_save_execute(
+        $conn,
+        'SELECT `part_name` FROM `part` WHERE `part_id` = ? LIMIT 1',
+        'i',
+        array($partId)
+    );
+    mysqli_stmt_bind_result($stmt, $partName);
+    $name = '';
+    if (mysqli_stmt_fetch($stmt)) {
+        $name = trim((string) $partName);
+    }
+    mysqli_stmt_close($stmt);
+
+    return $name;
+}
+
+/**
+ * รวมรายการ part ที่ผู้ใช้เพิ่มแยก (manual) เข้ากับผลจากสูตรเซต
+ *
+ * @param mysqli $conn connection ฐานข้อมูล
+ * @param array<int, array{part_id:int, part_name:string, product_name:string, pick_qty:float}> $mergedParts map part_id
+ * @return void ไม่มี return value
+ */
+function pre_pickup_save_merge_manual_lines($conn, &$mergedParts)
+{
+    $partIds = isset($_GET['manual_part_id']) ? $_GET['manual_part_id'] : array();
+    $qtys = isset($_GET['manual_part_qty']) ? $_GET['manual_part_qty'] : array();
+    $productNames = isset($_GET['manual_product_name']) ? $_GET['manual_product_name'] : array();
+
+    if (!is_array($partIds)) {
+        $partIds = ($partIds !== '' && $partIds !== null) ? array($partIds) : array();
+    }
+    if (!is_array($qtys)) {
+        $qtys = ($qtys !== '' && $qtys !== null) ? array($qtys) : array();
+    }
+    if (!is_array($productNames)) {
+        $productNames = ($productNames !== '' && $productNames !== null) ? array($productNames) : array();
+    }
+
+    $count = count($partIds);
+    for ($i = 0; $i < $count; $i++) {
+        $partId = pre_pickup_save_positive_int($partIds[$i]);
+        if ($partId <= 0) {
+            continue;
+        }
+        $qtyRaw = isset($qtys[$i]) ? $qtys[$i] : 0;
+        $pickQty = pre_pickup_save_amount($qtyRaw);
+        $productName = pre_pickup_save_text(isset($productNames[$i]) ? $productNames[$i] : '', 255);
+
+        if (isset($mergedParts[$partId])) {
+            $mergedParts[$partId]['pick_qty'] += $pickQty;
+            continue;
+        }
+
+        $partName = pre_pickup_save_part_name($conn, $partId);
+        if ($partName === '') {
+            throw new Exception('ไม่พบ Part ในรายการที่เพิ่มแยก (id: ' . $partId . ')');
+        }
+
+        $mergedParts[$partId] = array(
+            'part_id' => $partId,
+            'part_name' => $partName,
+            'product_name' => $productName !== '' ? $productName : $partName,
+            'pick_qty' => $pickQty,
+        );
+    }
+}
+
+/**
+ * ตัด Part ที่ผู้ใช้ลบออกจากตารางเบิกเซตบน pickup_ma (omit_part_id[])
+ *
+ * @param array<int, array{part_id:int, part_name:string, product_name:string, pick_qty:float}> $mergedParts map part_id
+ * @return void ไม่มี return value
+ */
+function pre_pickup_save_apply_omitted_parts(&$mergedParts)
+{
+    $omits = isset($_GET['omit_part_id']) ? $_GET['omit_part_id'] : array();
+    if (!is_array($omits)) {
+        $omits = ($omits !== '' && $omits !== null) ? array($omits) : array();
+    }
+
+    foreach ($omits as $rawId) {
+        $partId = pre_pickup_save_positive_int($rawId);
+        if ($partId > 0) {
+            unset($mergedParts[$partId]);
+        }
+    }
+}
+
 // ─ Main Flow ─────────────────────────────────────────────────────────────────
 
 $message = '';
@@ -237,39 +467,89 @@ $savedCount = 0;
 
 try {
     $preDate = pre_pickup_save_text(isset($_GET['pre_date']) ? $_GET['pre_date'] : '', 30);
-    $productId = pre_pickup_save_positive_int(isset($_GET['pre_product']) ? $_GET['pre_product'] : 0);
-    $baseAmount = pre_pickup_save_amount(isset($_GET['pre_amount']) ? $_GET['pre_amount'] : 0);
+    $setRows = pre_pickup_save_collect_sets();
     $preType = pre_pickup_save_text(isset($_GET['pre_type']) ? $_GET['pre_type'] : '', 100);
-    $preBy = pre_pickup_save_text(isset($_GET['pre_by']) ? $_GET['pre_by'] : '', 100);
+    $preBy = inventory_actor_name_for_save(100);
     $preRemarks = pre_pickup_save_text(isset($_GET['pre_remarks']) ? $_GET['pre_remarks'] : '', 5000);
+    $searchRaw = pre_pickup_save_text(isset($_GET['search_id']) ? $_GET['search_id'] : '', 100);
+    if ($searchRaw === '') {
+        $searchRaw = pre_pickup_save_text(isset($_GET['no_repair']) ? $_GET['no_repair'] : '', 100);
+    }
+    $tsMtnNumber = $searchRaw;
+    if ($tsMtnNumber !== '') {
+        if (function_exists('mb_substr')) {
+            $tsMtnNumber = mb_substr($tsMtnNumber, 0, 7, 'UTF-8');
+        } else {
+            $tsMtnNumber = substr($tsMtnNumber, 0, 7);
+        }
+    }
 
-    $allowedTypes = array('เบิกผลิต', 'เบิกตาม PO', 'เบิกซ่อมลูกค้า', 'เบิกเสียระหว่างผลิต', 'เบิกอื่นๆ');
+    $allowedTypes = array(
+        'เบิกผลิต',
+        'เบิกตาม PO',
+        'เบิกซ่อมลูกค้า',
+        'เบิกเสียระหว่างผลิต',
+        'เบิกเสียระหว่างขนส่ง',
+        'เบิก MA',
+        'เบิกอื่นๆ',
+    );
     if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $preDate)) {
         throw new Exception('วันที่เบิกไม่ถูกต้อง');
     }
 
-    if ($productId <= 0 || $preBy === '' || !in_array($preType, $allowedTypes, true)) {
+    $manualPartIds = isset($_GET['manual_part_id']) ? $_GET['manual_part_id'] : array();
+    if (!is_array($manualPartIds)) {
+        $manualPartIds = ($manualPartIds !== '' && $manualPartIds !== null) ? array($manualPartIds) : array();
+    }
+
+    if ($preBy === '' || !in_array($preType, $allowedTypes, true)) {
         throw new Exception('ข้อมูลหลักสำหรับบันทึกรายการเบิกไม่ครบถ้วน');
     }
 
-    $parts = pre_pickup_save_fetch_formula_parts($connect, $productId);
-    if (empty($parts)) {
-        throw new Exception('ไม่พบสูตร part ของ Product ที่เลือก');
+    if (count($setRows) === 0 && count($manualPartIds) === 0) {
+        throw new Exception('ไม่มีรายการเซตหรือรายการแยกสำหรับบันทึก');
+    }
+
+    $mergedParts = array();
+    $isRepair = ($preType === 'เบิกซ่อมลูกค้า');
+    foreach ($setRows as $setRow) {
+        $productId = (int) $setRow['product_id'];
+        $baseAmount = (float) $setRow['amount'];
+        if ($isRepair) {
+            $parts = pre_pickup_save_fetch_repair_parts($connect, $productId);
+            if (empty($parts)) {
+                throw new Exception('ไม่พบรายการเซตซ่อม (part_product) ของ Product ที่เลือก');
+            }
+        } else {
+            $parts = pre_pickup_save_fetch_formula_parts($connect, $productId);
+            if (empty($parts)) {
+                throw new Exception('ไม่พบสูตร part ของ Product ที่เลือก');
+            }
+        }
+        pre_pickup_save_merge_parts($mergedParts, $parts, $baseAmount);
+    }
+
+    pre_pickup_save_merge_manual_lines($connect, $mergedParts);
+    pre_pickup_save_apply_omitted_parts($mergedParts);
+
+    if (empty($mergedParts)) {
+        throw new Exception('ไม่พบรายการ part สำหรับบันทึก');
     }
 
     $preId = date('ymd-His');
     mysqli_autocommit($connect, false);
 
-    foreach ($parts as $part) {
+    foreach ($mergedParts as $part) {
         pre_pickup_save_insert_row($connect, array(
             'pre_id' => $preId,
             'pre_date' => $preDate,
             'product_name' => $part['product_name'],
             'part_id' => (string) $part['part_id'],
             'pre_type' => $preType,
-            'pre_amount' => pre_pickup_save_part_amount($part['part_id'], $baseAmount),
+            'pre_amount' => $part['pick_qty'],
             'pre_by' => $preBy,
             'pre_remarks' => $preRemarks,
+            'ts_mtn_number' => $tsMtnNumber,
         ));
         $savedCount++;
     }

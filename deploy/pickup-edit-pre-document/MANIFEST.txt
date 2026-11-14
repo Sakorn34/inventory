@@ -1,0 +1,11 @@
+# MANIFEST — Inventory — แก้เอกสารเบิกรอคลัง + หน้ารายการเบิก
+# สร้างเมื่อ: 2026-11-03 07:12:32
+# ใช้เปรียบเทียบ MD5 บน server หลัง copy (เช่น ผ่าน check_server_files.php)
+
+relative_path | bytes | md5 | modified
+------------------------------------------------------------------------
+www/pickup_overview.php | 6034 | 9d3191c9e186efb5fd831be18fa24be6 | 2026-11-03 07:12:32
+www/pickup_list_order.php | 11687 | a62ac4abd23cb4e87275d92ebe3a460a | 2026-11-03 07:12:32
+www/pickup_list_order_detail.php | 40065 | 9485769c3b74f79bcca19eaa3089ddaa | 2026-11-03 07:12:32
+www/pickup_list_order_edit.php | 23295 | 1b462934a3f5278dad95adbeb83488cd | 2026-11-03 07:12:32
+www/css/inventory-ui.css | 18265 | 220d840f389ca53e8df66ce392c6372d | 2026-11-03 07:12:32

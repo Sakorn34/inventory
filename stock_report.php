@@ -116,7 +116,7 @@ $chartTitleSuffix = ($getLogPart !== '') ? $getLogPart : $lblAllLogPart;
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title><?php echo $h($lblTitle); ?></title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.6.3/css/font-awesome.min.css">
-<link rel="stylesheet" href="css/inventory-ui.css">
+<?php require_once __DIR__ . '/inventory_ui_head.php'; ?>
 <script src="js/jquery-3.5.1.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script>

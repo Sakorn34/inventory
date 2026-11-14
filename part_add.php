@@ -1,15 +1,58 @@
 <?php
+/**
+ * หน้าเพิ่ม Part ใหม่ในระบบ inventory
+ *
+ * แสดงฟอร์มบันทึกข้อมูล Part, Product, สต็อก และการจัดซื้อ แล้วส่งไป part_save.php
+ * ใช้ธีม inv-app / inventory-ui.css ให้สอดคล้องหน้าหลักอื่น
+ */
 require_once __DIR__ . '/connect.php';
-header("Content-Type: text/html; charset=UTF-8");
+require_once __DIR__ . '/inventory_session_actor.php';
+header('Content-Type: text/html; charset=UTF-8');
 @setlocale(LC_TIME, 'th_TH.UTF-8', 'th_TH', 'tha');
+
+$h = static function ($s) {
+    return htmlspecialchars((string) $s, ENT_QUOTES, 'UTF-8');
+};
+
+$array = array();
+$sqlSP = 'SELECT pd_name FROM product ORDER BY pd_name ASC';
+$exeSP = db_exec($connect, $sqlSP);
+if ($exeSP) {
+    while ($resultSP = db_fetch_array($exeSP)) {
+        $array[] = $resultSP['pd_name'];
+    }
+}
+$arrLength = count($array);
+
+$arrayVD = array();
+$sqlVD = 'SELECT vname FROM tbl_vendor ORDER BY vname ASC';
+$exeVD = db_exec($connect, $sqlVD);
+if ($exeVD) {
+    while ($resultVD = db_fetch_array($exeVD)) {
+        $arrayVD[] = $resultVD['vname'];
+    }
+}
+$arrLengthVD = count($arrayVD);
+
+$arrayCt = array();
+$arrayCt_id = array();
+$sqlCt = 'SELECT ct_id, ct_name FROM categories_product ORDER BY ct_name ASC';
+$exeCt = db_exec($connect, $sqlCt);
+if ($exeCt) {
+    while ($resultCt = db_fetch_array($exeCt)) {
+        $arrayCt_id[] = $resultCt['ct_id'];
+        $arrayCt[] = $resultCt['ct_name'];
+    }
+}
+$arrLengthCt = count($arrayCt);
 ?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.6.3/css/font-awesome.min.css">
-<link type="text/css" rel="stylesheet" href="css.css" />
-<link rel="stylesheet" type="text/css" href="css/smoothness/jquery-ui-1.7.2.custom.css">  
+<link rel="stylesheet" type="text/css" href="css/smoothness/jquery-ui-1.7.2.custom.css">
+<?php require_once __DIR__ . '/inventory_ui_head.php'; ?>
 <title>เพิ่มข้อมูล Part</title>
 <script type="text/javascript" src="js/jquery-1.3.2.min.js"></script>  
 <script type="text/javascript" src="js/jquery-ui-1.7.2.custom.min.js"></script>  
@@ -47,8 +90,7 @@ function save_job(){
 		}
 
 		if(document.getElementById("part_by").value == ""){ 
-			alert("กรุณากรอกข้อมูลให้ครบถ้วน");
-			document.getElementById("part_by").focus();
+			alert("ไม่พบชื่อผู้บันทึกจาก session — กรุณาเข้าสู่ระบบ SSO ใหม่");
 			return;
 		}
 
@@ -201,269 +243,133 @@ function addSpare(mode) {
 }
 
 </script>
-<style type="text/css">
-<!--
-.ex1 {  border-radius: 10px;
-  background:#FFCCCC;
-  padding: 5px 10px 5px 10px;
-   width:max-content;
-}
-.ex11 {border-radius: 10px;
-  background:#FFCCCC;
-  padding: 5px 10px 5px 10px;
-   width:max-content;
-}
--->
-</style>
 </head>
+<body class="inv-app part-add">
+<?php require __DIR__ . '/title-h.php'; ?>
 
-<style>
-.content {
-  max-width: 1200px;
-  margin-top:100px;
-  font-size: 16px; 
-  color:#666666;
-}
+<main class="inv-main">
+  <header class="inv-page-header">
+    <h1 class="inv-page-title">เพิ่ม Part</h1>
+    <p class="inv-page-desc">กรอกข้อมูล Part, สต็อก และแหล่งจัดซื้อ แล้วกดบันทึก</p>
+  </header>
 
-input[type="text"] {
-  font-size: 16px;
-  padding: 1px;
-  border: 1px solid #C0C0C0;
-  color:#FF9900;
-}
+  <form id="form_part" name="form_part" method="post" action="part_save.php">
+    <input type="hidden" name="status" value="insert" />
 
-textarea{
-  font-size: 16px;
-  padding: 1px;
-  border: 1px solid #C0C0C0;
-}
+    <section class="inv-card part-add-card">
+      <div class="inv-card__head"><i class="fa fa-cube"></i> รายละเอียด Part</div>
+      <div class="inv-card__body">
+        <h2 class="part-add-section-title">ข้อมูลหลัก</h2>
+        <div class="part-add-grid">
+          <div class="inv-field">
+            <label for="part_name">ชื่อ Part</label>
+            <input class="inv-input" type="text" name="part_name" id="part_name" autocomplete="off" />
+          </div>
+          <div class="inv-field">
+            <label for="part_stock_no">Stock No.</label>
+            <input class="inv-input" type="text" name="part_stock_no" id="part_stock_no" autocomplete="off" />
+          </div>
+          <div class="inv-field">
+            <label for="part_product">Product</label>
+            <select class="inv-select" id="part_product" name="part_product">
+              <option value="">-- เลือก --</option>
+              <?php for ($a = 0; $a < $arrLength; $a++) { ?>
+              <option value="<?php echo $h($array[$a]); ?>"><?php echo $h($array[$a]); ?></option>
+              <?php } ?>
+            </select>
+          </div>
+          <div class="inv-field">
+            <label for="part_categories">Categories</label>
+            <select class="inv-select" id="part_categories" name="part_categories">
+              <option value="">-- เลือก --</option>
+              <?php for ($a = 0; $a < $arrLengthCt; $a++) { ?>
+              <option value="<?php echo $h($arrayCt_id[$a]); ?>"><?php echo $h($arrayCt[$a]); ?></option>
+              <?php } ?>
+            </select>
+          </div>
+          <div class="inv-field">
+            <label for="part_amount">จำนวน Stock</label>
+            <input class="inv-input" type="number" name="part_amount" id="part_amount" min="0" />
+          </div>
+          <div class="inv-field">
+            <label for="part_image">รูปภาพ ( path / URL )</label>
+            <input class="inv-input" type="text" name="part_image" id="part_image" autocomplete="off" />
+          </div>
+        </div>
 
-select {
-  font-size: 16px;
-  padding: 1px;
-  border: 1px solid #C0C0C0;
-}
-table, td, th {
-	  		border: 0px solid black;
- }
- tr.spaceUnder>td {
-		padding-bottom: 1em;
- }
- tr.spaceUnder05>td {
-		padding-bottom: 0.5em;
- }
- tr.spaceTop>td {
-		padding-top: 1em;
- }
+        <h2 class="part-add-section-title">สต็อกและการแจ้งเตือน</h2>
+        <div class="part-add-grid">
+          <div class="inv-field">
+            <label for="part_min_alert">จำนวนขั้นต่ำ Stock</label>
+            <input class="inv-input" type="number" name="part_min_alert" id="part_min_alert" min="0" />
+          </div>
+          <div class="inv-field part-add-field-check">
+            <span class="part-add-check-label">แจ้งเตือน Line เมื่อสต็อกต่ำ</span>
+            <label class="part-add-check"><input type="checkbox" name="part_line_alert" id="part_line_alert" value="1" /> เปิดใช้งาน (ส่งวันละครั้ง)</label>
+          </div>
+        </div>
 
-.ex {
-  border-radius: 10px;
-  background:#FFCCCC;
-  padding: 5px 10px 5px 10px;
-   width:max-content;
-  /*border: 3px solid #BADA55; */
-}
+        <h2 class="part-add-section-title">การจัดซื้อ</h2>
+        <div class="part-add-grid">
+          <div class="inv-field">
+            <label for="part_vendor">ร้าน Vendor</label>
+            <select class="inv-select" id="part_vendor" name="part_vendor">
+              <option value="">-- เลือก --</option>
+              <?php for ($a = 0; $a < $arrLengthVD; $a++) { ?>
+              <option value="<?php echo $h($arrayVD[$a]); ?>"><?php echo $h($arrayVD[$a]); ?></option>
+              <?php } ?>
+            </select>
+          </div>
+          <div class="inv-field">
+            <label for="part_puchase_quantity">จำนวนซื้อ/ครั้ง</label>
+            <input class="inv-input" type="number" name="part_puchase_quantity" id="part_puchase_quantity" min="0" />
+          </div>
+          <div class="inv-field part-add-grid__full">
+            <label for="part_link">Link สั่งซื้อ</label>
+            <input class="inv-input" type="text" name="part_link" id="part_link" autocomplete="off" />
+          </div>
+          <div class="inv-field">
+            <label for="part_price">ราคา</label>
+            <input class="inv-input" type="text" name="part_price" id="part_price" inputmode="decimal" autocomplete="off" />
+          </div>
+          <div class="inv-field">
+            <label for="part_shipment">การจัดส่ง</label>
+            <select class="inv-select" name="part_shipment" id="part_shipment">
+              <option value="">-- เลือก --</option>
+              <option value="ในประเทศ">ในประเทศ</option>
+              <option value="ต่างประเทศ">ต่างประเทศ</option>
+            </select>
+          </div>
+          <div class="inv-field">
+            <label for="part_leadtime">ระยะเวลาจัดส่ง (วัน)</label>
+            <input class="inv-input" type="number" name="part_leadtime" id="part_leadtime" min="0" />
+          </div>
+          <div class="inv-field">
+            <label for="part_transport_company">บริษัทขนส่ง</label>
+            <input class="inv-input" type="text" name="part_transport_company" id="part_transport_company" autocomplete="off" />
+          </div>
+          <div class="inv-field">
+            <label for="part_period_use">ระยะเวลาใช้ (วัน)</label>
+            <input class="inv-input" type="number" name="part_period_use" id="part_period_use" min="0" />
+          </div>
+          <div class="inv-field part-add-field-check">
+            <span class="part-add-check-label">ต้องตรวจร่างก่อน</span>
+            <label class="part-add-check"><input type="checkbox" name="part_check_draft" id="part_check_draft" value="Yes" /> ใช่</label>
+          </div>
+          <div class="inv-field part-add-grid__full">
+            <label for="part_remarks">หมายเหตุ</label>
+            <input class="inv-input" type="text" name="part_remarks" id="part_remarks" autocomplete="off" />
+          </div>
+        </div>
+      </div>
 
-.ex2 {
-  border-radius: 10px;
-  background:#CCFFFF;
-  padding: 5px 10px 5px 10px;
-  width:max-content;
-  /*border: 3px solid #BADA55; */
-}
-
- /* The navigation bar */
-.navbar {
-  background-color:#E9E9E9;
-  overflow: hidden;
-  position: fixed; /* Set the navbar to fixed position */
-  top: 0; /* Position the navbar at the top of the page */
-  width: 100%; /* Full width */
-}
-</style>
-<center>
-<body>
-<div class="navbar"><?php require("title-h.php"); ?></div>
-<div class="content">
-<!-- Code PHP  -->
-	
-<?php
-$array = array();
-$sqlSP = "SELECT * FROM product";
-$exeSP = db_exec($connect, $sqlSP) or die("Error Query [" . $sqlSP . "]");
-while ($resultSP = db_fetch_array($exeSP)) {
-    array_push($array, $resultSP['pd_name']);
-}
-$arrLength = count($array);
-	//		db_close($connect);
-
-$arrayVD = array();
-$sqlVD = "SELECT * FROM tbl_vendor ORDER BY vname ASC";
-$exeVD = db_exec($connect, $sqlVD) or die("Error Query [" . $sqlVD . "]");
-while ($resultVD = db_fetch_array($exeVD)) {
-    array_push($arrayVD, $resultVD['vname']);
-}
-$arrLengthVD = count($arrayVD);
-//echo $arrayVD;
-?>
-
-<form id="form_part" name="form_part" method="post" action="part_save.php">
-<input type="hidden" name="status" value="insert" />
-<table id="table1" width="100%" >
-  <tr class="spaceUnder05">
-    <td colspan="4" align="center" valign="center" ><b class="ex11">รายละเอียด part</b></td>
-  </tr>
-  <tr>
-    <td><br /></td>
-  </tr>
-  <tr>
-    <td align="right" valign="center"> ชื่อ Part : </td>
-    <td ><input type="text" name="part_name" id="part_name"/>   </td>
-    <td align="right" valign="center"> Stock No. : </td>
-    <td ><input type="text" name="part_stock_no" id="part_stock_no"/>   </td>
-  </tr>
-  <tr>
-    <td align="right" valign="center"> Product : </td>
-    <td ><p>
-      <select id="part_product" name="part_product" >
-        <option value="">-- Select --</option>
-        <?php for ($a = 0; $a <= $arrLength; $a++) { ?>
-        <option value="<?= $array[$a]; ?>">
-          <?= $array[$a]; ?>
-          </option>
-        <?php
-    } ?>
-      </select>
-    </p>
-        <?php 
-$arrayCt = array();
-$arrayCt_id = array();
-$sqlCt = "SELECT * FROM categories_product";
-$exeCt = db_exec($connect, $sqlCt) or die("Error Query [" . $sqlCt . "]");
-while ($resultCt = db_fetch_array($exeCt)) {
-    array_push($arrayCt, $resultCt['ct_name']);
-	array_push($arrayCt_id, $resultCt['ct_id']);
-}
-$arrLengthCt = count($arrayCt);
-				
-?>
-<td align="right" valign="center"> Categories : </td> <td ><p>  <select id="part_categories" name="part_categories" >
-        <option value="">-- Select --</option>
-        <?php for ($a = 0; $a <= $arrLengthCt; $a++) { ?>
-        <option value="<?= $arrayCt_id[$a]; ?>"> <?= $arrayCt[$a]; ?></option>
-        <?php
-    } ?>
-      </select>
-    </p>
-  </td> 
-  </tr>
-  <tr> <td align="right" valign="center"> จำนวน Stock : </td> 
-    <td > <input type="number" name="part_amount" id="part_amount" min="0" /> </td> 
-  <td align="right" valign="center"> รูปภาพ : </td> <td > <input type="text" name="part_image" id="part_image" /> </td></tr>
-    <tr>
-    <td colspan="4" ><hr /></td>
-   </tr>
-  <tr> <td align="right" valign="center"> จำนวนขั้นต่ำ Stock : </td> 
-  <td > <input type="number" name="part_min_alert" id="part_min_alert" min="0"  /> </td>
-  <td align="right" valign="center"> แจ้งเตือน Line เมื่อสต็อกต่ำ : </td>
-  <td><label><input type="checkbox" name="part_line_alert" id="part_line_alert" value="1" /> เปิดใช้งาน (ส่งวันละครั้ง)</label></td>
-  </tr>
-  <tr>
-  <td align="right" valign="center"> ร้าน Vendor : </td> <td > <p><select id="part_vendor" name="part_vendor"  >
-	 			<option value="<?=$resultPart['part_vendor']; ?>" ><?=$resultPart['part_vendor']; ?></option>
-				<option value="" >-- Select --</option>
-					  <?php for ($a = 0; $a <= $arrLengthVD; $a++) { ?>
-							<option value="<?= $arrayVD[$a]; ?>"><?= $arrayVD[$a]; ?></option>
-					 <?php
-  				  } ?>
-	 			</select></p>
-  </td> 
-  <tr>
-   <tr> <td align="right" valign="center"> จำนวนซื้อ/ครั้ง : </td> 
-  <td > <input type="number" name="part_puchase_quantity" id="part_puchase_quantity"  min="0"/> </td>
-  <td align="right" valign="center"> Link สั่งซื้อ : </td> <td > <input type="text" name="part_link" id="part_link"  /> </td> </tr>
-  
-  </tr>
-  <tr>
-    <td align="right" valign="center"> ราคา : </td> <td > <input type="text" name="part_price" id="part_price"  min="0"/> </td> 
-	  <td align="right" valign="center"> การจัดส่ง : </td> <td > <select class="custom-select" name="part_shipment" id="part_shipment" required>
-		<option value="<?=$resultPart['part_shipment']; ?>"><?=$resultPart['part_shipment']; ?></option>
-		<option value="ในประเทศ">ในประเทศ</option>
-		<option value="ต่างประเทศ">ต่างประเทศ</option>
-    </select></td> 
-  </tr>
-  <tr>
-      <td align="right" valign="center"> ระยะเวลาจัดส่ง (วัน) : </td> <td > <input type="number" name="part_leadtime" id="part_leadtime" min="0" /> </td>
-	  
-	      <td align="right" valign="center"> บริษัทขนส่ง : </td> <td > <input type="text" name="part_transport_company" id="part_transport_company" /> </td>
-  </tr>
-  
-  <tr>
-      <td align="right" valign="center"> ระยะเวลาใช้ (วัน) : </td> <td > <input type="number" name="part_period_use" id="part_period_use"  min="0"/> </td>  
-        <td align="right" valign="center"> ต้องตรวจร่างก่อน : </td> <td > <input type="checkbox" name="part_check_draft" id="part_check_draft"  value="Yes"/> </td>  
-  </tr>
-  <tr>
-          <td align="right" valign="center"> หมายเหตุ : </td> <td > <input type="text" name="part_remarks" id="part_remarks" /> </td>  
-  </tr>
-  
-  <tr> 
-<td></td><td></td>
-  </tr>
- 
-  <tr> 
-  <td></td>
-  <td></td>
-  <td></td>
-  <td></td>
-  
-  </tr>
-  </tr>
-  <!-- add ?????????   -->
-  <tr>
-    <td colspan="4" ><hr /></td>
-  </tr>
-  <tr> </tr>
-  <tr>
-    <td width="25%" align="center"></td>
-    <td width="25%"></td>
-    <td width="25%" align="center"><!-- serial ????????? -->
-        <!--	<p><select class="custom-select" name="sn_sp1" id="sn_sp1" style="display:none;  width:200px"><option value="">S/N</option></select></p>
-	<p><select class="custom-select" name="sn_sp2" id="sn_sp2" style="display:none;  width:200px"><option value="">S/N</option></select></p>
-	<p><select class="custom-select" name="sn_sp3" id="sn_sp3" style="display:none;  width:200px"><option value="">S/N</option></select></p>
-	<p><select class="custom-select" name="sn_sp4" id="sn_sp4" style="display:none;  width:200px"><option value="">S/N</option></select></p>
-	<p><select class="custom-select" name="sn_sp5" id="sn_sp5" style="display:none;  width:200px"><option value="">S/N</option></select></p>  -->
-    </td>
-    <td width="25%"></td>
-  </tr>
-  <tr>
-    <td  align="right" valign="center"> ผู้บันทึก : </td>
-    <td ><select class="custom-select" name="part_by" id="part_by">
-      <option value="">-- Select --</option>
-      <option value="NOI">NOI</option>
-      <option value="NI">NI</option>
-      <option value="PLAM">PLAM</option>
-      <option value="AO">AO</option>
-      <option value="MAX">Max</option>
-      <option value="DAY">DAY</option>
-      <option value="NUT">NUT</option>
-      <option value="BOY">BOY</option>
-      <option value="NA-MO">NA-MO</option>
-    </select>
-    </td>
-    <td  align="right" valign="center" ><p>
-      <button type="button" onclick="javascript:save_job();"><i class="fa fa-save">SAVE</i></button>
-    </p>
-        <i><a>
-        <p><a href="javascript: save_job();"></a></p>
-        </a></i></td>
-  </tr>
-</table>
-<br />
-<div align="center"></div>
-<div align="center"></div>
-</form>
-</div>
+      <div class="inv-card__footer part-add-footer">
+        <?php inventory_render_recorder_field('part_by', 'part_by', 'ผู้บันทึก', 'part-add-footer__by'); ?>
+        <button type="button" class="inv-btn inv-btn--primary" onclick="save_job();"><i class="fa fa-save"></i> บันทึก</button>
+      </div>
+    </section>
+  </form>
+</main>
 </body>
-</center>
 </html>
 

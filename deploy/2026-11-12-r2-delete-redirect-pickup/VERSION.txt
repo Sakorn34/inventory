@@ -1,0 +1,6 @@
+package=2026-11-12-r2-delete-redirect-pickup
+label=Inventory — โมดูลเบิกของ (pickup + pickup_ma + UI ฟอนต์)
+built=2026-11-12T03:51:48+00:00
+mode=incremental
+baseline=
+web_files=4

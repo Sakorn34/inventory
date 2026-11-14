@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Mockup — จัดของรอเบิก (มือถือ)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" />
+<link rel="stylesheet" href="../css/pickup-prep.css?v=1" />
+</head>
+<body class="prep-board">
+<div class="prep-board__shell">
+  <header class="prep-board__header">
+    <div class="prep-board__title-row">
+      <div>
+        <h1 class="prep-board__title">จัดของรอเบิก</h1>
+        <p class="prep-board__subtitle">จัดแล้ว 3 / 7 รายการ</p>
+      </div>
+      <button type="button" class="prep-board__refresh" aria-label="โหลดใหม่">↻</button>
+    </div>
+    <div class="prep-board__stats">
+      <div class="prep-board__stat">
+        <span class="prep-board__stat-value">3</span>
+        <span class="prep-board__stat-label">จัดแล้ว</span>
+      </div>
+      <div class="prep-board__stat">
+        <span class="prep-board__stat-value">4</span>
+        <span class="prep-board__stat-label">คงเหลือ</span>
+      </div>
+      <div class="prep-board__stat">
+        <span class="prep-board__stat-value">2</span>
+        <span class="prep-board__stat-label">เอกสาร</span>
+      </div>
+    </div>
+  </header>
+  <div class="prep-board__filters">
+    <button type="button" class="prep-board__filter is-active">ทั้งหมด</button>
+    <button type="button" class="prep-board__filter">ยังไม่จัด</button>
+    <button type="button" class="prep-board__filter">จัดแล้ว</button>
+  </div>
+  <main class="prep-board__main">
+    <article class="prep-board__doc">
+      <div class="prep-board__doc-head">
+        <div class="prep-board__doc-id">261103-155453</div>
+        <div class="prep-board__doc-meta">
+          <span>2026-11-03</span>
+          <span>คุณสมชาย</span>
+          <span>เบิกผลิต</span>
+        </div>
+        <p class="prep-board__doc-remarks is-collapsed">ส่ง Line แล้ว / เร่งด่วนช่วงบ่าย</p>
+        <button type="button" class="prep-board__remarks-toggle">ดูเพิ่ม</button>
+        <div class="prep-board__progress"><div class="prep-board__progress-bar" style="width:50%"></div></div>
+        <p class="prep-board__progress-text">จัดแล้ว 2 / 4</p>
+      </div>
+      <div class="prep-board__line is-prepared">
+        <span class="prep-board__check"><svg class="prep-board__check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></span>
+        <div class="prep-board__line-body">
+          <div class="prep-board__line-name">สายไฟ VAF 2.5 sq.mm.</div>
+          <div class="prep-board__line-sub">Product A</div>
+        </div>
+        <div class="prep-board__line-qty">×2</div>
+      </div>
+      <div class="prep-board__line">
+        <span class="prep-board__check"><svg class="prep-board__check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></span>
+        <div class="prep-board__line-body">
+          <div class="prep-board__line-name">Breaker 32A</div>
+          <div class="prep-board__line-sub">Product A</div>
+        </div>
+        <div class="prep-board__line-qty">×1</div>
+      </div>
+    </article>
+    <article class="prep-board__doc">
+      <div class="prep-board__doc-head">
+        <div class="prep-board__doc-id">261102-091200</div>
+        <div class="prep-board__doc-meta">
+          <span>2026-11-02</span>
+          <span>คุณมานี</span>
+          <span>เบิก MA</span>
+        </div>
+        <div class="prep-board__progress"><div class="prep-board__progress-bar" style="width:33%"></div></div>
+        <p class="prep-board__progress-text">จัดแล้ว 1 / 3</p>
+      </div>
+      <div class="prep-board__line is-prepared">
+        <span class="prep-board__check"><svg class="prep-board__check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></span>
+        <div class="prep-board__line-body">
+          <div class="prep-board__line-name">หลอด LED 9W</div>
+          <div class="prep-board__line-sub">Stock ทั่วไป</div>
+        </div>
+        <div class="prep-board__line-qty">×5</div>
+      </div>
+    </article>
+  </main>
+  <footer class="prep-board__footer">Static mockup — เปิดบนมือถือเพื่อดู layout</footer>
+</div>
+</body>
+</html>

@@ -52,35 +52,51 @@ function list_stock_get_part_id()
  * @param int $partId id ของ Part
  * @return string จำนวน stock หรือค่าว่างเมื่อไม่พบ
  */
-function list_stock_get_amount($conn, $partId)
+/**
+ * ดึงจำนวน stock และขั้นต่ำสั่งของ Part
+ *
+ * @param mysqli $conn connection ฐานข้อมูล
+ * @param int $partId id ของ Part
+ * @return array{amount:string,min_alert:string} ค่าว่างเมื่อไม่พบ
+ */
+function list_stock_get_part_row($conn, $partId)
 {
-    $stmt = mysqli_prepare($conn, 'SELECT `part_amount` FROM `part` WHERE `part_id` = ? LIMIT 1');
+    $empty = array('amount' => '', 'min_alert' => '');
+    $stmt = mysqli_prepare($conn, 'SELECT `part_amount`, `part_min_alert` FROM `part` WHERE `part_id` = ? LIMIT 1');
     if (!$stmt) {
-        return '';
+        return $empty;
     }
 
     mysqli_stmt_bind_param($stmt, 'i', $partId);
     if (!mysqli_stmt_execute($stmt)) {
         mysqli_stmt_close($stmt);
-        return '';
+        return $empty;
     }
 
-    mysqli_stmt_bind_result($stmt, $amount);
+    mysqli_stmt_bind_result($stmt, $amount, $minAlert);
     $hasRow = mysqli_stmt_fetch($stmt);
     mysqli_stmt_close($stmt);
 
-    return $hasRow ? (string) $amount : '';
+    if (!$hasRow) {
+        return $empty;
+    }
+
+    return array(
+        'amount' => (string) $amount,
+        'min_alert' => (string) $minAlert,
+    );
 }
 
 // ─ Response ─────────────────────────────────────────────────────────────────
 
 $partId = list_stock_get_part_id();
-$amount = $partId > 0 ? list_stock_get_amount($connect, $partId) : '';
+$row = $partId > 0 ? list_stock_get_part_row($connect, $partId) : array('amount' => '', 'min_alert' => '');
 
-if ($amount === '') {
+if ($row['amount'] === '') {
     echo '<option value="">none</option>';
 } else {
-    echo '<option value="' . list_stock_h($amount) . '">' . list_stock_h($amount) . '</option>';
+    echo '<option value="' . list_stock_h($row['amount']) . '" data-min="' . list_stock_h($row['min_alert']) . '">'
+        . list_stock_h($row['amount']) . '</option>';
 }
 
 db_close($connect);

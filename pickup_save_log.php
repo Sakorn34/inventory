@@ -15,6 +15,7 @@
  */
 
 require_once __DIR__ . '/connect.php';
+require_once __DIR__ . '/inventory_session_actor.php';
 
 header('Content-Type: text/html; charset=UTF-8');
 header('X-Content-Type-Options: nosniff');
@@ -258,7 +259,7 @@ function pickup_save_log_build_request()
 {
     $count = pickup_save_log_positive_int(isset($_GET['count']) ? $_GET['count'] : 0);
     $preId = pickup_save_log_text(isset($_GET['pre_id']) ? $_GET['pre_id'] : '', 30);
-    $logBy = pickup_save_log_text(isset($_GET['log_by']) ? $_GET['log_by'] : '', 100);
+    $logBy = inventory_actor_name_for_save(100);
     $preType = pickup_save_log_text(isset($_GET['pre_type']) ? $_GET['pre_type'] : '', 100);
     $tsMtnNumber = pickup_save_log_text(isset($_GET['ts_mtn_number']) ? $_GET['ts_mtn_number'] : '', 100);
 

@@ -62,15 +62,23 @@ function cal_wait_date($date)
 	return $send;
 }
 
-function checkStock($pick, $stock) {
+/**
+ * เปรียบเทียบจำนวนเบิกกับ stock คืน ok / false สำหรับแสดงในตารางเบิกเป็นเซต
+ *
+ * @param mixed $pick จำนวนที่ต้องการเบิก
+ * @param mixed $stock จำนวน stock คงเหลือ
+ * @return string "ok" หรือ "false"
+ */
+function checkStock($pick, $stock)
+{
+	$pickNum = is_numeric($pick) ? (float) $pick : 0.0;
+	$stockNum = is_numeric($stock) ? (float) $stock : 0.0;
 
-	$check = $pick + " "+ $stock;
-	if($pick <= $stock && $stock != ""){
-		$check = "ok";
-	}else{
-        $check = "false";
+	if ($stock !== '' && $stock !== null && $pickNum <= $stockNum) {
+		return 'ok';
 	}
-return $check;
+
+	return 'false';
 }
 
 function employee($position)

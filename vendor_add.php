@@ -108,9 +108,9 @@ $csrfToken = $_SESSION['vendor_csrf_token'];
               placeholder="10000">
           </div>
           <div class="inv-field">
-            <label>สาขา / ที่ตั้ง</label>
-            <input type="text" name="Location" class="inv-input" maxlength="255"
-              placeholder="สำนักงานใหญ่ / สาขา...">
+            <label>สาขา / ที่ตั้ง <small style="color:var(--inv-muted);font-weight:normal;">(สูงสุด 10 ตัว)</small></label>
+            <input type="text" name="Location" class="inv-input" maxlength="10"
+              placeholder="HQ / สาขา1 ...">
           </div>
         </div>
       </div>

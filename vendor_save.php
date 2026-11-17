@@ -63,7 +63,7 @@ $pkCol = vendor_save_pk_column($connect);
 
 // ─ รับค่า POST ──────────────────────────────────────────────────────────────
 
-$p = static function ($key, $default = '') use (&$_POST) {
+$p = static function ($key, $default = '') {
     return isset($_POST[$key]) ? trim((string) $_POST[$key]) : $default;
 };
 

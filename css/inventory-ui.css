@@ -962,6 +962,46 @@ button.inv-dash-stat:hover {
   padding: 0.85rem 1.1rem;
 }
 
+/* ── inv-flash (BEM) ── stock pages ───────────────────────────────── */
+.inv-flash {
+  display: flex;
+  align-items: center;
+  gap: .65rem;
+  padding: .8rem 1.1rem;
+  border-radius: 10px;
+  border-left: 4px solid transparent;
+  font-size: .9rem;
+  font-weight: 500;
+  line-height: 1.4;
+  margin-bottom: 1rem;
+}
+
+.inv-flash::before {
+  font-family: FontAwesome;
+  font-size: 1.05rem;
+  flex-shrink: 0;
+}
+
+.inv-flash--success {
+  background: #f0fdf4;
+  border-left-color: #22c55e;
+  color: #15803d;
+}
+
+.inv-flash--success::before {
+  content: "\f058";
+}
+
+.inv-flash--error {
+  background: #fef2f2;
+  border-left-color: #ef4444;
+  color: #b91c1c;
+}
+
+.inv-flash--error::before {
+  content: "\f057";
+}
+
 .inv-app .pickup-list-empty {
   color: var(--inv-muted);
   padding: 1.25rem;

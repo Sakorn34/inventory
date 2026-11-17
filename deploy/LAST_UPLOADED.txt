@@ -1,6 +1,6 @@
 # สถานะ deploy pickup บน server production (อัปเดตเมื่อผู้ใช้แจ้งว่าอัปโหลดแล้ว)
-package=2026-11-17-r2-pickup
-recorded=2026-11-17T08:19:06+00:00
+package=2026-11-17-r3-pickup
+recorded=2026-11-17T08:20:28+00:00
 note=แพ็กถัดไป (incremental) รวมเฉพาะไฟล์ที่ MD5 เปลี่ยนจากรายการด้านล่าง
 
 path | md5

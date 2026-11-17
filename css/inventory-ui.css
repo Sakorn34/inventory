@@ -298,6 +298,7 @@ textarea.inv-input {
   border: none;
   border-radius: 8px;
   cursor: pointer;
+  text-decoration: none;
   transition: transform 0.1s, box-shadow 0.15s, background 0.15s;
 }
 

@@ -136,9 +136,17 @@ if ($action === 'delete_log') {
     }
 
     $stmtDel = mysqli_prepare($connect, 'DELETE FROM log_stock WHERE log_id = ?');
-    if (!$stmtDel || !mysqli_stmt_execute($stmtDel)) {
+    if (!$stmtDel) {
         mysqli_rollback($connect);
-        stock_flash_set('ลบ log ไม่สำเร็จ', 'error');
+        stock_flash_set('ลบ log ไม่สำเร็จ: ' . mysqli_error($connect), 'error');
+        header('Location: stock_log_edit.php?id=' . $logId);
+        exit;
+    }
+    mysqli_stmt_bind_param($stmtDel, 'i', $logId);
+    if (!mysqli_stmt_execute($stmtDel)) {
+        mysqli_rollback($connect);
+        stock_flash_set('ลบ log ไม่สำเร็จ: ' . mysqli_stmt_error($stmtDel), 'error');
+        mysqli_stmt_close($stmtDel);
         header('Location: stock_log_edit.php?id=' . $logId);
         exit;
     }

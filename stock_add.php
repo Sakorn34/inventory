@@ -292,7 +292,7 @@ function addSpare(mode) {
       <div class="inv-card__head" style="display:flex;align-items:center;justify-content:space-between;">
         <span><i class="fa fa-truck"></i> หัวเอกสาร</span>
         <a href="stock_add_history.php" class="inv-btn inv-btn--ghost" style="font-size:.8rem;padding:.3rem .75rem;">
-          <i class="fa fa-history"></i> ประวัติการรับของ
+          <i class="fa fa-history"></i> ประวัติการเพิ่ม Stock
         </a>
       </div>
       <div class="inv-card__body">

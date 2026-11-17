@@ -325,6 +325,17 @@ textarea.inv-input {
   background: #e2e8f0;
 }
 
+.inv-btn--danger {
+  background: #fff1f2;
+  color: #be123c;
+  border: 1px solid #fecdd3;
+}
+
+.inv-btn--danger:hover {
+  background: #ffe4e6;
+  border-color: #fda4af;
+}
+
 /* ─ Table ──────────────────────────────────────────────────────────────────── */
 .inv-table-wrap {
   overflow-x: auto;
@@ -926,6 +937,28 @@ button.inv-dash-stat:hover {
   border-radius: 0;
   margin: 0;
   padding: 0.75rem 1.25rem;
+}
+
+.inv-app .pickup-list-message.success,
+.inv-app .inv-flash-message.success {
+  background: #dcfce7;
+  border: 1px solid #86efac;
+  color: #166534;
+}
+
+.inv-app .pickup-list-message.error,
+.inv-app .inv-flash-message.error {
+  background: #fee2e2;
+  border: 1px solid #fca5a5;
+  color: #991b1b;
+}
+
+.inv-app .inv-flash-message {
+  border-radius: var(--inv-radius, 10px);
+  font-size: 0.95rem;
+  margin: 0 0 1rem;
+  max-width: 100%;
+  padding: 0.85rem 1.1rem;
 }
 
 .inv-app .pickup-list-empty {
@@ -2111,11 +2144,71 @@ body.pickup-lift-dialog-open {
 }
 
 .inv-app.pickup-unified .pickup-set-table-foot {
+  align-items: center;
   background: #fafbfc;
   border-top: 1px solid var(--inv-border);
   display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem 1.15rem;
   justify-content: flex-start;
   padding: 0.75rem 0.85rem;
+}
+
+.inv-app.pickup-unified .pickup-set-table-foot .pickup-set-foot-add-ma {
+  margin-right: 0.15rem;
+}
+
+.inv-app.pickup-unified .pickup-set-group-head td {
+  background: #f1f5f9;
+  border-bottom: 1px solid var(--inv-border);
+  padding: 0.45rem 0.65rem;
+}
+
+.inv-app.pickup-unified .pickup-set-group-head--tech td {
+  border-top: 2px solid #c7d2fe;
+}
+
+.inv-app.pickup-unified .pickup-set-group-head__label {
+  color: #334155;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.inv-app.pickup-unified .pickup-set-group-head--tech .pickup-set-group-head__label {
+  color: #4338ca;
+}
+
+.inv-app.pickup-unified .pickup-set-tech-line td {
+  vertical-align: middle;
+}
+
+.inv-app.pickup-unified .pickup-tech-qty {
+  text-align: center;
+}
+
+.inv-app.pickup-unified .pickup-set-tech-name {
+  min-width: 12rem;
+}
+
+.inv-app.pickup-unified .pickup-set-tech-name-text {
+  color: var(--inv-text);
+  display: block;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: 1.35;
+}
+
+.inv-app.pickup-unified .pickup-set-tech-badge {
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  border-radius: 6px;
+  color: #4338ca;
+  display: inline-block;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.2rem 0.45rem;
+  white-space: nowrap;
 }
 
 .inv-app.pickup-unified .pickup-set-table-foot .inv-btn i {
@@ -2231,6 +2324,14 @@ body.pickup-lift-dialog-open {
   position: relative;
 }
 
+.inv-app .pickup-modal--tech-line .pickup-add-line-panel {
+  overflow: visible;
+}
+
+.inv-app .pickup-modal--tech-line .pickup-add-line-panel__body {
+  overflow: visible;
+}
+
 .inv-app .pickup-add-line-panel__close {
   background: transparent;
   border: none;
@@ -2258,6 +2359,11 @@ body.pickup-lift-dialog-open {
   display: flex;
   gap: 0.85rem;
   padding: 1.25rem 1.35rem 1.1rem;
+}
+
+.inv-app .pickup-add-line-panel__icon--tech {
+  background: #eef2ff;
+  color: #4338ca;
 }
 
 .inv-app .pickup-add-line-panel__icon {
@@ -2368,6 +2474,135 @@ body.pickup-lift-dialog-open {
 
 .inv-app .pickup-qty-stepper__btn:hover {
   background: #e2e8f0;
+}
+
+.inv-app .pickup-qty-stepper__input--locked {
+  background: #f8fafc;
+  color: var(--inv-text);
+  cursor: default;
+  pointer-events: none;
+  user-select: none;
+}
+
+.inv-app .pickup-tech-product-picker {
+  position: relative;
+  width: 100%;
+}
+
+.inv-app .pickup-tech-product-picker__native {
+  border: 0;
+  clip: rect(0 0 0 0);
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  width: 1px;
+}
+
+.inv-app .pickup-tech-product-picker__trigger {
+  align-items: center;
+  background: #fff;
+  border: 1px solid var(--inv-border);
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  gap: 0.65rem;
+  justify-content: flex-start;
+  min-height: 2.5rem;
+  padding: 0.35rem 0.65rem;
+  text-align: left;
+  width: 100%;
+}
+
+.inv-app .pickup-tech-product-picker__trigger:hover {
+  border-color: #94a3b8;
+}
+
+.inv-app .pickup-tech-product-picker--open .pickup-tech-product-picker__trigger {
+  border-color: var(--inv-primary, #1e5a8a);
+  box-shadow: 0 0 0 2px rgba(30, 90, 138, 0.12);
+}
+
+.inv-app .pickup-tech-product-picker__thumb {
+  display: block;
+  flex: 0 0 auto;
+}
+
+.inv-app .pickup-tech-product-thumb {
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  display: block;
+  height: 2.25rem;
+  object-fit: cover;
+  width: 2.25rem;
+}
+
+.inv-app .pickup-tech-product-thumb--empty {
+  align-items: center;
+  background: #f1f5f9;
+  color: #94a3b8;
+  display: inline-flex;
+  font-size: 0.95rem;
+  height: 2.25rem;
+  justify-content: center;
+  width: 2.25rem;
+}
+
+.inv-app .pickup-tech-product-picker__label {
+  flex: 1 1 auto;
+  font-size: 0.92rem;
+  line-height: 1.35;
+  min-width: 0;
+}
+
+.inv-app .pickup-tech-product-picker__chev {
+  color: #64748b;
+  flex: 0 0 auto;
+  font-size: 0.75rem;
+}
+
+.inv-app .pickup-tech-product-picker__menu {
+  background: #fff;
+  border: 1px solid var(--inv-border);
+  border-radius: 10px;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
+  left: 0;
+  margin-top: 0.35rem;
+  max-height: min(18rem, 45vh);
+  overflow: auto;
+  position: absolute;
+  right: 0;
+  top: 100%;
+  z-index: 60;
+}
+
+.inv-app .pickup-tech-product-picker__option {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid #f1f5f9;
+  cursor: pointer;
+  display: flex;
+  gap: 0.7rem;
+  padding: 0.55rem 0.75rem;
+  text-align: left;
+  width: 100%;
+}
+
+.inv-app .pickup-tech-product-picker__option:last-child {
+  border-bottom: 0;
+}
+
+.inv-app .pickup-tech-product-picker__option:hover,
+.inv-app .pickup-tech-product-picker__option:focus-visible {
+  background: #f0f9ff;
+  outline: none;
+}
+
+.inv-app .pickup-tech-product-picker__option-label {
+  font-size: 0.9rem;
+  line-height: 1.35;
 }
 
 .inv-app .pickup-qty-stepper__input {
@@ -2704,6 +2939,29 @@ body.pickup-lift-dialog-open {
   padding: 0.85rem 1.05rem;
 }
 
+.inv-app .pickup-doc-preview-line--tech {
+  background: #f5f3ff;
+  border-color: #c7d2fe;
+  gap: 0.75rem;
+}
+
+.inv-app .pickup-doc-preview-line__tech-badge {
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  border-radius: 6px;
+  color: #4338ca;
+  flex: 0 0 auto;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.5rem;
+  white-space: nowrap;
+}
+
+.inv-app .pickup-doc-preview-line__qty--tech {
+  background: #ede9fe;
+  color: #5b21b6;
+}
+
 .inv-app .pickup-history-preview__close {
   font-size: 0.88rem;
   min-height: 2.25rem;
@@ -2825,6 +3083,19 @@ body.inv-app .ui-widget button {
 }
 
 /* ─ Stock add (เพิ่ม Stock) ───────────────────────────────────────────────── */
+.inv-app.stock-add .stock-add-card {
+  overflow: visible;
+}
+
+.inv-app.stock-add .stock-add-card .inv-card__body {
+  overflow: visible;
+}
+
+.inv-app.stock-add .stock-add-vendor-field {
+  position: relative;
+  z-index: 40;
+}
+
 .inv-app.stock-add .stock-add-head-grid {
   display: grid;
   gap: 1rem 1.25rem;
@@ -2833,6 +3104,20 @@ body.inv-app .ui-widget button {
 
 .inv-app.stock-add .inv-search-box {
   position: relative;
+}
+
+.inv-app.stock-add #vendor_com.stock-add-vendor--locked {
+  border-color: #22c55e;
+  box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.35);
+}
+
+.inv-app.stock-add .stock-add-vendor-field .inv-field__hint kbd {
+  background: #f1f5f9;
+  border: 1px solid var(--inv-border);
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 0.85em;
+  padding: 0.1em 0.35em;
 }
 
 .inv-app.stock-add .inv-search-box__result,
@@ -2847,7 +3132,13 @@ body.inv-app .ui-widget button {
   position: absolute;
   right: 0;
   top: calc(100% + 0.25rem);
-  z-index: 20;
+  z-index: 120;
+}
+
+.inv-app.stock-add .inv-search-box__result:empty {
+  border: none;
+  box-shadow: none;
+  display: none;
 }
 
 .inv-app.stock-add .inv-search-box__result p,
@@ -2884,6 +3175,20 @@ body.inv-app .ui-widget button {
 .inv-app.stock-add .stock-add-table .stock-add-line__qty {
   max-width: 6.5rem;
   min-width: 4.5rem;
+}
+
+.inv-app.stock-add .stock-add-table .stock-add-line__price {
+  font-variant-numeric: tabular-nums;
+  max-width: 11rem;
+  min-width: 8.25rem;
+  text-align: right;
+  width: 100%;
+}
+
+.inv-app.stock-add .stock-add-table th.inv-col-num:nth-child(5),
+.inv-app.stock-add .stock-add-table td.inv-col-num:nth-child(5) {
+  min-width: 8.5rem;
+  width: 9.5rem;
 }
 
 .inv-app.stock-add .stock-add-lines-hint {

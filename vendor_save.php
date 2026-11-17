@@ -40,7 +40,7 @@ if (!hash_equals($sessionToken, $submittedToken) || $sessionToken === '') {
 // ─ ตรวจ action ─────────────────────────────────────────────────────────────
 
 $action = isset($_POST['action']) ? (string) $_POST['action'] : '';
-if (!in_array($action, array('create', 'update'), true)) {
+if (!in_array($action, array('create', 'update', 'delete'), true)) {
     stock_flash_set('action ไม่ถูกต้อง', 'error');
     header('Location: vendor_manage.php');
     exit;
@@ -154,6 +154,51 @@ if ($action === 'create') {
     }
     mysqli_stmt_close($stmt);
     stock_flash_set('เพิ่ม Vendor "' . $vname . '" สำเร็จ', 'success');
+    header('Location: vendor_manage.php');
+    exit;
+}
+
+// ─ Delete ────────────────────────────────────────────────────────────────────
+
+if ($action === 'delete') {
+    $vendorId = (int) (isset($_POST['vendor_id']) ? $_POST['vendor_id'] : 0);
+    if ($vendorId <= 0) {
+        stock_flash_set('ไม่พบ ID Vendor', 'error');
+        header('Location: vendor_manage.php');
+        exit;
+    }
+    $vnameDel = '';
+    $stmtChk = mysqli_prepare($connect,
+        'SELECT `vname` FROM `tbl_vendor` WHERE `' . $pkCol . '` = ? LIMIT 1');
+    if ($stmtChk) {
+        mysqli_stmt_bind_param($stmtChk, 'i', $vendorId);
+        mysqli_stmt_execute($stmtChk);
+        $resChk = mysqli_stmt_get_result($stmtChk);
+        $rowChk = mysqli_fetch_assoc($resChk);
+        mysqli_stmt_close($stmtChk);
+        $vnameDel = $rowChk ? (string) $rowChk['vname'] : '';
+    }
+    if ($vnameDel === '') {
+        stock_flash_set('ไม่พบ Vendor ที่ต้องการลบ', 'error');
+        header('Location: vendor_manage.php');
+        exit;
+    }
+    $stmtDel = mysqli_prepare($connect,
+        'DELETE FROM `tbl_vendor` WHERE `' . $pkCol . '` = ?');
+    if (!$stmtDel) {
+        stock_flash_set('เกิดข้อผิดพลาด: ' . mysqli_error($connect), 'error');
+        header('Location: vendor_edit.php?id=' . $vendorId);
+        exit;
+    }
+    mysqli_stmt_bind_param($stmtDel, 'i', $vendorId);
+    if (!mysqli_stmt_execute($stmtDel)) {
+        stock_flash_set('ลบไม่สำเร็จ: ' . mysqli_stmt_error($stmtDel), 'error');
+        mysqli_stmt_close($stmtDel);
+        header('Location: vendor_edit.php?id=' . $vendorId);
+        exit;
+    }
+    mysqli_stmt_close($stmtDel);
+    stock_flash_set('ลบ Vendor "' . $vnameDel . '" เรียบร้อยแล้ว', 'success');
     header('Location: vendor_manage.php');
     exit;
 }

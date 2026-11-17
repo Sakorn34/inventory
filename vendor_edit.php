@@ -275,15 +275,36 @@ $csrfToken = $_SESSION['vendor_csrf_token'];
     </div>
 
     <!-- ─ Actions ─────────────────────────────────────────────────────── -->
-    <div style="display:flex;gap:.75rem;justify-content:flex-end;flex-wrap:wrap;">
-      <a href="vendor_manage.php" class="inv-btn inv-btn--ghost">
-        <i class="fa fa-times"></i> ยกเลิก
-      </a>
-      <button type="submit" class="inv-btn inv-btn--primary">
-        <i class="fa fa-save"></i> บันทึกการแก้ไข
+    <div style="display:flex;gap:.75rem;justify-content:space-between;flex-wrap:wrap;align-items:center;">
+      <button type="button" class="inv-btn inv-btn--danger" id="btn_delete_vendor"
+        data-vname="<?php echo $v('vname'); ?>">
+        <i class="fa fa-trash-o"></i> ลบ Vendor นี้
       </button>
+      <div style="display:flex;gap:.75rem;">
+        <a href="vendor_manage.php" class="inv-btn inv-btn--ghost">
+          <i class="fa fa-times"></i> ยกเลิก
+        </a>
+        <button type="submit" class="inv-btn inv-btn--primary">
+          <i class="fa fa-save"></i> บันทึกการแก้ไข
+        </button>
+      </div>
     </div>
   </form>
+
+  <!-- ─ Delete form (ส่งแยก) ──────────────────────────────────────────── -->
+  <form method="post" action="vendor_save.php" id="form_vendor_delete" style="display:none;">
+    <input type="hidden" name="action" value="delete">
+    <input type="hidden" name="vendor_id" value="<?php echo (int) $vendor['vendor_id']; ?>">
+    <input type="hidden" name="csrf_token" value="<?php echo $h($csrfToken); ?>">
+  </form>
+  <script>
+  document.getElementById('btn_delete_vendor').addEventListener('click', function () {
+    var vname = this.getAttribute('data-vname');
+    if (confirm('ยืนยันการลบ Vendor "' + vname + '" ?\n\nข้อมูลจะถูกลบถาวร ไม่สามารถกู้คืนได้')) {
+      document.getElementById('form_vendor_delete').submit();
+    }
+  });
+  </script>
 </main>
 </body>
 </html>

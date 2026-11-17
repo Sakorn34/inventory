@@ -89,10 +89,10 @@ $vdetail     = $p('vdetail');
 
 // ─ Validate ─────────────────────────────────────────────────────────────────
 
-if ($vname === '') {
+if ($action !== 'delete' && $vname === '') {
     stock_flash_set('กรุณากรอกชื่อ Vendor', 'error');
     $back = $action === 'update'
-        ? 'vendor_edit.php?id=' . (int) ($_POST['vendor_id'] ?? 0)
+        ? 'vendor_edit.php?id=' . (int) (isset($_POST['vendor_id']) ? $_POST['vendor_id'] : 0)
         : 'vendor_add.php';
     header('Location: ' . $back);
     exit;
@@ -205,7 +205,7 @@ if ($action === 'delete') {
 
 // ─ Update ────────────────────────────────────────────────────────────────────
 
-$vendorId = (int) ($_POST['vendor_id'] ?? 0);
+$vendorId = (int) (isset($_POST['vendor_id']) ? $_POST['vendor_id'] : 0);
 if ($vendorId <= 0) {
     stock_flash_set('ไม่พบ ID Vendor', 'error');
     header('Location: vendor_manage.php');

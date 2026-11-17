@@ -7,6 +7,9 @@
  */
 require_once __DIR__ . '/connect.php';
 require_once __DIR__ . '/inventory_session_actor.php';
+require_once __DIR__ . '/stock_flash.php';
+
+$stockAddFlash = stock_flash_consume();
 header('Content-Type: text/html; charset=UTF-8');
 @setlocale(LC_TIME, 'th_TH.UTF-8', 'th_TH', 'tha');
 
@@ -52,9 +55,15 @@ function save_job(){
 		return;
 	}
 	
-	if(document.getElementById("vendor_com").value == "" ){ 
-		alert("กรุณากรอกชื่อ vendor");
-		document.getElementById("vendor_com").focus();
+	var vendorInput = document.getElementById("vendor_com");
+	if(vendorInput.value === "") {
+		alert("กรุณากรอกชื่อ Vendor");
+		vendorInput.focus();
+		return;
+	}
+	if(vendorInput.getAttribute("data-confirmed") !== "1") {
+		alert("กรุณาเลือก Vendor จากรายการ (พิมพ์ค้นหาแล้วคลิกเลือก)\nหากยังไม่มีในระบบ ให้เพิ่มที่เมนู Vendor ก่อน");
+		vendorInput.focus();
 		return;
 	}
 	if(document.getElementById("log_by").value == "" ){ 
@@ -73,23 +82,45 @@ function save_job(){
 	document.getElementById("form_add_stock").submit();
 	}
 
-//Search ����ѷ  Enduser / �����Ҩ�ҧ
-$(document.getElementById("user_company")).ready(function(){
-    $('.search-box-user input[type="text"]').on("keyup input", function(){
-        /* Get input value on change */
-        var inputVal = $(this).val();
-        var resultDropdown = $(this).siblings(".result");
-        if(inputVal.length){
-            $.get("search_cusname.php", {term: inputVal}).done(function(data){
-                resultDropdown.html(data);  // Display the returned data in browser
+// ค้นหา Vendor — ต้องเลือกจาก tbl_vendor เท่านั้น (ไม่อนุญาตพิมพ์ชื่อใหม่)
+$(function () {
+    var $vendorInput = $("#vendor_com");
+
+    function stockAddVendorClearDropdown($input) {
+        $input.siblings(".result").empty();
+    }
+
+    $vendorInput.on("keyup input", function () {
+        var $input = $(this);
+        // การพิมพ์ใดๆ ถือว่ายังไม่ได้เลือก
+        $input.removeClass("stock-add-vendor--locked").attr("data-confirmed", "0");
+        var inputVal = $input.val();
+        var resultDropdown = $input.siblings(".result");
+        if (inputVal.length) {
+            $.get("search_cusname.php", {term: inputVal}).done(function (data) {
+                resultDropdown.html(data);
             });
-        } else{  resultDropdown.empty(); }
-	});
-	
-    // Set search input value on click of result item
-    $(document).on("click", ".result p", function(){
-        $(this).parents(".search-box-user").find('input[type="text"]').val($(this).text());
-        $(this).parent(".result").empty();
+        } else {
+            resultDropdown.empty();
+        }
+    });
+
+    $vendorInput.on("keydown", function (e) {
+        // ปิด dropdown ด้วย Escape; Enter ไม่มีผล (ไม่ lock ชื่อที่พิมพ์เอง)
+        if (e.key === "Escape") {
+            stockAddVendorClearDropdown($(this));
+        }
+        if (e.key === "Enter" || e.which === 13) {
+            e.preventDefault();
+        }
+    });
+
+    $(document).on("click", ".search-box-user .result p", function () {
+        var $input = $(this).parents(".search-box-user").find('input[type="text"]');
+        $input.val($(this).text());
+        stockAddVendorClearDropdown($input);
+        // ยืนยันว่าเลือกจากรายการแล้ว
+        $input.addClass("stock-add-vendor--locked").attr("data-confirmed", "1");
     });
 });
 
@@ -247,6 +278,11 @@ function addSpare(mode) {
     <h1 class="inv-page-title">เพิ่ม Stock</h1>
     <p class="inv-page-desc">บันทึกของเข้าคลัง — กรอกวันที่ Vendor แล้วเพิ่มรายการ Product / Part</p>
   </header>
+  <?php if ($stockAddFlash['message'] !== '') { ?>
+  <div class="inv-flash-message <?php echo $h($stockAddFlash['type']); ?>" id="stock_add_flash" role="alert">
+    <?php echo $h($stockAddFlash['message']); ?>
+  </div>
+  <?php } ?>
 
   <form id="form_add_stock" name="form_add_stock" method="post" action="stock_save.php">
     <input type="hidden" id="count_sp" name="count_sp" value="0" />
@@ -263,9 +299,10 @@ function addSpare(mode) {
           <div class="inv-field stock-add-vendor-field">
             <label for="vendor_com">ร้าน Vendor</label>
             <div class="inv-search-box search-box-user">
-              <input class="inv-input" type="text" autocomplete="off" placeholder="ค้นหาชื่อร้าน Vendor" name="vendor_com" id="vendor_com" required />
+              <input class="inv-input" type="text" autocomplete="off" placeholder="พิมพ์เพื่อค้นหา Vendor..." name="vendor_com" id="vendor_com" required />
               <div class="result inv-search-box__result"></div>
             </div>
+            <p class="inv-field__hint">พิมพ์เพื่อค้นหา แล้วคลิกเลือกจากรายการ — หากยังไม่มี <a href="vendor_manage.php" target="_blank">เพิ่ม Vendor ใหม่</a></p>
           </div>
         </div>
       </div>
@@ -313,7 +350,7 @@ function addSpare(mode) {
                   <input class="inv-input stock-add-line__qty" type="number" name="amount_sp<?php echo (int) $line; ?>" id="amount_sp<?php echo (int) $line; ?>" min="0" />
                 </td>
                 <td class="inv-col-num">
-                  <input class="inv-input stock-add-line__qty" type="number" name="price_sp<?php echo (int) $line; ?>" id="price_sp<?php echo (int) $line; ?>" min="0" step="any" />
+                  <input class="inv-input stock-add-line__price" type="number" name="price_sp<?php echo (int) $line; ?>" id="price_sp<?php echo (int) $line; ?>" min="0" step="any" inputmode="decimal" />
                 </td>
                 <td>
                   <input class="inv-input" type="text" name="remarks_sp<?php echo (int) $line; ?>" id="remarks_sp<?php echo (int) $line; ?>" autocomplete="off" />

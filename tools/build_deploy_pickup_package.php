@@ -68,6 +68,9 @@ $DEPLOY_WEB_ROOT_FILES = array(
     'vendor_add.php',
     'vendor_edit.php',
     'vendor_save.php',
+    'stock_add_history.php',
+    'stock_log_edit.php',
+    'stock_log_save.php',
 );
 
 /** @var string[] ไฟล์ใน path ย่อยใต้ inventory (เช่น css/) */

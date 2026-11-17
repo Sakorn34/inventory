@@ -130,6 +130,11 @@ $totalGroups = count($groupKeys);
 <?php require_once __DIR__ . '/title-h.php'; ?>
 
 <main class="inv-main">
+  <?php $flash = stock_flash_consume(); if ($flash['message'] !== '') { ?>
+  <div class="inv-flash inv-flash--<?php echo $h($flash['type']); ?>" style="margin-bottom:1rem;">
+    <?php echo $h($flash['message']); ?>
+  </div>
+  <?php } ?>
   <div class="inv-page-header" style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;margin-bottom:1rem;">
     <div style="flex:1;">
       <h1 class="inv-page-title"><i class="fa fa-history"></i> ประวัติการรับของเข้า Stock</h1>
@@ -175,7 +180,7 @@ $totalGroups = count($groupKeys);
         </thead>
         <tbody id="sah-tbody">
         <?php if ($totalGroups === 0) { ?>
-          <tr><td colspan="6" class="sah-empty">
+          <tr><td colspan="7" class="sah-empty">
             <i class="fa fa-inbox" style="font-size:2rem;display:block;margin-bottom:.5rem;"></i>
             ไม่มีข้อมูลในช่วงที่เลือก
           </td></tr>
@@ -196,7 +201,7 @@ $totalGroups = count($groupKeys);
             <td class="sah-muted"><?php echo $h($g['log_by']); ?></td>
           </tr>
           <tr class="sah-row-detail" id="<?php echo $gid; ?>" style="display:none;">
-            <td colspan="6">
+            <td colspan="7">
               <div class="sah-detail-wrap">
                 <table class="sah-dtbl">
                   <thead>
@@ -207,6 +212,7 @@ $totalGroups = count($groupKeys);
                       <td style="color:var(--inv-muted);font-size:.75rem;text-align:right;">จำนวน</td>
                       <td style="color:var(--inv-muted);font-size:.75rem;text-align:right;">ราคา</td>
                       <td style="color:var(--inv-muted);font-size:.75rem;">หมายเหตุ</td>
+                      <td style="width:52px;"></td>
                     </tr>
                   </thead>
                   <tbody>
@@ -218,6 +224,14 @@ $totalGroups = count($groupKeys);
                       <td class="num"><?php echo number_format((float)$line['log_amount'], 0); ?></td>
                       <td class="num"><?php echo number_format((float)$line['log_price'], 2); ?></td>
                       <td class="muted"><?php echo $h($line['log_remarks']); ?></td>
+                      <td style="white-space:nowrap;">
+                        <a href="stock_log_edit.php?id=<?php echo (int)$line['log_id']; ?>"
+                           class="inv-btn inv-btn--ghost"
+                           style="padding:2px 8px;font-size:.75rem;line-height:1.6;"
+                           title="แก้ไข">
+                          <i class="fa fa-pencil"></i>
+                        </a>
+                      </td>
                     </tr>
                   <?php } ?>
                   </tbody>

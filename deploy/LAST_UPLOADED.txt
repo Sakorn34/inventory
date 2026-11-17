@@ -1,11 +1,11 @@
 # สถานะ deploy pickup บน server production (อัปเดตเมื่อผู้ใช้แจ้งว่าอัปโหลดแล้ว)
-package=2026-11-17-r3-pickup
-recorded=2026-11-17T08:20:28+00:00
+package=2026-11-17-r9-pickup
+recorded=2026-11-17T10:30:00+00:00
 note=แพ็กถัดไป (incremental) รวมเฉพาะไฟล์ที่ MD5 เปลี่ยนจากรายการด้านล่าง
 
 path | md5
 ------------------------------------------------------------------------
-css/inventory-ui.css | 221428d8058080ddd9f7afd4ede63413
+css/inventory-ui.css | cdd27555dd1e5f02224935a2808fe3ec
 css/pickup-prep.css | dd2d35df331cc03e454a8198dc117b0f
 formula_manage.php | 03d56be43ab4e7ac6eb9bf2250a5eb9f
 images/pickup-lift-walk-1.gif | 5f5371eb0425171b12190f5285dde3fd
@@ -21,7 +21,7 @@ inventory_request_timing.php | af6a344ee3308ed6c958293661852150
 inventory_session_actor.php | 37fb7aecf8c6b431582e030d97753b2a
 inventory_ui_fonts.php | 21dd4ef741cb97df16cd7cede2727898
 inventory_ui_head.php | 06543ea208e90ab53396d7f7cecf9e34
-inventory_version.php | 2db907daf2c938d2043047df3cb5ef5a
+inventory_version.php | 9d2b18b206cb3a1f19cb159ff4046822
 js/pickup-lift-call.js | e19f50e0f9b26b2e048eca78a6937407
 list_stock.php | 138433d500436d7d90fa6be9917ea22a
 part_add.php | 6eb20d0d553d04942ee64b899a08e0ad
@@ -54,12 +54,15 @@ pickup_tech_parts_save.php | 8b53cdd94c36722f346601c0b12d8689
 pre_pickup_save.php | 7a2117fd3aa450a23a8f04d690a1d407
 production_pre_pickup.php | dd5dff119d7349b32e169155759ddcfc
 search_cusname.php | 8b176e8e3b1bb80b408339ee6726819f
-stock_add.php | 95a3eacec048673b1e98e3e98c3b9e07
+stock_add.php | a6cd2208ac51522b13148e25f69cf705
+stock_add_history.php | f128de6c17452dd540633676e873673e
+stock_log_edit.php | 1915c125255ddb972abbf33d3fa2cfcc
+stock_log_save.php | 59ca55acf04460793a8ea07f9548dc62
 stock_flash.php | 36dd377c40e4534fb255ebb96a3d821d
 stock_overview.php | 3ae5612f9718262ab29c8f1c63a85ce5
 stock_save.php | 9a8c0834443aeba8e66b3f89b375ad3e
 title-h.php | c2c28b819911999e2e1894509e5f78df
 vendor_add.php | ccb1690215270749869e1aea26023aac
-vendor_edit.php | 272c282b4d9a7236d3f5f5b853a47e22
+vendor_edit.php | 4f8d9d8bd52415c66e327de68e36df3f
 vendor_manage.php | 8347aeb9246d25a730f62dc298239f47
-vendor_save.php | 1bbb0d51361c9e713fb96f519d520bee
+vendor_save.php | e3f206c6cce63d6561eeea6b7a0c8f62

@@ -1,11 +1,11 @@
 # สถานะ deploy pickup บน server production (อัปเดตเมื่อผู้ใช้แจ้งว่าอัปโหลดแล้ว)
 package=2026-11-17-r9-pickup
-recorded=2026-11-17T10:30:00+00:00
+recorded=2026-11-17T11:30:00+00:00
 note=แพ็กถัดไป (incremental) รวมเฉพาะไฟล์ที่ MD5 เปลี่ยนจากรายการด้านล่าง
 
 path | md5
 ------------------------------------------------------------------------
-css/inventory-ui.css | cdd27555dd1e5f02224935a2808fe3ec
+css/inventory-ui.css | bd1fc4068c598483a5ae1dd6d63ff8dc
 css/pickup-prep.css | dd2d35df331cc03e454a8198dc117b0f
 formula_manage.php | 03d56be43ab4e7ac6eb9bf2250a5eb9f
 images/pickup-lift-walk-1.gif | 5f5371eb0425171b12190f5285dde3fd
@@ -54,10 +54,10 @@ pickup_tech_parts_save.php | 8b53cdd94c36722f346601c0b12d8689
 pre_pickup_save.php | 7a2117fd3aa450a23a8f04d690a1d407
 production_pre_pickup.php | dd5dff119d7349b32e169155759ddcfc
 search_cusname.php | 8b176e8e3b1bb80b408339ee6726819f
-stock_add.php | a6cd2208ac51522b13148e25f69cf705
+stock_add.php | f52d551d3eebc6a82d7094545ef880c8
 stock_add_history.php | f128de6c17452dd540633676e873673e
-stock_log_edit.php | 1915c125255ddb972abbf33d3fa2cfcc
-stock_log_save.php | 59ca55acf04460793a8ea07f9548dc62
+stock_log_edit.php | 6a0a42152fbe1d592aed6f9db6d9ca83
+stock_log_save.php | d325b02f2d523a343862471ba50833b3
 stock_flash.php | 36dd377c40e4534fb255ebb96a3d821d
 stock_overview.php | 3ae5612f9718262ab29c8f1c63a85ce5
 stock_save.php | 9a8c0834443aeba8e66b3f89b375ad3e

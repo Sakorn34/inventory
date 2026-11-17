@@ -56,7 +56,9 @@ $invPageMs = (string) inv_page_elapsed_ms();
 <a href="./part_add.php" class="inv-nav-link<?php echo $navActive('part_add.php'); ?>"><i class="fa fa-plus"></i><?php echo $h($mnuPartAdd); ?></a>
 <a href="./product_manage.php" class="inv-nav-link<?php echo $navActive('product_manage.php'); ?>"><i class="fa fa-tags"></i><?php echo $h($mnuProduct); ?></a>
 <a href="./formula_manage.php" class="inv-nav-link<?php echo $navActive('formula_manage.php'); ?>"><i class="fa fa-sitemap"></i><?php echo $h($mnuFormula); ?></a>
+<?php if (false): /* ซ่อนเมนูประสานงาน — ไม่ใช้งานแล้ว */ ?>
 <a href="./setup_overview.php" class="inv-nav-link<?php echo $navActive(array('setup_overview.php','setup_add.php','setup_detail.php')); ?>"><i class="fa fa-truck"></i><?php echo $h($mnuSetup); ?></a>
+<?php endif; ?>
 <a href="./vendor_manage.php" class="inv-nav-link<?php echo $navActive(array('vendor_manage.php','vendor_add.php','vendor_edit.php')); ?>"><i class="fa fa-building-o"></i><?php echo $h($mnuVendor); ?></a>
 </nav>
 <?php if ($invAppMetaLabel !== '' || $invReleaseVersion !== '' || $invMaintenanceSince !== '') { ?>

@@ -7,7 +7,7 @@
  */
 
 if (!defined('INVENTORY_RELEASE_VERSION')) {
-    define('INVENTORY_RELEASE_VERSION', '2026.11.17-r1');
+    define('INVENTORY_RELEASE_VERSION', '2026.11.17-r5');
 }
 
 if (!defined('INVENTORY_RELEASE_DATE')) {

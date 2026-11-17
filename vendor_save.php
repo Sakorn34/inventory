@@ -138,7 +138,7 @@ if ($action === 'create') {
             exit;
         }
         mysqli_stmt_bind_param(
-            $stmt, 'issssssssssssssssss',
+            $stmt, 'isssssssssssssssssss',
             $newId,
             $vname, $type, $contactname, $add1, $add2, $add3, $zipcode, $location,
             $tel1, $tel2, $fax1, $fax2, $email,

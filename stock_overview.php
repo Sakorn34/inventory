@@ -2,6 +2,9 @@
 require_once __DIR__ . '/connect.php';
 require_once __DIR__ . '/function.php';
 require_once __DIR__ . '/line_stock_alert.php';
+require_once __DIR__ . '/stock_flash.php';
+
+$stockOverviewFlash = stock_flash_consume();
 
 inventory_line_alert_ensure_schema($connect);
 header('Content-Type: text/html; charset=UTF-8');
@@ -480,6 +483,11 @@ function invInitStockDashboard(payload){
     <h1 class="inv-page-title"><?php echo $h($lblOverview); ?></h1>
     <p class="inv-page-desc"><?php echo $h($lblDesc); ?></p>
   </header>
+  <?php if ($stockOverviewFlash['message'] !== '') { ?>
+  <div class="inv-flash-message <?php echo $h($stockOverviewFlash['type']); ?>" id="stock_overview_flash" role="status">
+    <?php echo $h($stockOverviewFlash['message']); ?>
+  </div>
+  <?php } ?>
   <section class="inv-card">
     <div class="inv-card__head"><i class="fa fa-filter"></i> <?php echo $h($lblFilter); ?></div>
     <div class="inv-card__body">

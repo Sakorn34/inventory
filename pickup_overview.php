@@ -135,6 +135,26 @@ function pickupDocPreviewEscape(text) {
         .replace(/"/g, "&quot;");
 }
 
+/**
+ * ชื่อแถวคลังช่างใน popup — ไม่แสดงรหัส Pxxxxx (รองรับข้อมูลเก่าใน DB)
+ *
+ * @param {{part_name?: string, tech_product_id?: number}} line
+ * @returns {string}
+ */
+function pickupDocPreviewTechPartName(line) {
+    var raw = line && line.part_name ? String(line.part_name).trim() : "";
+    if (raw === "") {
+        return "";
+    }
+    var stripped = raw
+        .replace(/^P\d{3,}\s*[—\-–:]+\s*/iu, "")
+        .replace(/^P\d{3,}\s+/iu, "");
+    if (/^P\d{3,}$/iu.test(stripped)) {
+        return "";
+    }
+    return stripped !== "" ? stripped : raw;
+}
+
 var pickupDocPreviewData = null;
 
 function closePickupDocPreview() {
@@ -171,11 +191,31 @@ function renderPickupDocPreview(data) {
     }
 
     var linesHtml = "";
+    var invCount = typeof data.line_count_inventory === "number" ? data.line_count_inventory : 0;
+    var techCount = typeof data.line_count_tech === "number" ? data.line_count_tech : 0;
     for (var i = 0; i < data.lines.length; i++) {
         var line = data.lines[i];
-        var lineRemark = line.remarks
-            ? ('<span class="pickup-doc-preview-line__remark">' + pickupDocPreviewEscape(line.remarks) + "</span>")
-            : "";
+        var isTech = line.line_kind === "tech";
+        var lineRemark = "";
+        if (line.remarks && !isTech) {
+            lineRemark = '<span class="pickup-doc-preview-line__remark">' + pickupDocPreviewEscape(line.remarks) + "</span>";
+        } else if (line.remarks && isTech) {
+            lineRemark = '<span class="pickup-doc-preview-line__remark">S/N: ' + pickupDocPreviewEscape(line.remarks) + "</span>";
+        }
+        if (isTech) {
+            var techPartLabel = pickupDocPreviewTechPartName(line);
+            linesHtml +=
+                '<li class="pickup-doc-preview-line pickup-doc-preview-line--tech">' +
+                '<span class="pickup-doc-preview-line__tech-badge" title="ตัดสต็อกคลังช่างแล้ว">คลังช่าง</span>' +
+                '<div class="pickup-doc-preview-line__main">' +
+                '<span class="pickup-doc-preview-line__name">' + pickupDocPreviewEscape(techPartLabel) + "</span>" +
+                (line.product ? ('<span class="pickup-doc-preview-line__product">' + pickupDocPreviewEscape(line.product) + "</span>") : "") +
+                lineRemark +
+                "</div>" +
+                '<span class="pickup-doc-preview-line__qty pickup-doc-preview-line__qty--tech">' + pickupDocPreviewEscape(line.amount) + "</span>" +
+                "</li>";
+            continue;
+        }
         linesHtml +=
             '<li class="pickup-doc-preview-line">' +
             '<label class="pickup-doc-preview-line__check" title="เลือกจ่ายรายการนี้">' +
@@ -190,9 +230,15 @@ function renderPickupDocPreview(data) {
             "</li>";
     }
 
+    var countText = data.line_count + " รายการ";
+    if (techCount > 0) {
+        countText += " (คลังกลาง " + (invCount || (data.line_count - techCount)) + " · คลังช่าง " + techCount + " · ตัดแล้ว)";
+    }
+    countText += " · เลือกรายการคลังกลางที่จะจ่ายแล้วกดยืนยัน";
+
     body.innerHTML =
         remarksBlock +
-        '<p class="pickup-doc-preview-count">' + data.line_count + " รายการ · เลือกรายการที่จะจ่ายแล้วกดยืนยัน</p>" +
+        '<p class="pickup-doc-preview-count">' + countText + "</p>" +
         '<ul class="pickup-doc-preview-lines">' + linesHtml + "</ul>";
 }
 
@@ -229,17 +275,19 @@ function confirmPickupDocPreview() {
                 alert("ไม่พบชื่อผู้บันทึกจาก session — กรุณาเข้าสู่ระบบ SSO ใหม่");
                 return;
             }
-            var count = data.lines.length;
+            var logIdx = 0;
             var countCheck = 0;
             var dataRow =
-                "count=" + encodeURIComponent(count) +
                 "&ts_mtn_number=" + encodeURIComponent(data.ts_mtn_number || "") +
                 "&log_by=" + encodeURIComponent(logBy) +
                 "&pre_id=" + encodeURIComponent(data.pre_id) +
                 "&pre_type=" + encodeURIComponent(data.pre_type || "");
 
-            for (var i = 0; i < count; i++) {
+            for (var i = 0; i < data.lines.length; i++) {
                 var line = data.lines[i];
+                if (line.line_kind === "tech") {
+                    continue;
+                }
                 var chkEl = document.querySelector(
                     '.pickup-doc-preview-chk[data-line-index="' + i + '"]'
                 );
@@ -247,13 +295,13 @@ function confirmPickupDocPreview() {
                 if (chk === "YES") {
                     countCheck++;
                 }
-                var idx = i + 1;
+                logIdx++;
                 dataRow +=
-                    "&log_part" + idx + "=" + encodeURIComponent(line.part_id || "") +
-                    "&log_product" + idx + "=" + encodeURIComponent(line.product || "") +
-                    "&log_amount" + idx + "=" + encodeURIComponent(line.amount || "") +
-                    "&log_remarks" + idx + "=" + encodeURIComponent(line.remarks || "") +
-                    "&check" + idx + "=" + encodeURIComponent(chk);
+                    "&log_part" + logIdx + "=" + encodeURIComponent(line.part_id || "") +
+                    "&log_product" + logIdx + "=" + encodeURIComponent(line.product || "") +
+                    "&log_amount" + logIdx + "=" + encodeURIComponent(line.amount || "") +
+                    "&log_remarks" + logIdx + "=" + encodeURIComponent(line.remarks || "") +
+                    "&check" + logIdx + "=" + encodeURIComponent(chk);
             }
 
             if (countCheck === 0) {
@@ -261,7 +309,7 @@ function confirmPickupDocPreview() {
                 return;
             }
 
-            window.location = "pickup_save_log.php?" + dataRow;
+            window.location = "pickup_save_log.php?count=" + encodeURIComponent(logIdx) + dataRow;
         },
         error: function() {
             alert("ตรวจรหัสผ่านไม่สำเร็จ กรุณาลองใหม่");

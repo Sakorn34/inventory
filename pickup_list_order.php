@@ -17,6 +17,8 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
 
 require_once __DIR__ . '/connect.php';
 require_once __DIR__ . '/pickup_constants.php';
+require_once __DIR__ . '/pickup_pre_stock_tech.php';
+require_once __DIR__ . '/pickup_tech_parts.php';
 header("Content-Type: text/html; charset=UTF-8");
 header('X-Content-Type-Options: nosniff');
 @setlocale(LC_TIME, 'th_TH.UTF-8', 'th_TH', 'tha');
@@ -329,29 +331,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_pre_id'])) {
         $message = 'ไม่พบเลขเอกสารที่ต้องการลบ';
         $message_type = 'error';
     } else {
-        $deleteSql = "DELETE FROM pre_stock WHERE pre_id = ? AND pre_status = 'pre'";
-        $deleteStmt = mysqli_prepare($connect, $deleteSql);
-
-        if ($deleteStmt === false) {
-            $message = 'ไม่สามารถเตรียมคำสั่งลบรายการได้';
+        $partsRevert = pickup_tech_parts_revert_for_pre_document($connect, $deletePreId);
+        if (!$partsRevert['ok']) {
+            $message = $partsRevert['message'] !== ''
+                ? $partsRevert['message']
+                : 'ยกเลิกการเบิกคลังช่างใน Parts ไม่สำเร็จ';
             $message_type = 'error';
-            error_log('inventory delete prepare error: ' . mysqli_error($connect));
         } else {
-            mysqli_stmt_bind_param($deleteStmt, 's', $deletePreId);
+            pickup_pre_stock_tech_delete_by_pre_id($connect, $deletePreId);
 
-            if (mysqli_stmt_execute($deleteStmt)) {
-                $deletedRows = mysqli_stmt_affected_rows($deleteStmt);
-                $message = $deletedRows > 0
-                    ? 'ลบเอกสาร ' . $deletePreId . ' เรียบร้อยแล้ว'
-                    : 'ไม่พบรายการที่ลบได้ หรือเอกสารนี้ไม่ได้อยู่ในสถานะรอเบิก';
-                $message_type = $deletedRows > 0 ? 'success' : 'error';
-            } else {
-                $message = 'ลบรายการไม่สำเร็จ';
+            $deleteSql = "DELETE FROM pre_stock WHERE pre_id = ? AND pre_status = 'pre'";
+            $deleteStmt = mysqli_prepare($connect, $deleteSql);
+
+            if ($deleteStmt === false) {
+                $message = 'ไม่สามารถเตรียมคำสั่งลบรายการได้';
                 $message_type = 'error';
-                error_log('inventory delete execute error: ' . mysqli_stmt_error($deleteStmt));
-            }
+                error_log('inventory delete prepare error: ' . mysqli_error($connect));
+            } else {
+                mysqli_stmt_bind_param($deleteStmt, 's', $deletePreId);
 
-            mysqli_stmt_close($deleteStmt);
+                if (mysqli_stmt_execute($deleteStmt)) {
+                    $deletedRows = mysqli_stmt_affected_rows($deleteStmt);
+                    if ($deletedRows > 0) {
+                        $message = 'ลบเอกสาร ' . $deletePreId . ' เรียบร้อยแล้ว';
+                        if ((int) $partsRevert['deleted'] > 0) {
+                            $message .= ' (ยกเลิกการเบิกคลังช่างใน Parts ' . (int) $partsRevert['deleted'] . ' รายการ)';
+                        }
+                    } else {
+                        $message = 'ไม่พบรายการที่ลบได้ หรือเอกสารนี้ไม่ได้อยู่ในสถานะรอเบิก';
+                    }
+                    $message_type = $deletedRows > 0 ? 'success' : 'error';
+                } else {
+                    $message = 'ลบรายการไม่สำเร็จ';
+                    $message_type = 'error';
+                    error_log('inventory delete execute error: ' . mysqli_stmt_error($deleteStmt));
+                }
+
+                mysqli_stmt_close($deleteStmt);
+            }
         }
     }
 

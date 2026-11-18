@@ -3,7 +3,7 @@
  * หน้าจัดชุดรายการเบิก Part ตาม Product สำหรับระบบ inventory
  *
  * ขอบเขตของไฟล์นี้คือเลือก Product แล้วกำหนดรายการ Part สำหรับเบิกเป็นเซต
- * รองรับสองโหมด: เซตผลิต (`production_formula`) และเซตซ่อม (`part.part_product`)
+ * รองรับสองโหมด: เซตผลิต (`production_formula`) และเซตซ่อม (`repair_formula` + `repair_formula_tech`)
  * ให้สอดคล้องกับ pickup_set_formula / pre_pickup_save
  * โดยใช้ prepared statement, validate input และ CSRF token สำหรับการบันทึก
  *
@@ -18,6 +18,8 @@
 require_once __DIR__ . '/connect.php';
 require_once __DIR__ . '/function.php';
 require_once __DIR__ . '/pickup_repair_part_product.php';
+require_once __DIR__ . '/pickup_repair_formula_tech.php';
+require_once __DIR__ . '/pickup_tech_parts.php';
 
 if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
@@ -235,13 +237,15 @@ function formula_manage_get_repair_set_summaries($conn)
         $pdId = (int) $product['pd_id'];
         $pdName = (string) $product['pd_name'];
         $partCount = pickup_repair_part_scope_count($conn, $pdId, $pdName);
-        if ($partCount <= 0) {
+        $techCount = pickup_repair_formula_tech_count($conn, $pdId);
+        $totalCount = $partCount + $techCount;
+        if ($totalCount <= 0) {
             continue;
         }
         $summaries[] = array(
             'pd_id' => $pdId,
             'pd_name' => $pdName,
-            'part_count' => $partCount,
+            'part_count' => $totalCount,
         );
     }
 
@@ -592,7 +596,10 @@ function formula_manage_delete_set($conn, $productId, $setMode)
     }
 
     if ($setMode === 'repair') {
-        return pickup_repair_formula_delete_for_product($conn, $productId);
+        $deleted = pickup_repair_formula_delete_for_product($conn, $productId);
+        $deleted += pickup_repair_formula_tech_delete_for_product($conn, $productId);
+
+        return $deleted;
     }
 
     return formula_manage_delete_production_set($conn, $productId);
@@ -827,6 +834,31 @@ function formula_manage_respond_set_parts_json($conn)
 
     $parts = formula_manage_get_set_parts_list($conn, $pdId, $setMode);
     $modeLabel = $setMode === 'repair' ? 'เซตซ่อม' : 'เซตผลิต';
+    $techParts = array();
+    if ($setMode === 'repair') {
+        $techRows = pickup_repair_formula_tech_list($conn, $pdId);
+        $catalog = pickup_repair_formula_tech_valid_product_map();
+        foreach ($techRows as $techRow) {
+            $techId = (int) $techRow['tech_product_id'];
+            $label = 'อะไหล่คลังช่าง #' . $techId;
+            if (pickup_tech_parts_available()) {
+                foreach (pickup_tech_parts_products_list() as $tp) {
+                    if ((int) $tp['id'] === $techId) {
+                        $code = isset($tp['code']) ? trim((string) $tp['code']) : '';
+                        $name = isset($tp['name']) ? trim((string) $tp['name']) : '';
+                        $label = $code !== '' ? $code . ' — ' . $name : $name;
+                        break;
+                    }
+                }
+            }
+            $techParts[] = array(
+                'tech_product_id' => $techId,
+                'label' => $label,
+                'default_qty' => (float) $techRow['default_qty'],
+                'active' => $catalog === array() || isset($catalog[$techId]),
+            );
+        }
+    }
 
     echo json_encode(
         array(
@@ -836,6 +868,7 @@ function formula_manage_respond_set_parts_json($conn)
             'set_mode' => $setMode,
             'set_mode_label' => $modeLabel,
             'parts' => $parts,
+            'tech_parts' => $techParts,
         ),
         JSON_UNESCAPED_UNICODE
     );
@@ -892,7 +925,14 @@ try {
             $postedParts = isset($_POST['part_ids']) && is_array($_POST['part_ids']) ? $_POST['part_ids'] : array();
             if ($setMode === 'repair') {
                 $savedCount = formula_manage_save_repair_set($connect, $selectedProductId, $postedParts);
-                $message = 'บันทึกเซตซ่อมสำเร็จ จำนวน Part ในชุด: ' . $savedCount . ' รายการ (repair_formula)';
+                $savedTech = pickup_repair_formula_tech_save_from_post($connect, $selectedProductId, $_POST);
+                if ($savedCount > 0 && $savedTech > 0) {
+                    $message = 'บันทึกเซตซ่อมสำเร็จ — คลังกลาง ' . $savedCount . ' รายการ · คลังช่าง ' . $savedTech . ' รายการ';
+                } elseif ($savedTech > 0) {
+                    $message = 'บันทึกเซตซ่อมสำเร็จ — คลังช่าง ' . $savedTech . ' รายการ (repair_formula_tech)';
+                } else {
+                    $message = 'บันทึกเซตซ่อมสำเร็จ จำนวน Part ในชุด: ' . $savedCount . ' รายการ (repair_formula)';
+                }
             } else {
                 $savedCount = formula_manage_save_formula($connect, $selectedProductId, $postedParts);
                 $message = 'บันทึกเซตผลิตสำเร็จ จำนวน Part ในชุด: ' . $savedCount . ' รายการ (production_formula)';
@@ -933,6 +973,26 @@ if ($setMode === 'repair') {
 $csrfToken = formula_manage_csrf_token();
 $isRepairMode = ($setMode === 'repair');
 $formulaManageDeleteSetLabel = $isRepairMode ? 'เซตซ่อม' : 'เซตผลิต';
+$formulaManageTechProducts = array();
+$formulaManageSelectedTechQty = array();
+$formulaManageTechAvailable = false;
+$formulaManageTechError = '';
+if ($isRepairMode && $selectedProductId > 0) {
+    $formulaManageTechAvailable = pickup_tech_parts_available();
+    $formulaManageTechError = pickup_tech_parts_error();
+    if ($formulaManageTechAvailable) {
+        $formulaManageTechProducts = pickup_tech_parts_products_list();
+    }
+    foreach (pickup_repair_formula_tech_list($connect, $selectedProductId) as $techRow) {
+        $tid = isset($techRow['tech_product_id']) ? (int) $techRow['tech_product_id'] : 0;
+        if ($tid > 0) {
+            $formulaManageSelectedTechQty[$tid] = isset($techRow['default_qty'])
+                ? (float) $techRow['default_qty']
+                : PICKUP_REPAIR_TECH_DEFAULT_QTY;
+        }
+    }
+}
+$formulaManageInitialSelected = count($selectedPartMap) + count($formulaManageSelectedTechQty);
 $setSummaries = array();
 if ($selectedProductId <= 0) {
     $setSummaries = formula_manage_get_set_summaries($connect, $setMode);
@@ -1076,6 +1136,49 @@ if ($selectedProductId <= 0) {
             display: block;
             font-size: 13px;
             margin-top: 3px;
+        }
+
+        .tech-set-block {
+            margin-top: 28px;
+            padding-top: 18px;
+            border-top: 2px dashed #c8e6c9;
+        }
+
+        .tech-set-block h2 {
+            font-size: 18px;
+            margin: 0 0 8px;
+            color: #1b5e20;
+        }
+
+        .tech-set-hint {
+            color: #555;
+            font-size: 14px;
+            margin: 0 0 12px;
+        }
+
+        .part-item--tech {
+            border-color: #b2dfdb;
+            background: #f1faf8;
+        }
+
+        .tech-default-qty {
+            width: 4.5rem;
+            margin-left: 6px;
+            padding: 4px 6px;
+            border: 1px solid #4caf50;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .tech-set-badge {
+            display: inline-block;
+            font-size: 11px;
+            background: #00897b;
+            color: #fff;
+            border-radius: 4px;
+            padding: 1px 6px;
+            margin-left: 6px;
+            vertical-align: middle;
         }
 
         .empty-state {
@@ -1572,11 +1675,37 @@ if ($selectedProductId <= 0) {
         }
 
         function formulaManageUpdateCount() {
-            var checked = document.querySelectorAll('input[name="part_ids[]"]:checked').length;
+            var checkedParts = document.querySelectorAll('input[name="part_ids[]"]:checked').length;
+            var checkedTech = document.querySelectorAll('input[name="tech_product_ids[]"]:checked').length;
             var counter = document.getElementById('selected_count');
             if (counter) {
-                counter.innerText = checked;
+                counter.innerText = String(checkedParts + checkedTech);
             }
+        }
+
+        function formulaManageFilterTechParts() {
+            var search = document.getElementById('tech_part_search');
+            if (!search) {
+                return;
+            }
+            var keyword = String(search.value || '').toLowerCase();
+            var items = document.querySelectorAll('.tech-set-block .part-item');
+            for (var i = 0; i < items.length; i++) {
+                var text = String(items[i].getAttribute('data-search') || '').toLowerCase();
+                items[i].style.display = text.indexOf(keyword) !== -1 ? '' : 'none';
+            }
+        }
+
+        function formulaManageSetAllTech(checked) {
+            var boxes = document.querySelectorAll('.tech-set-block input[name="tech_product_ids[]"]');
+            for (var i = 0; i < boxes.length; i++) {
+                var item = boxes[i].closest('.part-item');
+                if (item && item.style.display === 'none') {
+                    continue;
+                }
+                boxes[i].checked = checked;
+            }
+            formulaManageUpdateCount();
         }
 
         var formulaManagePartsPopPdId = 0;
@@ -1667,25 +1796,44 @@ if ($selectedProductId <= 0) {
                     if (!data || !data.ok) {
                         throw new Error((data && data.error) ? data.error : 'โหลดไม่สำเร็จ');
                     }
+                    var techCount = data.tech_parts ? data.tech_parts.length : 0;
+                    var totalCount = data.parts.length + techCount;
                     if (meta) {
-                        meta.textContent = data.set_mode_label + ' · ' + data.parts.length + ' รายการ';
+                        var metaParts = data.parts.length > 0 ? ('คลังกลาง ' + data.parts.length) : '';
+                        var metaTech = techCount > 0 ? ('คลังช่าง ' + techCount) : '';
+                        meta.textContent = data.set_mode_label + ' · ' + totalCount + ' รายการ'
+                            + (metaParts !== '' || metaTech !== '' ? ' (' + [metaParts, metaTech].filter(Boolean).join(' · ') + ')' : '');
                     }
-                    if (!data.parts.length) {
+                    if (totalCount <= 0) {
                         body.innerHTML = '<div class="fm-parts-pop__empty">ยังไม่มี Part ในชุดนี้</div>';
                         return;
                     }
-                    var html = '<ul class="fm-parts-pop__list">';
-                    for (var i = 0; i < data.parts.length; i++) {
-                        var part = data.parts[i];
-                        var cat = part.ct_name ? String(part.ct_name) : '';
-                        html += '<li class="fm-parts-pop__item">';
-                        html += '<span class="fm-parts-pop__part-name">' + formulaManageEscapeHtml(String(part.part_name)) + '</span>';
-                        if (cat !== '') {
-                            html += '<span class="fm-parts-pop__part-cat">' + formulaManageEscapeHtml(cat) + '</span>';
+                    var html = '';
+                    if (data.parts.length) {
+                        html += '<p class="fm-parts-pop__tech-head"><b>คลังกลาง</b></p><ul class="fm-parts-pop__list">';
+                        for (var i = 0; i < data.parts.length; i++) {
+                            var part = data.parts[i];
+                            var cat = part.ct_name ? String(part.ct_name) : '';
+                            html += '<li class="fm-parts-pop__item">';
+                            html += '<span class="fm-parts-pop__part-name">' + formulaManageEscapeHtml(String(part.part_name)) + '</span>';
+                            if (cat !== '') {
+                                html += '<span class="fm-parts-pop__part-cat">' + formulaManageEscapeHtml(cat) + '</span>';
+                            }
+                            html += '</li>';
                         }
-                        html += '</li>';
+                        html += '</ul>';
                     }
-                    html += '</ul>';
+                    if (techCount) {
+                        html += '<p class="fm-parts-pop__tech-head"><b>คลังช่าง</b></p><ul class="fm-parts-pop__list">';
+                        for (var ti = 0; ti < data.tech_parts.length; ti++) {
+                            var tp = data.tech_parts[ti];
+                            html += '<li class="fm-parts-pop__item fm-parts-pop__item--tech">';
+                            html += '<span class="fm-parts-pop__part-name">' + formulaManageEscapeHtml(String(tp.label)) + '</span>';
+                            html += '<span class="fm-parts-pop__part-cat">× ' + formulaManageEscapeHtml(String(tp.default_qty)) + ' ต่อชุด</span>';
+                            html += '</li>';
+                        }
+                        html += '</ul>';
+                    }
                     body.innerHTML = html;
                 })
                 .catch(function (err) {
@@ -1737,12 +1885,18 @@ if ($selectedProductId <= 0) {
         }
 
         function formulaManageConfirmSaveSet(form) {
-            var checked = document.querySelectorAll('input[name="part_ids[]"]:checked').length;
+            var checkedParts = document.querySelectorAll('input[name="part_ids[]"]:checked').length;
+            var checkedTech = document.querySelectorAll('input[name="tech_product_ids[]"]:checked').length;
             var initial = parseInt(form.getAttribute('data-initial-selected') || '0', 10);
-            if (initial > 0 && checked === 0) {
+            if (initial > 0 && checkedParts === 0 && checkedTech === 0) {
                 return window.confirm(
-                    'ไม่ได้เลือก Part ใดๆ — การบันทึกจะลบรายการในชุดของ Product นี้ทั้งหมด\nต้องการบันทึกต่อหรือไม่?'
+                    'ไม่ได้เลือก Part หรืออะไหล่คลังช่าง — การบันทึกจะลบรายการในชุดของ Product นี้ทั้งหมด\nต้องการบันทึกต่อหรือไม่?'
                 );
+            }
+            var techBoxes = document.querySelectorAll('input[name="tech_product_ids[]"]:checked');
+            if (techBoxes.length > 10) {
+                alert('อะไหล่คลังช่างในชุดซ่อมได้ไม่เกิน 10 รายการ');
+                return false;
             }
             return true;
         }
@@ -1794,8 +1948,9 @@ if ($selectedProductId <= 0) {
             </div>
             <?php if ($isRepairMode) { ?>
                 <p class="mode-hint">
-                    ใช้กับปุ่ม <b>เบิกเซตซ่อม</b> — บันทึกลงตาราง <code>repair_formula</code>
-                    (Part ตัวเดียวกันใช้ในหลาย Product ได้ ไม่แย่งฟิลด์ <code>part_product</code> ของ Part)
+                    ใช้กับปุ่ม <b>เบิกเซตซ่อม</b> — คลังกลางลง <code>repair_formula</code>
+                    · คลังช่างลง <code>repair_formula_tech</code> (จำนวนเริ่มต้นต่อชุด คูณด้วยจำนวนชุดตอนเบิก)
+                    <br>Part ตัวเดียวกันใช้ในหลาย Product ได้ ไม่แย่งฟิลด์ <code>part_product</code>
                 </p>
             <?php } else { ?>
                 <p class="mode-hint">
@@ -1901,7 +2056,7 @@ if ($selectedProductId <= 0) {
                     <?php } ?>
                 </div>
             <?php } else { ?>
-                <form method="post" action="formula_manage.php?set_mode=<?php echo formula_manage_h($setMode); ?>&amp;pd_id=<?php echo formula_manage_h($selectedProductId); ?>" data-initial-selected="<?php echo formula_manage_h(count($selectedPartMap)); ?>" onsubmit="return formulaManageConfirmSaveSet(this);">
+                <form method="post" action="formula_manage.php?set_mode=<?php echo formula_manage_h($setMode); ?>&amp;pd_id=<?php echo formula_manage_h($selectedProductId); ?>" data-initial-selected="<?php echo formula_manage_h($formulaManageInitialSelected); ?>" onsubmit="return formulaManageConfirmSaveSet(this);">
                     <input type="hidden" name="csrf_token" value="<?php echo formula_manage_h($csrfToken); ?>">
                     <input type="hidden" name="form_action" value="save_set">
                     <input type="hidden" name="pd_id" value="<?php echo formula_manage_h($selectedProductId); ?>">
@@ -1940,6 +2095,58 @@ if ($selectedProductId <= 0) {
                                             </span>
                                         </span>
                                     </label>
+                                </div>
+                            <?php } ?>
+                        </div>
+                    <?php } ?>
+
+                    <?php if ($isRepairMode) { ?>
+                        <div class="tech-set-block">
+                            <h2><i class="fa fa-cogs"></i> อะไหล่คลังช่างในชุดซ่อม</h2>
+                            <p class="tech-set-hint">
+                                เลือกอะไหล่จากแอป parts — จำนวน «ต่อชุด» ค่าเริ่มต้น 1 (ตอนเบิก × จำนวนชุด) สูงสุด 10 รายการต่อ Product
+                            </p>
+                            <?php if (!$formulaManageTechAvailable) { ?>
+                                <div class="empty-state">เชื่อมต่อคลังช่างไม่ได้<?php echo $formulaManageTechError !== '' ? ' — ' . formula_manage_h($formulaManageTechError) : ''; ?></div>
+                            <?php } elseif (count($formulaManageTechProducts) === 0) { ?>
+                                <div class="empty-state">ไม่มีรายการอะไหล่ในคลังช่าง</div>
+                            <?php } else { ?>
+                                <div class="part-actions">
+                                    <input type="search" id="tech_part_search" onkeyup="formulaManageFilterTechParts()" placeholder="ค้นหาอะไหล่คลังช่าง">
+                                    <button type="button" onclick="formulaManageSetAllTech(true)">เลือกทั้งหมดที่แสดง</button>
+                                    <button type="button" onclick="formulaManageSetAllTech(false)">ยกเลิกทั้งหมดที่แสดง</button>
+                                </div>
+                                <div class="part-grid">
+                                    <?php foreach ($formulaManageTechProducts as $techProduct) {
+                                        $techId = isset($techProduct['id']) ? (int) $techProduct['id'] : 0;
+                                        if ($techId <= 0) {
+                                            continue;
+                                        }
+                                        $isTechChecked = isset($formulaManageSelectedTechQty[$techId]);
+                                        $defaultQty = $isTechChecked
+                                            ? $formulaManageSelectedTechQty[$techId]
+                                            : PICKUP_REPAIR_TECH_DEFAULT_QTY;
+                                        $code = isset($techProduct['code']) ? trim((string) $techProduct['code']) : '';
+                                        $name = isset($techProduct['name']) ? trim((string) $techProduct['name']) : '';
+                                        $displayName = $code !== '' ? $code . ' — ' . $name : $name;
+                                        $searchText = $displayName . ' ' . $techId;
+                                        ?>
+                                        <div class="part-item part-item--tech" data-search="<?php echo formula_manage_h($searchText); ?>">
+                                            <label>
+                                                <input type="checkbox" name="tech_product_ids[]" value="<?php echo formula_manage_h($techId); ?>" <?php echo $isTechChecked ? 'checked' : ''; ?> onchange="formulaManageUpdateCount()">
+                                                <span>
+                                                    <b><?php echo formula_manage_h($displayName); ?></b><span class="tech-set-badge">คลังช่าง</span>
+                                                    <span class="part-meta">
+                                                        ID: <?php echo formula_manage_h($techId); ?>
+                                                        | คงเหลือ: <?php echo formula_manage_h(isset($techProduct['quantity']) ? $techProduct['quantity'] : ''); ?>
+                                                        <?php echo formula_manage_h(isset($techProduct['unit']) ? ' ' . $techProduct['unit'] : ''); ?>
+                                                        | ต่อชุด:
+                                                        <input type="number" class="tech-default-qty" name="tech_default_qty[<?php echo formula_manage_h($techId); ?>]" value="<?php echo formula_manage_h($defaultQty); ?>" min="0.01" step="0.01" inputmode="decimal" title="จำนวนต่อ 1 ชุด">
+                                                    </span>
+                                                </span>
+                                            </label>
+                                        </div>
+                                    <?php } ?>
                                 </div>
                             <?php } ?>
                         </div>

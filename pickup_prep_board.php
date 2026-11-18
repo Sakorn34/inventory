@@ -36,7 +36,7 @@ header('Referrer-Policy: no-referrer');
 <link rel="icon" type="image/png" href="images/bitcombine-logo.png" />
 <link rel="apple-touch-icon" href="images/bitcombine-logo.png" />
 <?php require_once __DIR__ . '/inventory_ui_fonts.php'; ?>
-<link rel="stylesheet" href="css/pickup-prep.css?v=11" />
+<link rel="stylesheet" href="css/pickup-prep.css?v=13" />
 </head>
 <body class="prep-board">
 <?php if (!$tokenOk) {
@@ -113,6 +113,7 @@ header('Referrer-Policy: no-referrer');
   var token = app.getAttribute("data-token") || "";
   var filterMode = "all";
   var documents = [];
+  var techPartGroups = [];
   var refreshTimer = null;
   var toastTimer = null;
 
@@ -141,6 +142,27 @@ header('Referrer-Policy: no-referrer');
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;");
+  }
+
+  /**
+   * ชื่ออะไหล่คลังช่างบนมือถือ — ไม่แสดงรหัส Pxxxxx (รองรับข้อมูลเก่า)
+   *
+   * @param {string} name
+   * @returns {string}
+   */
+  function prepBoardDisplayPartName(name) {
+    var raw = String(name || "").trim();
+    if (raw === "") {
+      return "";
+    }
+    var stripped = raw
+      .replace(/^P\d{3,}\s*[—\-–:]+\s*/iu, "")
+      .replace(/^P\d{3,}[—\-–](.+)$/iu, "$1")
+      .replace(/^P\d{3,}\s+/iu, "");
+    if (/^P\d{3,}$/iu.test(stripped)) {
+      return "";
+    }
+    return stripped !== "" ? stripped : raw;
   }
 
   function apiUrl(action) {
@@ -188,6 +210,23 @@ header('Referrer-Policy: no-referrer');
     return n.toFixed(2);
   }
 
+  function mergePrepPartGroup(map, group) {
+    if (!group || !group.part_key) {
+      return;
+    }
+    var key = String(group.part_key);
+    if (!map[key]) {
+      map[key] = {
+        part_key: key,
+        part_name: prepBoardDisplayPartName(group.part_name),
+        lines: []
+      };
+    }
+    (group.lines || []).forEach(function (line) {
+      map[key].lines.push(line);
+    });
+  }
+
   function buildPartGroups() {
     var map = {};
     documents.forEach(function (doc) {
@@ -210,9 +249,13 @@ header('Referrer-Policy: no-referrer');
           pre_id: doc.pre_id,
           pre_date: doc.pre_date,
           pre_by: doc.pre_by,
-          pre_type: doc.pre_type
+          pre_type: doc.pre_type,
+          is_tech: false
         });
       });
+    });
+    techPartGroups.forEach(function (group) {
+      mergePrepPartGroup(map, group);
     });
 
     var groups = [];
@@ -227,7 +270,14 @@ header('Referrer-Policy: no-referrer');
 
   function partGroupHasVisibleLines(group) {
     for (var i = 0; i < group.lines.length; i++) {
-      if (lineMatchesFilter(group.lines[i])) {
+      var ln = group.lines[i];
+      if (ln.is_tech) {
+        if (filterMode !== "pending") {
+          return true;
+        }
+        continue;
+      }
+      if (lineMatchesFilter(ln)) {
         return true;
       }
     }
@@ -240,7 +290,7 @@ header('Referrer-Policy: no-referrer');
       return;
     }
 
-    if (!documents.length) {
+    if (!documents.length && !techPartGroups.length) {
       var hint = window.prepEmptyHint || "";
       var emptyHtml = '<p class="prep-board__state">ไม่มีรายการรอจัด</p>';
       if (hint !== "") {
@@ -259,34 +309,71 @@ header('Referrer-Policy: no-referrer');
       }
 
       var preparedCount = 0;
+      var pickableCount = 0;
       var totalQty = 0;
       var docIds = {};
       group.lines.forEach(function (line) {
-        if (line.prepared) {
-          preparedCount++;
+        if (!line.is_tech) {
+          pickableCount++;
+          if (line.prepared) {
+            preparedCount++;
+          }
         }
         totalQty += parseAmount(line.pre_amount);
         docIds[line.pre_id] = true;
       });
       var lineTotal = group.lines.length;
-      var pct = lineTotal > 0 ? Math.round((preparedCount / lineTotal) * 100) : 0;
+      var pct = pickableCount > 0 ? Math.round((preparedCount / pickableCount) * 100) : 100;
       var docCount = Object.keys(docIds).length;
+      var displayPartName = prepBoardDisplayPartName(group.part_name);
+      var techOnlyGroup = pickableCount === 0 && lineTotal > 0;
 
-      html += '<article class="prep-board__doc prep-board__part-group" data-part-key="' + escapeHtml(group.part_key) + '">';
-      html += '<div class="prep-board__doc-head">';
-      html += '<div class="prep-board__part-title">' + escapeHtml(group.part_name) + "</div>";
-      html += '<div class="prep-board__part-summary">';
-      html += '<span class="prep-board__part-total">รวม ' + escapeHtml(formatAmount(totalQty)) + " ชิ้น</span>";
-      html += "<span>" + docCount + " เอกสาร · " + lineTotal + " รายการ</span>";
-      html += "</div>";
-      html += '<div class="prep-board__progress"><div class="prep-board__progress-bar" style="width:' + pct + '%"></div></div>';
-      html += '<p class="prep-board__progress-text">จัดแล้ว ' + preparedCount + " / " + lineTotal + " รายการ</p>";
-      html += "</div>";
+      html += '<article class="prep-board__doc prep-board__part-group' + (techOnlyGroup ? " prep-board__part-group--tech-only" : "") + '" data-part-key="' + escapeHtml(group.part_key) + '">';
+      if (!techOnlyGroup) {
+        html += '<div class="prep-board__doc-head">';
+        html += '<div class="prep-board__part-title">' + escapeHtml(displayPartName || group.part_name) + "</div>";
+        html += '<div class="prep-board__part-summary">';
+        html += '<span class="prep-board__part-total">รวม ' + escapeHtml(formatAmount(totalQty)) + " ชิ้น</span>";
+        html += "<span>" + docCount + " เอกสาร · " + lineTotal + " รายการ</span>";
+        html += "</div>";
+        html += '<div class="prep-board__progress"><div class="prep-board__progress-bar" style="width:' + pct + '%"></div></div>';
+        html += '<p class="prep-board__progress-text">จัดแล้ว ' + preparedCount + " / " + pickableCount + " รายการ</p>";
+        html += "</div>";
+      }
 
       var sortedLines = group.lines.slice().sort(function (a, b) {
         return parseAmount(b.pre_amount) - parseAmount(a.pre_amount);
       });
       sortedLines.forEach(function (line) {
+        if (line.is_tech) {
+          if (filterMode === "pending") {
+            return;
+          }
+          var techMeta = [];
+          if (line.line_sn) {
+            techMeta.push(escapeHtml(line.line_sn));
+          }
+          if (line.parts_doc_no) {
+            techMeta.push(escapeHtml(line.parts_doc_no));
+          }
+          var techName = displayPartName || prepBoardDisplayPartName(group.part_name);
+          html += '<div class="prep-board__line prep-board__line--tech-ref" role="presentation">';
+          html += '<span class="prep-board__tech-badge">คลังช่าง</span>';
+          html += '<div class="prep-board__line-body">';
+          if (techName) {
+            html += '<div class="prep-board__line-name">' + escapeHtml(techName) + "</div>";
+          }
+          if (line.pre_type) {
+            html += '<div class="prep-board__line-sub">' + escapeHtml(line.pre_type) + "</div>";
+          }
+          if (techMeta.length) {
+            html += '<div class="prep-board__line-sub">' + techMeta.join(" · ") + "</div>";
+          }
+          html += "</div>";
+          html += '<div class="prep-board__line-qty prep-board__line-qty--tech">' + escapeHtml(formatAmount(parseAmount(line.pre_amount))) + " ชิ้น</div>";
+          html += "</div>";
+          return;
+        }
         if (!lineMatchesFilter(line)) {
           return;
         }
@@ -379,6 +466,7 @@ header('Referrer-Policy: no-referrer');
           return;
         }
         documents = result.body.documents || [];
+        techPartGroups = result.body.tech_part_groups || [];
         updateStats(result.body.summary);
         window.prepEmptyHint = result.body.empty_hint || "";
         renderList();

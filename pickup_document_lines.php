@@ -7,6 +7,7 @@
  */
 
 require_once __DIR__ . '/connect.php';
+require_once __DIR__ . '/pickup_pre_stock_tech.php';
 
 header('Content-Type: application/json; charset=UTF-8');
 header('X-Content-Type-Options: nosniff');
@@ -81,6 +82,7 @@ while (mysqli_stmt_fetch($stmt)) {
         $docRemarks[$lineRemark] = true;
     }
     $lines[] = array(
+        'line_kind' => 'inventory',
         'part_id' => (int) $prePart,
         'part_name' => (string) $partName,
         'product' => (string) $preProduct,
@@ -90,9 +92,16 @@ while (mysqli_stmt_fetch($stmt)) {
 }
 
 mysqli_stmt_close($stmt);
+
+$techLines = pickup_pre_stock_tech_fetch_lines($connect, $preId);
+$allLines = $lines;
+if ($techLines !== array()) {
+    $allLines = array_merge($lines, $techLines);
+}
+
 db_close($connect);
 
-if ($lines === array()) {
+if ($allLines === array()) {
     http_response_code(404);
     echo json_encode(array('ok' => false, 'message' => 'ไม่พบเอกสารหรือไม่มีรายการรอจ่าย'), JSON_UNESCAPED_UNICODE);
     exit;
@@ -109,11 +118,13 @@ echo json_encode(
         'pre_type' => $headerType,
         'ts_mtn_number' => $headerMtn,
         'remarks' => $remarksJoined,
-        'line_count' => count($lines),
+        'line_count' => count($allLines),
+        'line_count_inventory' => count($lines),
+        'line_count_tech' => count($techLines),
         'detail_url' => 'pickup_list_order_detail.php?pre_id=' . rawurlencode($preId)
             . '&ts_mtn_number=' . rawurlencode($headerMtn)
             . '&pre_remarks=' . rawurlencode($remarksJoined),
-        'lines' => $lines,
+        'lines' => $allLines,
     ),
     JSON_UNESCAPED_UNICODE
 );

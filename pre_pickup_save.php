@@ -12,11 +12,13 @@
  * 3. คำนวณจำนวนพิเศษสำหรับ part 57/58 แล้ว insert เป็นเอกสารรอเบิก
  *
  * ตัวอย่าง: pre_pickup_save.php?pre_date=2026-05-18&pre_product=1&pre_amount=1&pre_type=เบิกผลิต&pre_by=Ken
+ * รองรับทั้ง GET (legacy) และ POST (หน้า pickup_ma โหมดเซต — ส่งอาร์เรย์ tech_* / manual_*)
  */
 
 require_once __DIR__ . '/connect.php';
 require_once __DIR__ . '/inventory_session_actor.php';
 require_once __DIR__ . '/pickup_repair_part_product.php';
+require_once __DIR__ . '/pickup_pre_stock_tech.php';
 
 header('Content-Type: text/html; charset=UTF-8');
 header('X-Content-Type-Options: nosniff');
@@ -105,6 +107,44 @@ function pre_pickup_save_positive_int($value)
     $id = filter_var($value, FILTER_VALIDATE_INT, array('options' => array('min_range' => 1)));
 
     return $id === false ? 0 : (int) $id;
+}
+
+/**
+ * อ่าน scalar จาก POST หรือ GET (POST มีลำดับความสำคัญสูงกว่า)
+ *
+ * @param string $key ชื่อพารามิเตอร์
+ * @param mixed  $default ค่าเริ่มต้นเมื่อไม่มีใน request
+ * @return mixed
+ */
+function pre_pickup_save_request_value($key, $default = null)
+{
+    if (array_key_exists($key, $_POST)) {
+        return $_POST[$key];
+    }
+    if (array_key_exists($key, $_GET)) {
+        return $_GET[$key];
+    }
+
+    return $default;
+}
+
+/**
+ * อ่านพารามิเตอร์แบบอาร์เรย์จาก POST หรือ GET
+ *
+ * @param string $key ชื่อพารามิเตอร์ (เช่น pre_product, tech_product_id)
+ * @return array<int, mixed>
+ */
+function pre_pickup_save_request_array($key)
+{
+    $value = pre_pickup_save_request_value($key, null);
+    if (is_array($value)) {
+        return $value;
+    }
+    if ($value !== null && $value !== '') {
+        return array($value);
+    }
+
+    return array();
 }
 
 /**
@@ -304,8 +344,8 @@ function pre_pickup_save_notify($preBy)
 function pre_pickup_save_collect_sets()
 {
     $sets = array();
-    $products = isset($_GET['pre_product']) ? $_GET['pre_product'] : null;
-    $amounts = isset($_GET['pre_amount']) ? $_GET['pre_amount'] : null;
+    $products = pre_pickup_save_request_array('pre_product');
+    $amounts = pre_pickup_save_request_array('pre_amount');
 
     if (is_array($products) && is_array($amounts)) {
         $count = min(count($products), count($amounts));
@@ -395,9 +435,9 @@ function pre_pickup_save_part_name($conn, $partId)
  */
 function pre_pickup_save_merge_manual_lines($conn, &$mergedParts)
 {
-    $partIds = isset($_GET['manual_part_id']) ? $_GET['manual_part_id'] : array();
-    $qtys = isset($_GET['manual_part_qty']) ? $_GET['manual_part_qty'] : array();
-    $productNames = isset($_GET['manual_product_name']) ? $_GET['manual_product_name'] : array();
+    $partIds = pre_pickup_save_request_array('manual_part_id');
+    $qtys = pre_pickup_save_request_array('manual_part_qty');
+    $productNames = pre_pickup_save_request_array('manual_product_name');
 
     if (!is_array($partIds)) {
         $partIds = ($partIds !== '' && $partIds !== null) ? array($partIds) : array();
@@ -444,12 +484,80 @@ function pre_pickup_save_merge_manual_lines($conn, &$mergedParts)
  * @param array<int, array{part_id:int, part_name:string, product_name:string, pick_qty:float}> $mergedParts map part_id
  * @return void ไม่มี return value
  */
+/**
+ * เลือก part_id ใช้เป็นหัวเอกสารอ้างอิงเมื่อบันทึกเฉพาะคลังช่าง (ให้เอกสารโผล่ในรายการรอจ่าย)
+ *
+ * @param mysqli $conn connection ฐานข้อมูล
+ * @return int
+ */
+function pre_pickup_save_pick_anchor_part_id($conn)
+{
+    if (!($conn instanceof mysqli)) {
+        return 0;
+    }
+    $stmt = mysqli_prepare($conn, 'SELECT `part_id` FROM `part` ORDER BY `part_id` ASC LIMIT 1');
+    if ($stmt === false) {
+        return 0;
+    }
+    mysqli_stmt_execute($stmt);
+    mysqli_stmt_bind_result($stmt, $partId);
+    $id = 0;
+    if (mysqli_stmt_fetch($stmt)) {
+        $id = (int) $partId;
+    }
+    mysqli_stmt_close($stmt);
+
+    return $id;
+}
+
+/**
+ * บันทึกเอกสารที่มีเฉพาะรายการคลังช่าง (ตัด Parts แล้ว) — สร้าง pre_stock หัวเอกสาร + pre_stock_tech
+ *
+ * @param mysqli               $conn      connection ฐานข้อมูล
+ * @param array<string,string> $ctx       หัวเอกสาร pre_date, pre_type, pre_by, pre_remarks, ts_mtn_number
+ * @param array<int,array<string,mixed>> $techLines รายการจาก pickup_pre_stock_tech_collect_from_request()
+ * @return int จำนวนแถวที่บันทึก (อย่างน้อย 1)
+ */
+function pre_pickup_save_process_tech_only($conn, array $ctx, array $techLines)
+{
+    if ($techLines === array()) {
+        throw new Exception('ไม่มีรายการคลังช่างสำหรับบันทึก');
+    }
+    $anchorPartId = pre_pickup_save_pick_anchor_part_id($conn);
+    if ($anchorPartId <= 0) {
+        throw new Exception('ไม่พบ Part ในคลังกลางสำหรับสร้างเอกสารอ้างอิง');
+    }
+
+    $preId = date('ymd-His');
+    mysqli_autocommit($conn, false);
+
+    try {
+        pre_pickup_save_insert_row($conn, array(
+            'pre_id' => $preId,
+            'pre_date' => $ctx['pre_date'],
+            'product_name' => 'คลังช่าง (ตัดสต็อกแล้ว)',
+            'part_id' => (string) $anchorPartId,
+            'pre_type' => $ctx['pre_type'],
+            'pre_amount' => 0.01,
+            'pre_by' => $ctx['pre_by'],
+            'pre_remarks' => $ctx['pre_remarks'],
+            'ts_mtn_number' => $ctx['ts_mtn_number'],
+        ));
+        pickup_pre_stock_tech_insert_lines($conn, $preId, $techLines);
+        mysqli_commit($conn);
+        mysqli_autocommit($conn, true);
+    } catch (Exception $e) {
+        mysqli_rollback($conn);
+        mysqli_autocommit($conn, true);
+        throw $e;
+    }
+
+    return 1;
+}
+
 function pre_pickup_save_apply_omitted_parts(&$mergedParts)
 {
-    $omits = isset($_GET['omit_part_id']) ? $_GET['omit_part_id'] : array();
-    if (!is_array($omits)) {
-        $omits = ($omits !== '' && $omits !== null) ? array($omits) : array();
-    }
+    $omits = pre_pickup_save_request_array('omit_part_id');
 
     foreach ($omits as $rawId) {
         $partId = pre_pickup_save_positive_int($rawId);
@@ -466,14 +574,14 @@ $isSuccess = false;
 $savedCount = 0;
 
 try {
-    $preDate = pre_pickup_save_text(isset($_GET['pre_date']) ? $_GET['pre_date'] : '', 30);
+    $preDate = pre_pickup_save_text(pre_pickup_save_request_value('pre_date', ''), 30);
     $setRows = pre_pickup_save_collect_sets();
-    $preType = pre_pickup_save_text(isset($_GET['pre_type']) ? $_GET['pre_type'] : '', 100);
+    $preType = pre_pickup_save_text(pre_pickup_save_request_value('pre_type', ''), 100);
     $preBy = inventory_actor_name_for_save(100);
-    $preRemarks = pre_pickup_save_text(isset($_GET['pre_remarks']) ? $_GET['pre_remarks'] : '', 5000);
-    $searchRaw = pre_pickup_save_text(isset($_GET['search_id']) ? $_GET['search_id'] : '', 100);
+    $preRemarks = pre_pickup_save_text(pre_pickup_save_request_value('pre_remarks', ''), 5000);
+    $searchRaw = pre_pickup_save_text(pre_pickup_save_request_value('search_id', ''), 100);
     if ($searchRaw === '') {
-        $searchRaw = pre_pickup_save_text(isset($_GET['no_repair']) ? $_GET['no_repair'] : '', 100);
+        $searchRaw = pre_pickup_save_text(pre_pickup_save_request_value('no_repair', ''), 100);
     }
     $tsMtnNumber = $searchRaw;
     if ($tsMtnNumber !== '') {
@@ -497,17 +605,48 @@ try {
         throw new Exception('วันที่เบิกไม่ถูกต้อง');
     }
 
-    $manualPartIds = isset($_GET['manual_part_id']) ? $_GET['manual_part_id'] : array();
-    if (!is_array($manualPartIds)) {
-        $manualPartIds = ($manualPartIds !== '' && $manualPartIds !== null) ? array($manualPartIds) : array();
-    }
+    $manualPartIds = pre_pickup_save_request_array('manual_part_id');
 
     if ($preBy === '' || !in_array($preType, $allowedTypes, true)) {
         throw new Exception('ข้อมูลหลักสำหรับบันทึกรายการเบิกไม่ครบถ้วน');
     }
 
+    $techLinesEarly = pickup_pre_stock_tech_collect_from_request();
+
     if (count($setRows) === 0 && count($manualPartIds) === 0) {
-        throw new Exception('ไม่มีรายการเซตหรือรายการแยกสำหรับบันทึก');
+        if ($techLinesEarly === array()) {
+            throw new Exception('ไม่มีรายการเซตหรือรายการแยกสำหรับบันทึก');
+        }
+        $ctx = array(
+            'pre_date' => $preDate,
+            'pre_type' => $preType,
+            'pre_by' => $preBy,
+            'pre_remarks' => $preRemarks,
+            'ts_mtn_number' => $tsMtnNumber,
+        );
+        $savedCount = pre_pickup_save_process_tech_only($connect, $ctx, $techLinesEarly);
+        $isSuccess = true;
+        $message = 'บันทึกเอกสารสำเร็จ (คลังช่างตัดแล้ว — ไม่มีรายการรอจ่ายคลังกลาง)';
+        pre_pickup_save_notify($preBy);
+        db_close($connect);
+        ?>
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<?php if ($isSuccess) { ?>
+<meta http-equiv="Refresh" content="1; URL='pickup_overview.php'">
+<?php } ?>
+<title>บันทึกเบิกของเป็นเซต</title>
+</head>
+<body>
+<h3>บันทึกสำเร็จ</h3>
+<p><?php echo pre_pickup_save_h($message); ?></p>
+<p>กำลังกลับไปหน้ารายการเบิกของ...</p>
+</body>
+</html>
+        <?php
+        exit;
     }
 
     $mergedParts = array();
@@ -533,7 +672,37 @@ try {
     pre_pickup_save_apply_omitted_parts($mergedParts);
 
     if (empty($mergedParts)) {
-        throw new Exception('ไม่พบรายการ part สำหรับบันทึก');
+        if ($techLinesEarly === array()) {
+            throw new Exception('ไม่พบรายการ part สำหรับบันทึก');
+        }
+        $ctx = array(
+            'pre_date' => $preDate,
+            'pre_type' => $preType,
+            'pre_by' => $preBy,
+            'pre_remarks' => $preRemarks,
+            'ts_mtn_number' => $tsMtnNumber,
+        );
+        $savedCount = pre_pickup_save_process_tech_only($connect, $ctx, $techLinesEarly);
+        $isSuccess = true;
+        $message = 'บันทึกเอกสารสำเร็จ (คลังช่างตัดแล้ว — ไม่มีรายการรอจ่ายคลังกลาง)';
+        pre_pickup_save_notify($preBy);
+        db_close($connect);
+        ?>
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Refresh" content="1; URL='pickup_overview.php'">
+<title>บันทึกเบิกของเป็นเซต</title>
+</head>
+<body>
+<h3>บันทึกสำเร็จ</h3>
+<p><?php echo pre_pickup_save_h($message); ?></p>
+<p>กำลังกลับไปหน้ารายการเบิกของ...</p>
+</body>
+</html>
+        <?php
+        exit;
     }
 
     $preId = date('ymd-His');
@@ -552,6 +721,11 @@ try {
             'ts_mtn_number' => $tsMtnNumber,
         ));
         $savedCount++;
+    }
+
+    $techLines = pickup_pre_stock_tech_collect_from_request();
+    if ($techLines !== array()) {
+        pickup_pre_stock_tech_insert_lines($connect, $preId, $techLines);
     }
 
     mysqli_commit($connect);

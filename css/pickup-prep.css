@@ -361,6 +361,57 @@ body.prep-board {
   color: var(--prep-muted);
 }
 
+.prep-board__part-group--tech-only {
+  border: 1px solid #e9d5ff;
+  border-radius: 14px;
+  margin-bottom: 0.75rem;
+  overflow: hidden;
+}
+
+.prep-board__part-group--tech-only .prep-board__line--tech-ref:first-child {
+  border-top: none;
+}
+
+.prep-board__line--tech-ref {
+  align-items: flex-start;
+  background: #faf5ff;
+  cursor: default;
+  gap: 0.55rem;
+}
+
+.prep-board__line--tech-ref:active {
+  background: #faf5ff;
+}
+
+.prep-board__tech-badge {
+  background: #f3e8ff;
+  border: 1px solid #e9d5ff;
+  border-radius: 6px;
+  color: #7c3aed;
+  flex-shrink: 0;
+  font-size: 0.7rem;
+  font-weight: 700;
+  margin-top: 0.15rem;
+  padding: 0.2rem 0.45rem;
+  white-space: nowrap;
+}
+
+.prep-board__line-doc {
+  color: var(--prep-muted);
+  font-size: 0.75rem;
+  line-height: 1.35;
+  margin-bottom: 0.2rem;
+}
+
+.prep-board__progress-text--tech-only {
+  color: #7c3aed;
+}
+
+.prep-board__line-qty--tech {
+  color: #6d28d9;
+  font-size: 0.92rem;
+}
+
 .prep-board__line-qty {
   flex-shrink: 0;
   font-weight: 700;

@@ -8,8 +8,16 @@
 require_once __DIR__ . '/connect.php';
 require_once __DIR__ . '/function.php';
 require_once __DIR__ . '/pickup_repair_part_product.php';
+require_once __DIR__ . '/pickup_repair_formula_tech.php';
 require_once __DIR__ . '/pickup_ma_production_catalog.php';
+require_once __DIR__ . '/pickup_tech_parts.php';
 require_once __DIR__ . '/inventory_session_actor.php';
+
+// โหลดรายการคลังช่างตั้งแต่ต้น — JS ใน <head> ใช้ตัวแปรเหล่านี้ก่อน body render
+// (fail-soft: ต่อไม่ได้ = รายการว่าง + เก็บสาเหตุไว้แสดงในโหมดคลังช่าง)
+$pickupTechAvailable = pickup_tech_parts_available();
+$pickupTechProducts = $pickupTechAvailable ? pickup_tech_parts_products_list() : array();
+$pickupTechError = pickup_tech_parts_error();
 header('Content-Type: text/html; charset=UTF-8');
 @setlocale(LC_TIME, 'th_TH.UTF-8', 'th_TH', 'tha');
 
@@ -31,7 +39,11 @@ function pickup_ma_product_has_repair_set($conn, $productId, $pdName)
         return false;
     }
 
-    return pickup_repair_part_scope_count($conn, $productId, $pdName) > 0;
+    if (pickup_repair_part_scope_count($conn, $productId, $pdName) > 0) {
+        return true;
+    }
+
+    return pickup_repair_formula_tech_count($conn, $productId) > 0;
 }
 
 /**
@@ -205,6 +217,21 @@ function pickup_ma_parse_repair_detail($detail)
 			pickupMaSyncLogRemarks();
 		}
 
+		/**
+		 * หมายเหตุสำหรับบันทึก Parts — แยกจากวัตถุประสงค์ (คอลัมน์ประเภทใน Parts)
+		 *
+		 * @returns {string}
+		 */
+		function pickupMaTechPartsDetailNote() {
+			var purpose = pickupGetPurposeType();
+			if (purpose === "เบิกซ่อมลูกค้า") {
+				var companyEl = document.getElementById("pickup_ma_customer_com");
+				return companyEl ? String(companyEl.value).trim() : "";
+			}
+			var remarksEl = document.getElementById("log_remarks");
+			return remarksEl ? String(remarksEl.value).trim() : "";
+		}
+
 		function pickupGetPurposeType() {
 			var ids = ["myCheck1", "myCheck2", "myCheck6", "myCheck3", "myCheck4", "myCheck5", "myCheck7"];
 			for (var i = 0; i < ids.length; i++) {
@@ -257,12 +284,15 @@ function pickup_ma_parse_repair_detail($detail)
 				overlay.hidden = !locked;
 				overlay.setAttribute("aria-hidden", locked ? "false" : "true");
 			}
-			var modeSwitch = document.getElementById("pickup_mode_switch");
-			if (modeSwitch) {
-				var modeButtons = modeSwitch.getElementsByTagName("button");
-				for (var b = 0; b < modeButtons.length; b++) {
-					modeButtons[b].disabled = locked;
+			var modeButtons = document.querySelectorAll(".pickup-unified-mode-btn[data-mode]");
+			for (var b = 0; b < modeButtons.length; b++) {
+				if (locked) {
+					modeButtons[b].disabled = true;
+					continue;
 				}
+				var isTech = modeButtons[b].getAttribute("data-mode") === "tech";
+				var techOk = modeButtons[b].getAttribute("data-tech-available") === "1";
+				modeButtons[b].disabled = isTech && !techOk;
 			}
 		}
 
@@ -295,7 +325,7 @@ function pickup_ma_parse_repair_detail($detail)
 			var hint = document.getElementById("pickup_set_mode_hint");
 			if (hint) {
 				hint.textContent = pickupIsRepairPurpose()
-					? "ชุดซ่อม: รายการ Part ที่ผูก Product ใน repair_formula"
+					? "ชุดซ่อม: repair_formula + อะไหล่คลังช่างจาก repair_formula_tech (ถ้ามี)"
 					: "สูตรผลิต: รายการจาก production_formula";
 			}
 			pickupFilterPreProductOptions();
@@ -435,6 +465,19 @@ function pickup_ma_parse_repair_detail($detail)
 		var pickupSetFormulaLines = {};
 		var pickupSetManualLines = {};
 		var pickupSetOmittedPartIds = {};
+		var pickupSetTechStore = [];
+		var pickupSetTechLineSeq = 0;
+		var pickupSetTechPartsDocNos = [];
+		/** @type {number} กันผล AJAX ชุดเก่าทับหลังเปลี่ยนชุด */
+		var pickupSetFormulaLoadEpoch = 0;
+
+		/**
+		 * @param {number} epoch รุ่นการโหลดจาก pickupLoadSetFormula
+		 * @returns {boolean}
+		 */
+		function pickupSetLoadIsStale(epoch) {
+			return typeof epoch === "number" && epoch !== pickupSetFormulaLoadEpoch;
+		}
 
 		/**
 		 * โหมดเซต — เปิดฟอร์มเพิ่ม Part แยกรายการให้รวมในตารางเซต
@@ -444,6 +487,748 @@ function pickup_ma_parse_repair_detail($detail)
 				return;
 			}
 			openPickupMaAddModal();
+		}
+
+		/**
+		 * อ่านหมายเลขสินค้าจากฟอร์มหัวเอกสาร (ใช้เติม S/N แถวคลังช่าง)
+		 *
+		 * @returns {string}
+		 */
+		function pickupGetMaProductSnForTechLine() {
+			var snEl = document.getElementById("pickup_ma_product_sn");
+			return snEl ? String(snEl.value).trim() : "";
+		}
+
+		/**
+		 * S/N สำหรับบันทึกคลังช่าง — แถวในตารางเซตใช้หมายเลขสินค้าหัวเอกสารเท่านั้น
+		 *
+		 * @param {HTMLElement} row แถว tr.pickup-tech-line
+		 * @returns {string}
+		 */
+		function pickupTechSnFromRow(row) {
+			if (row && row.classList && row.classList.contains("pickup-set-tech-line")) {
+				return pickupGetMaProductSnForTechLine();
+			}
+			var sn = row ? row.querySelector(".pickup-tech-sn") : null;
+			return sn ? String(sn.value).trim() : "";
+		}
+
+		/**
+		 * ชื่อ Product ชุดแรกในตารางเซต (ใช้แสดงในเอกสารรวม)
+		 *
+		 * @returns {string}
+		 */
+		function pickupSetPrimaryProductLabel() {
+			var first = document.querySelector("#pickup_set_bars .pickup-set-bar-row select");
+			if (first && first.selectedIndex > 0 && first.options[first.selectedIndex]) {
+				return String(first.options[first.selectedIndex].text).trim();
+			}
+			return "";
+		}
+
+		/**
+		 * รายการคลังช่างในตารางเซต — ส่งไป pre_pickup_save เพื่อแสดงใน popup รอจ่าย
+		 *
+		 * @returns {Array<{productId:string,label:string,amount:string,sn:string,setProduct:string}>}
+		 */
+		/**
+		 * มีแถวคลังช่างในตารางเซตที่จะบันทึกหรือไม่
+		 *
+		 * @returns {boolean}
+		 */
+		/**
+		 * มีรายการคลังกลางที่ต้องบันทึก pre_stock จริงหรือไม่ (ไม่นับแถวที่ลบออกจากตารางแล้ว)
+		 *
+		 * @returns {boolean}
+		 */
+		function pickupSetHasInventoryPartsForSave() {
+			var key;
+			for (key in pickupSetManualLines) {
+				if (Object.prototype.hasOwnProperty.call(pickupSetManualLines, key) && !pickupSetOmittedPartIds[key]) {
+					return true;
+				}
+			}
+			for (key in pickupSetFormulaLines) {
+				if (Object.prototype.hasOwnProperty.call(pickupSetFormulaLines, key) && !pickupSetOmittedPartIds[key]) {
+					return true;
+				}
+			}
+			return false;
+		}
+
+		function pickupSetHasTechForSave() {
+			var n;
+			for (n = 0; n < pickupSetTechStore.length; n++) {
+				if (pickupSetTechStore[n] && pickupSetTechStore[n].productId) {
+					return true;
+				}
+			}
+			return document.querySelectorAll("#pickup_set_tbody .pickup-set-tech-line").length > 0;
+		}
+
+		/**
+		 * วาดแถวคลังช่างจาก store ก่อนบันทึก (กันกรณี store กับ DOM ไม่ตรงกัน)
+		 */
+		function pickupSetEnsureTechRendered() {
+			if (!pickupSetHasTechForSave()) {
+				return;
+			}
+			var domRows = document.querySelectorAll("#pickup_set_tbody .pickup-set-tech-line").length;
+			var storeCount = 0;
+			var si;
+			for (si = 0; si < pickupSetTechStore.length; si++) {
+				if (pickupSetTechStore[si] && pickupSetTechStore[si].productId) {
+					storeCount++;
+				}
+			}
+			if (storeCount > 0 && domRows < storeCount) {
+				pickupSetRenderCombined();
+			}
+		}
+
+		function pickupCollectSetTechLinesForSave() {
+			pickupSetEnsureTechRendered();
+			pickupSetTechSyncFromDom();
+			var rows = document.querySelectorAll("#pickup_set_tbody .pickup-set-tech-line");
+			var setProduct = pickupSetPrimaryProductLabel();
+			var out = [];
+			var i;
+			for (i = 0; i < rows.length; i++) {
+				var tr = rows[i];
+				var pidEl = tr.querySelector(".pickup-tech-product");
+				var qty = tr.querySelector(".pickup-tech-qty");
+				if (!pidEl || !pidEl.value) {
+					continue;
+				}
+				var amount = parseFloat(qty ? qty.value : "");
+				if (isNaN(amount) || amount <= 0) {
+					continue;
+				}
+				var labelNode = tr.querySelector(".pickup-set-tech-name-text");
+				var label = labelNode ? String(labelNode.textContent).trim() : "";
+				if (label === "") {
+					label = pickupSetTechLineDisplayName(pidEl.value);
+				}
+				out.push({
+					productId: pidEl.value,
+					label: label,
+					amount: qtyTechFmt(amount),
+					sn: pickupTechSnFromRow(tr),
+					setProduct: setProduct
+				});
+			}
+			if (out.length > 0) {
+				return out;
+			}
+			for (i = 0; i < pickupSetTechStore.length; i++) {
+				var item = pickupSetTechStore[i];
+				if (!item || !item.productId) {
+					continue;
+				}
+				var amt = parseFloat(item.qty);
+				if (isNaN(amt) || amt <= 0) {
+					continue;
+				}
+				var prod = pickupTechProductById(item.productId);
+				var itemLabel = item.label ? String(item.label) : pickupSetTechLineDisplayName(item.productId);
+				out.push({
+					productId: String(item.productId),
+					label: itemLabel,
+					amount: qtyTechFmt(amt),
+					sn: pickupGetMaProductSnForTechLine(),
+					setProduct: setProduct
+				});
+			}
+			return out;
+		}
+
+		/**
+		 * เปิดตารางเซตก่อนเพิ่มแถวคลังช่าง (ล้างโหมดอื่นถ้าผู้ใช้ยืนยัน)
+		 *
+		 * @returns {boolean}
+		 */
+		function pickupEnsureSetBodyForTechLine() {
+			if (pickupGetWorkMode() === "set") {
+				return true;
+			}
+			var mode = pickupGetWorkMode();
+			if (mode === "ma" || mode === "tech") {
+				if (pickupUnifiedHasLineData()) {
+					if (!confirm("จะเพิ่มรายการคลังช่างในตารางเซต — รายการในโหมดปัจจุบันจะถูกล้าง ต้องการต่อหรือไม่?")) {
+						return false;
+					}
+				}
+				if (mode === "ma") {
+					pickupUnifiedClearMaLines();
+				}
+				if (mode === "tech") {
+					pickupTechClearLines();
+				}
+			}
+			pickupUnifiedApplyMode("set");
+			return true;
+		}
+
+		/**
+		 * โหมดเซต — เปิด popup เลือกอะไหล่คลังช่าง
+		 */
+		function pickupGoTechWarehousePickup() {
+			openPickupSetTechAddModal();
+		}
+
+		function pickupTechProductLabel(p) {
+			return p.code !== "" ? p.code + " — " + p.name : p.name;
+		}
+
+		/**
+		 * ชื่ออะไหล่คลังช่างสำหรับแสดงในตารางเซต (ไม่รวมรหัส Pxxxxx)
+		 *
+		 * @param {object|null} p รายการจาก PICKUP_TECH_PRODUCTS
+		 * @returns {string}
+		 */
+		function pickupTechProductNameOnly(p) {
+			if (!p) {
+				return "";
+			}
+			var name = String(p.name || "").trim();
+			if (name !== "") {
+				return name;
+			}
+			return String(p.code || "").trim();
+		}
+
+		/**
+		 * @param {string|number} productId
+		 * @returns {string}
+		 */
+		function pickupSetTechLineDisplayName(productId) {
+			var prod = pickupTechProductById(productId);
+			var label = pickupTechProductNameOnly(prod);
+			return label !== "" ? label : "อะไหล่ #" + String(productId);
+		}
+
+		/**
+		 * แถวหัวกลุ่มในตารางเซต (คลังกลาง / คลังช่าง)
+		 *
+		 * @param {string} title
+		 * @param {string} modClass
+		 * @returns {string}
+		 */
+		function pickupSetGroupHeadRow(title, modClass) {
+			return '<tr class="pickup-set-group-head ' + modClass + '">'
+				+ '<td colspan="7"><span class="pickup-set-group-head__label">' + pickupSetEscHtml(title) + "</span></td></tr>";
+		}
+
+		function pickupTechProductIconUrl(product) {
+			return product && product.icon_url ? String(product.icon_url) : "";
+		}
+
+		function pickupTechProductThumbHtml(iconUrl) {
+			if (iconUrl) {
+				return '<img class="pickup-tech-product-thumb" src="' + iconUrl.replace(/"/g, "&quot;") + '" alt="" loading="lazy" decoding="async" />';
+			}
+			return '<span class="pickup-tech-product-thumb pickup-tech-product-thumb--empty" aria-hidden="true"><i class="fa fa-cube"></i></span>';
+		}
+
+		function pickupSetTechPickerClose() {
+			var menu = document.getElementById("pickup_set_tech_picker_menu");
+			var wrap = document.getElementById("pickup_set_tech_product_picker");
+			if (menu) {
+				menu.hidden = true;
+			}
+			if (wrap) {
+				wrap.classList.remove("pickup-tech-product-picker--open");
+			}
+		}
+
+		function pickupSetTechPickerToggle() {
+			var menu = document.getElementById("pickup_set_tech_picker_menu");
+			var wrap = document.getElementById("pickup_set_tech_product_picker");
+			var trigger = document.getElementById("pickup_set_tech_picker_trigger");
+			if (!menu || !wrap) {
+				return;
+			}
+			var willOpen = menu.hidden;
+			menu.hidden = !willOpen;
+			wrap.classList.toggle("pickup-tech-product-picker--open", willOpen);
+			if (trigger) {
+				trigger.setAttribute("aria-expanded", willOpen ? "true" : "false");
+			}
+		}
+
+		function pickupSetTechPickerSelect(productId) {
+			var sel = document.getElementById("pickup_set_tech_modal_product");
+			if (sel) {
+				sel.value = productId;
+			}
+			pickupSetTechPickerSyncDisplay(productId);
+			pickupSetTechPickerClose();
+			loadPickupSetTechModalStats();
+		}
+
+		function pickupSetTechPickerSyncDisplay(selectedId) {
+			var thumb = document.getElementById("pickup_set_tech_picker_thumb");
+			var label = document.getElementById("pickup_set_tech_picker_label");
+			if (!thumb || !label) {
+				return;
+			}
+			var product = pickupTechProductById(selectedId);
+			if (!product) {
+				thumb.innerHTML = pickupTechProductThumbHtml("");
+				label.textContent = "-- เลือกอะไหล่คลังช่าง --";
+				return;
+			}
+			thumb.innerHTML = pickupTechProductThumbHtml(pickupTechProductIconUrl(product));
+			label.textContent = pickupTechProductLabel(product);
+		}
+
+		/**
+		 * ผูก click รายการในเมนู picker (ใช้ data-product-id แทน onclick inline)
+		 */
+		function pickupSetTechPickerInitMenu() {
+			var menu = document.getElementById("pickup_set_tech_picker_menu");
+			if (!menu || menu.getAttribute("data-picker-bound") === "1") {
+				return;
+			}
+			menu.setAttribute("data-picker-bound", "1");
+			menu.addEventListener("click", function(ev) {
+				var btn = ev.target.closest ? ev.target.closest(".pickup-tech-product-picker__option") : null;
+				if (!btn) {
+					return;
+				}
+				ev.preventDefault();
+				ev.stopPropagation();
+				var pid = btn.getAttribute("data-product-id");
+				if (pid) {
+					pickupSetTechPickerSelect(pid);
+				}
+			});
+		}
+
+		function pickupSetTechModalBuildProductSelect(selectedId) {
+			var sel = document.getElementById("pickup_set_tech_modal_product");
+			var menu = document.getElementById("pickup_set_tech_picker_menu");
+			if (!sel || !menu) {
+				return;
+			}
+			var selHtml = '<option value=""></option>';
+			var menuHtml = "";
+			for (var i = 0; i < PICKUP_TECH_PRODUCTS.length; i++) {
+				var p = PICKUP_TECH_PRODUCTS[i];
+				var label = pickupTechProductLabel(p);
+				var id = String(p.id);
+				var escLabel = label.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+				var selected = String(selectedId) === id ? ' selected="selected"' : "";
+				selHtml += '<option value="' + id.replace(/"/g, "&quot;") + '"' + selected + ">" + escLabel + "</option>";
+				menuHtml += '<button type="button" class="pickup-tech-product-picker__option" data-product-id="' + id.replace(/"/g, "&quot;") + '">'
+					+ pickupTechProductThumbHtml(pickupTechProductIconUrl(p))
+					+ '<span class="pickup-tech-product-picker__option-label">' + escLabel + "</span></button>";
+			}
+			sel.innerHTML = selHtml;
+			menu.innerHTML = menuHtml;
+			pickupSetTechPickerInitMenu();
+			pickupSetTechPickerSyncDisplay(selectedId);
+		}
+
+		/**
+		 * ล็อกช่องจำนวนใน popup คลังช่าง — ปรับได้เฉพาะปุ่ม + / −
+		 */
+		function pickupSetTechInitModalQtyInput() {
+			var input = document.getElementById("pickup_set_tech_modal_amount");
+			if (!input || input.getAttribute("data-qty-locked") === "1") {
+				return;
+			}
+			input.readOnly = true;
+			input.setAttribute("data-qty-locked", "1");
+			input.setAttribute("aria-readonly", "true");
+			input.tabIndex = -1;
+			function blockEdit(event) {
+				event.preventDefault();
+			}
+			input.addEventListener("keydown", blockEdit);
+			input.addEventListener("beforeinput", blockEdit);
+			input.addEventListener("paste", blockEdit);
+			input.addEventListener("wheel", function(event) {
+				if (document.activeElement === input) {
+					event.preventDefault();
+				}
+			}, { passive: false });
+			input.addEventListener("mousedown", blockEdit);
+			input.addEventListener("focus", function() {
+				input.blur();
+			});
+		}
+
+		function resetPickupSetTechAddModal() {
+			pickupSetTechModalBuildProductSelect("");
+			var minEl = document.getElementById("pickup_set_tech_modal_min");
+			var stockEl = document.getElementById("pickup_set_tech_modal_stock");
+			var qtyEl = document.getElementById("pickup_set_tech_modal_amount");
+			if (minEl) {
+				minEl.textContent = "—";
+			}
+			if (stockEl) {
+				stockEl.textContent = "—";
+			}
+			if (qtyEl) {
+				qtyEl.value = "1";
+			}
+		}
+
+		function loadPickupSetTechModalStats() {
+			var sel = document.getElementById("pickup_set_tech_modal_product");
+			var minEl = document.getElementById("pickup_set_tech_modal_min");
+			var stockEl = document.getElementById("pickup_set_tech_modal_stock");
+			if (!sel || !minEl || !stockEl) {
+				return;
+			}
+			var product = pickupTechProductById(sel.value);
+			if (!product) {
+				minEl.textContent = "—";
+				stockEl.textContent = "—";
+				return;
+			}
+			minEl.textContent = pickupSetTechMinText(product.id);
+			stockEl.textContent = pickupSetTechRemainText(product.id);
+		}
+
+		function pickupSetTechModalQtyStep(delta) {
+			var input = document.getElementById("pickup_set_tech_modal_amount");
+			if (!input) {
+				return;
+			}
+			var current = parseFloat(input.value);
+			if (isNaN(current)) {
+				current = 1;
+			}
+			current = Math.max(0.01, Math.round((current + delta) * 100) / 100);
+			input.value = qtyTechFmt(current);
+		}
+
+		function openPickupSetTechAddModal() {
+			if (!pickupRequirePurpose()) {
+				return;
+			}
+			if (!PICKUP_TECH_PRODUCTS.length) {
+				alert("ไม่มีรายการอะไหล่คลังช่าง — ตรวจสอบการเชื่อมต่อระบบ Parts");
+				return;
+			}
+			if (!pickupEnsureSetBodyForTechLine()) {
+				return;
+			}
+			if (pickupSetTechStore.length >= 10) {
+				alert("เพิ่มเบิกคลังช่างในตารางเซตได้สูงสุด 10 รายการ");
+				return;
+			}
+			var modal = document.getElementById("pickup_set_tech_add_modal");
+			if (!modal) {
+				return;
+			}
+			resetPickupSetTechAddModal();
+			pickupSetTechInitModalQtyInput();
+			modal.style.display = "flex";
+			modal.setAttribute("aria-hidden", "false");
+			pickupSetTechPickerClose();
+			var trigger = document.getElementById("pickup_set_tech_picker_trigger");
+			if (trigger) {
+				trigger.focus();
+			}
+		}
+
+		function closePickupSetTechAddModal() {
+			var modal = document.getElementById("pickup_set_tech_add_modal");
+			if (!modal) {
+				return;
+			}
+			modal.style.display = "none";
+			modal.setAttribute("aria-hidden", "true");
+		}
+
+		function submitPickupSetTechAddModal() {
+			var sel = document.getElementById("pickup_set_tech_modal_product");
+			var qtyEl = document.getElementById("pickup_set_tech_modal_amount");
+			if (!sel || !qtyEl) {
+				return;
+			}
+			if (!sel.value) {
+				alert("กรุณาเลือกอะไหล่คลังช่าง");
+				sel.focus();
+				return;
+			}
+			var amount = parseFloat(qtyEl.value);
+			if (isNaN(amount) || amount <= 0) {
+				alert("กรุณากรอกจำนวนเบิกมากกว่า 0");
+				qtyEl.focus();
+				return;
+			}
+			var product = pickupTechProductById(sel.value);
+			if (product && amount > parseFloat(product.quantity)) {
+				if (!confirm("จำนวนเบิก (" + qtyTechFmt(amount) + ") เกินคงเหลือ (" + qtyTechFmt(product.quantity) + ") — ระบบคลังช่างอาจปฏิเสธตอนบันทึก\nเพิ่มรายการนี้ต่อหรือไม่?")) {
+					return;
+				}
+			}
+			pickupSetTechLineSeq++;
+			pickupSetTechStore.push({
+				seq: pickupSetTechLineSeq,
+				productId: sel.value,
+				label: pickupTechProductNameOnly(product),
+				qty: qtyTechFmt(amount),
+				sn: ""
+			});
+			pickupSetRenderCombined();
+			closePickupSetTechAddModal();
+		}
+
+		function pickupSetTechSyncFromDom() {
+			var rows = document.querySelectorAll("#pickup_set_tbody .pickup-set-tech-line");
+			if (!rows.length) {
+				return;
+			}
+			var storeBySeq = {};
+			var idx;
+			for (idx = 0; idx < pickupSetTechStore.length; idx++) {
+				storeBySeq[String(pickupSetTechStore[idx].seq)] = pickupSetTechStore[idx];
+			}
+			var domBySeq = {};
+			for (var i = 0; i < rows.length; i++) {
+				var tr = rows[i];
+				var seq = parseInt(tr.getAttribute("data-tech-seq"), 10);
+				if (isNaN(seq)) {
+					seq = ++pickupSetTechLineSeq;
+				}
+				var prev = storeBySeq[String(seq)];
+				var pidEl = tr.querySelector(".pickup-tech-product");
+				var qty = tr.querySelector(".pickup-tech-qty");
+				var productId = pidEl ? String(pidEl.value).trim() : "";
+				if (productId === "" && prev && prev.productId) {
+					productId = String(prev.productId);
+				}
+				var qtyVal = qty ? qty.value : "";
+				if ((qtyVal === "" || qtyVal === null) && prev && prev.qty) {
+					qtyVal = prev.qty;
+				}
+				domBySeq[String(seq)] = {
+					seq: seq,
+					productId: productId,
+					label: prev && prev.label ? prev.label : pickupSetTechLineDisplayName(productId),
+					qty: qtyVal,
+					sn: pickupGetMaProductSnForTechLine(),
+					fromFormula: prev && prev.fromFormula ? prev.fromFormula : false
+				};
+			}
+			var merged = [];
+			var seen = {};
+			for (idx = 0; idx < pickupSetTechStore.length; idx++) {
+				var item = pickupSetTechStore[idx];
+				var key = String(item.seq);
+				if (domBySeq[key]) {
+					merged.push(domBySeq[key]);
+					seen[key] = true;
+				} else {
+					merged.push(item);
+				}
+			}
+			for (var domKey in domBySeq) {
+				if (Object.prototype.hasOwnProperty.call(domBySeq, domKey) && !seen[domKey]) {
+					merged.push(domBySeq[domKey]);
+				}
+			}
+			pickupSetTechStore = merged;
+			for (idx = 0; idx < merged.length; idx++) {
+				if (merged[idx].seq > pickupSetTechLineSeq) {
+					pickupSetTechLineSeq = merged[idx].seq;
+				}
+			}
+		}
+
+		function pickupSetTechBuildSelectOptions(selectedId) {
+			var html = '<option value="">เลือกอะไหล่คลังช่าง</option>';
+			for (var i = 0; i < PICKUP_TECH_PRODUCTS.length; i++) {
+				var p = PICKUP_TECH_PRODUCTS[i];
+				var label = p.code !== "" ? p.code + " — " + p.name : p.name;
+				var selected = String(selectedId) === String(p.id) ? ' selected="selected"' : "";
+				html += '<option value="' + String(p.id).replace(/"/g, "&quot;") + '"' + selected + ">"
+					+ label.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+					+ "</option>";
+			}
+			return html;
+		}
+
+		function pickupSetTechRemainText(productId) {
+			var product = pickupTechProductById(productId);
+			return product ? qtyTechFmt(product.quantity) + " " + product.unit : "—";
+		}
+
+		/**
+		 * จำนวนขั้นต่ำสต็อก (min_stock) จากระบบ Parts
+		 *
+		 * @param {string|number} productId รหัส products.id
+		 * @returns {string}
+		 */
+		function pickupSetTechMinText(productId) {
+			var product = pickupTechProductById(productId);
+			if (!product) {
+				return "—";
+			}
+			var min = product.min_stock;
+			if (min === null || min === undefined || min === "") {
+				return "—";
+			}
+			return qtyTechFmt(min);
+		}
+
+		function pickupSetRemoveTechLine(seq) {
+			var id = String(seq);
+			pickupSetTechStore = pickupSetTechStore.filter(function(item) {
+				return String(item.seq) !== id;
+			});
+			pickupSetRenderCombined();
+		}
+
+		function pickupSetTechClear() {
+			pickupSetTechStore = [];
+			pickupSetTechLineSeq = 0;
+		}
+
+		/**
+		 * โหลดอะไหล่คลังช่างจาก repair_formula_tech ตาม Product/จำนวนชุด
+		 * ล้างรายการคลังช่างในตารางก่อน — ให้สอดคล้องกับชุดที่เลือกล่าสุด (เปลี่ยนชุด / เปลี่ยนจำนวน)
+		 *
+		 * @param {Array<{product:string,amount:string|number}>} sets
+		 * @param {function():void} onDone
+		 * @param {number} [loadEpoch] รุ่นการโหลด — callback เก่าจะไม่แตะ store
+		 */
+		function pickupSetLoadRepairTechForSets(sets, onDone, loadEpoch) {
+			if (pickupSetLoadIsStale(loadEpoch)) {
+				if (typeof onDone === "function") {
+					onDone();
+				}
+				return;
+			}
+			pickupSetTechClear();
+			if (pickupGetSetFormulaMode() !== "repair" || !sets || !sets.length) {
+				if (typeof onDone === "function") {
+					onDone();
+				}
+				return;
+			}
+			var pending = sets.length;
+			var loadFailed = false;
+			for (var si = 0; si < sets.length; si++) {
+				(function(setRow) {
+					$.getJSON("pickup_set_repair_tech.php", {
+						pre_product: setRow.product,
+						pre_amount: setRow.amount
+					}, function(data) {
+						if (pickupSetLoadIsStale(loadEpoch) || loadFailed) {
+							return;
+						}
+						if (data && data.ok && data.lines) {
+							for (var li = 0; li < data.lines.length; li++) {
+								if (pickupSetTechStore.length >= 10) {
+									break;
+								}
+								var line = data.lines[li];
+								if (!line || !line.tech_product_id) {
+									continue;
+								}
+								var dup = false;
+								var ti;
+								for (ti = 0; ti < pickupSetTechStore.length; ti++) {
+									if (String(pickupSetTechStore[ti].productId) === String(line.tech_product_id)) {
+										dup = true;
+										break;
+									}
+								}
+								if (dup) {
+									continue;
+								}
+								pickupSetTechLineSeq++;
+								var loadProd = pickupTechProductById(line.tech_product_id);
+								var loadLabel = loadProd
+									? pickupTechProductNameOnly(loadProd)
+									: String(line.label || "").replace(/^[^\s—]+\s*—\s*/, "").trim();
+								pickupSetTechStore.push({
+									seq: pickupSetTechLineSeq,
+									productId: String(line.tech_product_id),
+									label: loadLabel !== "" ? loadLabel : pickupSetTechLineDisplayName(line.tech_product_id),
+									qty: String(line.qty),
+									fromFormula: true
+								});
+							}
+						}
+						pending--;
+						if (pending === 0 && typeof onDone === "function") {
+							if (!pickupSetLoadIsStale(loadEpoch)) {
+								onDone();
+							}
+						}
+					}).fail(function() {
+						if (pickupSetLoadIsStale(loadEpoch)) {
+							return;
+						}
+						loadFailed = true;
+						pending--;
+						if (pending === 0 && typeof onDone === "function") {
+							onDone();
+						}
+					});
+				})(sets[si]);
+			}
+		}
+
+		function pickupSetAppendTechRows(tbody) {
+			for (var i = 0; i < pickupSetTechStore.length; i++) {
+				var item = pickupSetTechStore[i];
+				if (!item.productId) {
+					continue;
+				}
+				var tr = document.createElement("tr");
+				tr.className = "pickup-set-tech-line pickup-tech-line";
+				tr.setAttribute("data-tech-seq", String(item.seq));
+				var displayName = item.label ? String(item.label) : pickupSetTechLineDisplayName(item.productId);
+				var rowQty = item.qty !== "" && item.qty !== null && item.qty !== undefined ? item.qty : "1";
+				var nameCell = '<span class="pickup-set-tech-name-text">' + pickupSetEscHtml(displayName) + "</span>";
+				nameCell += '<input type="hidden" class="pickup-tech-product" value="' + pickupSetEscHtml(item.productId) + '">';
+				nameCell += '<input type="hidden" class="pickup-tech-sn pickup-set-tech-sn" value="'
+					+ pickupSetEscHtml(pickupGetMaProductSnForTechLine()) + '">';
+				tr.innerHTML =
+					'<td class="inv-col-num pickup-set-tech-no"></td>'
+					+ '<td class="pickup-set-tech-name">' + nameCell + "</td>"
+					+ '<td class="inv-col-num pickup-tech-min">' + pickupSetEscHtml(pickupSetTechMinText(item.productId)) + "</td>"
+					+ '<td class="inv-col-num pickup-tech-remain">' + pickupSetEscHtml(pickupSetTechStockCell(item.productId)) + "</td>"
+					+ '<td class="inv-col-num"><input class="inv-input pickup-tech-qty" type="number" min="0.01" step="0.01" inputmode="decimal" style="width:90px;" value="'
+					+ pickupSetEscHtml(rowQty) + '" onchange="pickupTechQtyChanged(this);" onkeyup="pickupTechQtyChanged(this);"></td>'
+					+ '<td><span class="pickup-set-tech-badge">ตัดสต็อกทันที</span></td>'
+					+ '<td class="inv-col-action pickup-set-line-action"><button type="button" class="inv-btn inv-btn--ghost pickup-set-line-remove" title="ลบรายการ" onclick="pickupSetRemoveTechLine('
+					+ parseInt(item.seq, 10) + '); return false;"><i class="fa fa-trash"></i></button></td>';
+				tbody.appendChild(tr);
+				var qtyInput = tr.querySelector(".pickup-tech-qty");
+				if (qtyInput) {
+					pickupTechQtyChanged(qtyInput);
+				}
+			}
+		}
+
+		/**
+		 * คงเหลือคลังช่างในตารางเซต (ตัวเลขอย่างเดียว ให้สอดคล้องแถวคลังกลาง)
+		 *
+		 * @param {string|number} productId
+		 * @returns {string}
+		 */
+		function pickupSetTechStockCell(productId) {
+			var product = pickupTechProductById(productId);
+			return product ? qtyTechFmt(product.quantity) : "—";
+		}
+
+		function pickupSetRenumberAllRows(tbody) {
+			var rows = tbody.querySelectorAll("tr.pickup-set-inv-line, tr.pickup-set-tech-line");
+			for (var i = 0; i < rows.length; i++) {
+				var numCell = rows[i].querySelector(".inv-col-num");
+				if (numCell) {
+					numCell.textContent = String(i + 1);
+				}
+			}
 		}
 
 		function pickupSetEscHtml(value) {
@@ -529,7 +1314,7 @@ function pickup_ma_parse_repair_detail($detail)
 				var stockOk = pickupSetCheckStock(row.pick, row.stock);
 				var statusClass = stockOk ? "stock-ok" : "stock-bad";
 				var statusText = stockOk ? "OK" : "Stock ไม่พอ";
-				html += "<tr data-part-id=\"" + pickupSetEscHtml(partId) + "\" data-pick-qty=\"" + pickupSetEscHtml(row.pick) + "\">";
+				html += "<tr class=\"pickup-set-inv-line\" data-part-id=\"" + pickupSetEscHtml(partId) + "\" data-pick-qty=\"" + pickupSetEscHtml(row.pick) + "\">";
 				html += "<td class=\"inv-col-num\">" + (n + 1) + "</td>";
 				html += "<td>" + pickupSetEscHtml(row.name) + "</td>";
 				html += "<td class=\"inv-col-num\">" + pickupSetEscHtml(row.min) + "</td>";
@@ -561,6 +1346,7 @@ function pickup_ma_parse_repair_detail($detail)
 		}
 
 		function pickupSetRenderCombined() {
+			pickupSetTechSyncFromDom();
 			var merged = pickupSetMergeTwoMaps(pickupSetFormulaLines, pickupSetManualLines);
 			for (var omitId in pickupSetOmittedPartIds) {
 				if (Object.prototype.hasOwnProperty.call(pickupSetOmittedPartIds, omitId)) {
@@ -572,13 +1358,27 @@ function pickup_ma_parse_repair_detail($detail)
 			if (!tbody) {
 				return;
 			}
-			if (html === "") {
-				tbody.innerHTML = '<tr><td colspan="7" class="pickup-set-empty">เลือก Product และจำนวนชุดเพื่อโหลดสูตร หรือกด「เพิ่มเบิกแยกรายการ」</td></tr>';
+			var hasInv = html !== "";
+			var hasTech = pickupSetTechStore.length > 0;
+			if (!hasInv && !hasTech) {
+				tbody.innerHTML = '<tr><td colspan="7" class="pickup-set-empty">เลือก Product และจำนวนชุดเพื่อโหลดสูตร หรือกด「เพิ่มเบิกแยกรายการ」/「เพิ่มเบิกจากคลังช่าง」</td></tr>';
 				document.getElementById("pickup_set_has_rows").value = "0";
 				pickupSyncUnifiedClearButton();
 				return;
 			}
-			tbody.innerHTML = html;
+			var bodyHtml = "";
+			if (hasInv) {
+				bodyHtml += pickupSetGroupHeadRow("คลังกลาง", "pickup-set-group-head--inv");
+				bodyHtml += html;
+			}
+			if (hasTech) {
+				bodyHtml += pickupSetGroupHeadRow("คลังช่าง", "pickup-set-group-head--tech");
+			}
+			tbody.innerHTML = bodyHtml;
+			if (hasTech) {
+				pickupSetAppendTechRows(tbody);
+			}
+			pickupSetRenumberAllRows(tbody);
 			document.getElementById("pickup_set_has_rows").value = "1";
 			pickupSyncUnifiedClearButton();
 		}
@@ -626,9 +1426,17 @@ function pickup_ma_parse_repair_detail($detail)
 			return pickupSetMapToHtml(map);
 		}
 
+		function pickupSetHasTechLines() {
+			return pickupSetTechStore.length > 0
+				|| document.querySelectorAll("#pickup_set_tbody .pickup-set-tech-line").length > 0;
+		}
+
 		function pickupUnifiedHasLineData() {
 			if (pickupGetWorkMode() === "set") {
-				return document.getElementById("pickup_set_has_rows").value === "1";
+				return document.getElementById("pickup_set_has_rows").value === "1" || pickupSetHasTechLines();
+			}
+			if (pickupGetWorkMode() === "tech") {
+				return pickupTechHasData();
 			}
 			return parseInt(document.getElementById("count_sp").value || "0", 10) > 0;
 		}
@@ -639,7 +1447,10 @@ function pickup_ma_parse_repair_detail($detail)
 		 * @returns {boolean}
 		 */
 		function pickupUnifiedHasAnyLineData() {
-			if (document.getElementById("pickup_set_has_rows").value === "1") {
+			if (document.getElementById("pickup_set_has_rows").value === "1" || pickupSetHasTechLines()) {
+				return true;
+			}
+			if (pickupTechHasData()) {
 				return true;
 			}
 			return parseInt(document.getElementById("count_sp").value || "0", 10) > 0;
@@ -668,8 +1479,9 @@ function pickup_ma_parse_repair_detail($detail)
 			pickupSetFormulaLines = {};
 			pickupSetManualLines = {};
 			pickupSetOmittedPartIds = {};
+			pickupSetTechClear();
 			document.getElementById("pickup_set_tbody").innerHTML =
-				'<tr><td colspan="7" class="pickup-set-empty">เลือกโหมดเซตแล้วโหลดชุดจาก popup หรือกด「เพิ่มเบิกแยกรายการ」</td></tr>';
+				'<tr><td colspan="7" class="pickup-set-empty">เลือกโหมดเซตแล้วโหลดชุดจาก popup หรือกด「เพิ่มเบิกแยกรายการ」/「เพิ่มเบิกจากคลังช่าง」</td></tr>';
 			document.getElementById("pickup_set_has_rows").value = "0";
 			var first = document.querySelector("#pickup_set_bars .pickup-set-bar-row");
 			if (first) {
@@ -776,6 +1588,26 @@ function pickup_ma_parse_repair_detail($detail)
 			pickupSetBarSyncState();
 		}
 
+		/**
+		 * ล้างรายการในตารางเซตทั้งหมดก่อนโหลดชุดใหม่ (คลังกลาง + แยก + คลังช่าง)
+		 */
+		function pickupSetClearAllLinesBeforeReload() {
+			pickupSetFormulaLines = {};
+			pickupSetManualLines = {};
+			pickupSetOmittedPartIds = {};
+			pickupSetTechClear();
+			pickupSetFormulaLoadEpoch++;
+			var tbody = document.getElementById("pickup_set_tbody");
+			if (tbody) {
+				tbody.innerHTML = '<tr><td colspan="7" class="pickup-set-empty">กำลังโหลดชุด…</td></tr>';
+			}
+			var hasRowsEl = document.getElementById("pickup_set_has_rows");
+			if (hasRowsEl) {
+				hasRowsEl.value = "0";
+			}
+			pickupSyncUnifiedClearButton();
+		}
+
 		function pickupLoadSetFormula() {
 			if (!pickupHasPurposeSelected()) {
 				return;
@@ -785,12 +1617,13 @@ function pickup_ma_parse_repair_detail($detail)
 			}
 			var sets = pickupCollectSetRows();
 			if (!sets.length) {
-				pickupSetFormulaLines = {};
-				pickupSetOmittedPartIds = {};
+				pickupSetClearAllLinesBeforeReload();
 				pickupSetRenderCombined();
 				return;
 			}
+			pickupSetClearAllLinesBeforeReload();
 			var setMode = pickupGetSetFormulaMode();
+			var loadEpoch = ++pickupSetFormulaLoadEpoch;
 			var pending = sets.length;
 			var htmlList = [];
 			var loadFailed = false;
@@ -804,12 +1637,15 @@ function pickup_ma_parse_repair_detail($detail)
 							set_mode: setMode
 						},
 						function(html) {
-							if (loadFailed) {
+							if (pickupSetLoadIsStale(loadEpoch) || loadFailed) {
 								return;
 							}
 							htmlList.push(html);
 							pending--;
 							if (pending === 0) {
+								if (pickupSetLoadIsStale(loadEpoch)) {
+									return;
+								}
 								pickupSetFormulaLines = {};
 								pickupSetOmittedPartIds = {};
 								for (var hi = 0; hi < htmlList.length; hi++) {
@@ -818,12 +1654,21 @@ function pickup_ma_parse_repair_detail($detail)
 										pickupSetParseHtmlChunk(htmlList[hi])
 									);
 								}
-								pickupSetRenderCombined();
+								pickupSetLoadRepairTechForSets(sets, function() {
+									if (pickupSetLoadIsStale(loadEpoch)) {
+										return;
+									}
+									pickupSetRenderCombined();
+								}, loadEpoch);
 							}
 						}
 					).fail(function() {
+						if (pickupSetLoadIsStale(loadEpoch)) {
+							return;
+						}
 						loadFailed = true;
 						pickupSetFormulaLines = {};
+						pickupSetTechClear();
 						pickupSetRenderCombined();
 					});
 				})(sets[i]);
@@ -834,13 +1679,22 @@ function pickup_ma_parse_repair_detail($detail)
 			document.getElementById("pickup_work_mode").value = mode;
 			var isSet = mode === "set";
 			var isMa = mode === "ma";
+			var isTech = mode === "tech";
 			document.getElementById("pickup_body_set").style.display = isSet ? "" : "none";
 			document.getElementById("pickup_body_ma").style.display = isMa ? "" : "none";
+			var bodyTech = document.getElementById("pickup_body_tech");
+			if (bodyTech) {
+				bodyTech.style.display = isTech ? "" : "none";
+			}
 			var maTools = document.getElementById("pickup_ma_tools");
 			if (maTools) {
 				maTools.style.display = isMa ? "" : "none";
 			}
-			var buttons = document.getElementById("pickup_mode_switch").getElementsByTagName("button");
+			var techTools = document.getElementById("pickup_tech_tools");
+			if (techTools) {
+				techTools.style.display = isTech ? "" : "none";
+			}
+			var buttons = document.querySelectorAll(".pickup-unified-mode-btn[data-mode]");
 			for (var b = 0; b < buttons.length; b++) {
 				var btnMode = buttons[b].getAttribute("data-mode");
 				var isActive = mode !== "" && btnMode === mode;
@@ -850,7 +1704,7 @@ function pickup_ma_parse_repair_detail($detail)
 			}
 			var footer = document.getElementById("pickup_unified_footer");
 			if (footer) {
-				footer.style.display = isSet || isMa ? "" : "none";
+				footer.style.display = isSet || isMa || isTech ? "" : "none";
 			}
 			if (isSet) {
 				pickupSetBarSyncState();
@@ -877,11 +1731,521 @@ function pickup_ma_parse_repair_detail($detail)
 			}
 			pickupUnifiedClearMaLines();
 			pickupUnifiedClearSetLines();
+			pickupTechClearLines();
 			pickupUnifiedApplyMode("");
 			closePickupMaAddModal();
 			closePickupSetAddModal();
 			pickupSyncLinesPurposeGate();
 			pickupSyncUnifiedClearButton();
+		}
+
+		// ── โหมดคลังช่าง (tech) — เบิกจาก biton_tech_parts ตัดสต็อกทันที ──
+
+		var PICKUP_TECH_PRODUCTS = <?php echo json_encode($pickupTechProducts, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP); ?>;
+		var pickupTechLineSeq = 0;
+
+		function pickupTechProductById(id) {
+			for (var i = 0; i < PICKUP_TECH_PRODUCTS.length; i++) {
+				if (String(PICKUP_TECH_PRODUCTS[i].id) === String(id)) {
+					return PICKUP_TECH_PRODUCTS[i];
+				}
+			}
+			return null;
+		}
+
+		function pickupTechHasData() {
+			return document.querySelectorAll("#pickup_tech_tbody .pickup-tech-line").length > 0;
+		}
+
+		/**
+		 * เพิ่มแถวเบิกอะไหล่คลังช่าง — select อะไหล่ + จำนวน + S/N
+		 */
+		function pickupTechAddLine() {
+			if (!pickupRequirePurpose()) {
+				return;
+			}
+			var tbody = document.getElementById("pickup_tech_tbody");
+			if (!tbody) {
+				return;
+			}
+			pickupTechLineSeq++;
+			var seq = pickupTechLineSeq;
+
+			var tr = document.createElement("tr");
+			tr.className = "pickup-tech-line";
+			tr.setAttribute("data-seq", String(seq));
+
+			var html = '<td class="inv-col-num pickup-tech-no"></td>';
+			html += '<td><select class="inv-input pickup-tech-product" onchange="pickupTechRowChanged(this);">';
+			html += '<option value="">เลือกอะไหล่คลังช่าง</option>';
+			for (var i = 0; i < PICKUP_TECH_PRODUCTS.length; i++) {
+				var p = PICKUP_TECH_PRODUCTS[i];
+				var label = p.code !== '' ? p.code + ' — ' + p.name : p.name;
+				html += '<option value="' + String(p.id).replace(/"/g, '&quot;') + '">' + label.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</option>';
+			}
+			html += '</select></td>';
+			html += '<td class="inv-col-num pickup-tech-remain">—</td>';
+			html += '<td class="inv-col-num"><input class="inv-input pickup-tech-qty" type="number" min="0.01" step="0.01" inputmode="decimal" style="width:90px;" value="1" onchange="pickupTechQtyChanged(this);" onkeyup="pickupTechQtyChanged(this);"></td>';
+			html += '<td><input class="inv-input pickup-tech-sn" type="text" maxlength="200" placeholder="S/N เครื่อง (ถ้ามี)" value="'
+				+ pickupSetEscHtml(pickupGetMaProductSnForTechLine()) + '"></td>';
+			html += '<td class="inv-col-action"><button type="button" class="inv-btn inv-btn--ghost" onclick="pickupTechRemoveLine(this); return false;" title="ลบรายการ"><i class="fa fa-trash"></i></button></td>';
+
+			tr.innerHTML = html;
+			var emptyRow = document.getElementById("pickup_tech_empty_hint");
+			if (emptyRow) {
+				emptyRow.style.display = "none";
+			}
+			tbody.appendChild(tr);
+			pickupTechSyncNumbers();
+			pickupSyncUnifiedClearButton();
+		}
+
+		function pickupTechRemoveLine(btn) {
+			var tr = btn.closest ? btn.closest("tr") : null;
+			if (!tr) {
+				return;
+			}
+			tr.parentNode.removeChild(tr);
+			var tbody = document.getElementById("pickup_tech_tbody");
+			if (tbody && !tbody.querySelector(".pickup-tech-line")) {
+				var emptyRow = document.getElementById("pickup_tech_empty_hint");
+				if (emptyRow) {
+					emptyRow.style.display = "";
+				}
+			}
+			pickupTechSyncNumbers();
+			pickupSyncUnifiedClearButton();
+		}
+
+		function pickupTechSyncNumbers() {
+			var rows = document.querySelectorAll("#pickup_tech_tbody .pickup-tech-line");
+			for (var i = 0; i < rows.length; i++) {
+				var noCell = rows[i].querySelector(".pickup-tech-no");
+				if (noCell) {
+					noCell.textContent = String(i + 1);
+				}
+			}
+		}
+
+		/**
+		 * เปลี่ยนอะไหล่ในแถว → อัปเดตช่องคงเหลือ
+		 */
+		function pickupTechRowChanged(sel) {
+			var tr = sel.closest ? sel.closest("tr") : null;
+			if (!tr) {
+				return;
+			}
+			var remainCell = tr.querySelector(".pickup-tech-remain");
+			var minCell = tr.querySelector(".pickup-tech-min");
+			var product = pickupTechProductById(sel.value);
+			if (remainCell) {
+				remainCell.textContent = product ? qtyTechFmt(product.quantity) + ' ' + product.unit : '—';
+			}
+			if (minCell) {
+				minCell.textContent = pickupSetTechMinText(sel.value);
+			}
+			pickupTechQtyChanged(tr.querySelector(".pickup-tech-qty"));
+			if (tr.classList && tr.classList.contains("pickup-set-tech-line")) {
+				pickupSetTechSyncFromDom();
+			}
+		}
+
+		/**
+		 * จำนวนเปลี่ยน → เตือนถ้าเกินคงเหลือ (ฝั่งหน้าเว็บ — server กันอีกชั้น)
+		 */
+		function pickupTechQtyChanged(input) {
+			var tr = input.closest ? input.closest("tr") : null;
+			if (!tr) {
+				return;
+			}
+			var sel = tr.querySelector(".pickup-tech-product");
+			var amount = parseFloat(input.value);
+			if (!sel || !sel.value || isNaN(amount) || amount <= 0) {
+				input.style.borderColor = "";
+				return;
+			}
+			var product = pickupTechProductById(sel.value);
+			if (product && amount > parseFloat(product.quantity)) {
+				input.style.borderColor = "#dc2626";
+			} else {
+				input.style.borderColor = "";
+			}
+			if (tr.classList && tr.classList.contains("pickup-set-tech-line")) {
+				pickupSetTechSyncFromDom();
+			}
+		}
+
+		/**
+		 * จัดรูปจำนวนแบบสั้น (0.50 → 0.5, 2.00 → 2) — สไตล์เดียวกับ qty_fmt ของ parts
+		 */
+		function qtyTechFmt(n) {
+			var num = parseFloat(n);
+			if (isNaN(num)) {
+				return "0";
+			}
+			return String(Math.round(num * 100) / 100);
+		}
+
+		function pickupTechClearLines() {
+			var tbody = document.getElementById("pickup_tech_tbody");
+			if (!tbody) {
+				return;
+			}
+			var rows = tbody.querySelectorAll(".pickup-tech-line");
+			for (var i = 0; i < rows.length; i++) {
+				tbody.removeChild(rows[i]);
+			}
+			var emptyRow = document.getElementById("pickup_tech_empty_hint");
+			if (emptyRow) {
+				emptyRow.style.display = "";
+			}
+			pickupSyncUnifiedClearButton();
+		}
+
+		/**
+		 * ประกอบฟอร์มเบิกคลังช่างจากแถวในตาราง
+		 *
+		 * @param {NodeList|Array} rows แถว .pickup-tech-line
+		 * @param {HTMLFormElement} form ฟอร์ม form_tech_save
+		 * @returns {boolean} false เมื่อ validate ไม่ผ่าน
+		 */
+		function pickupTechFillFormFromRows(rows, form) {
+			var old = form.querySelectorAll("input[data-tech-line]");
+			for (var o = 0; o < old.length; o++) {
+				form.removeChild(old[o]);
+			}
+
+			function addHidden(name, value) {
+				var input = document.createElement("input");
+				input.type = "hidden";
+				input.name = name;
+				input.value = value === null || value === undefined ? "" : String(value);
+				input.setAttribute("data-tech-line", "1");
+				form.appendChild(input);
+			}
+
+			var purposeType = pickupGetPurposeType();
+			if (purposeType === "") {
+				alert("กรุณาเลือกวัตถุประสงค์");
+				return false;
+			}
+
+			addHidden("tp_count", String(rows.length));
+			addHidden("tp_purpose", purposeType);
+			addHidden("tp_remarks", pickupMaTechPartsDetailNote());
+			addHidden("log_by", document.getElementById("log_by").value);
+
+			for (var i = 0; i < rows.length; i++) {
+				var row = rows[i];
+				var pidEl = row.querySelector(".pickup-tech-product");
+				var qty = row.querySelector(".pickup-tech-qty");
+				if (!pidEl || !pidEl.value) {
+					alert("รายการคลังช่างที่ " + (i + 1) + " ยังไม่ได้เลือกอะไหล่");
+					return false;
+				}
+				var amount = parseFloat(qty.value);
+				if (isNaN(amount) || amount <= 0) {
+					alert("รายการคลังช่างที่ " + (i + 1) + " กรุณากรอกจำนวนเบิกมากกว่า 0");
+					return false;
+				}
+				var product = pickupTechProductById(pidEl.value);
+				if (product && amount > parseFloat(product.quantity)) {
+					if (!confirm("รายการคลังช่างที่ " + (i + 1) + " จำนวนเบิก (" + qtyTechFmt(amount) + ") เกินคงเหลือ (" + qtyTechFmt(product.quantity) + ") — ระบบคลังช่างจะปฏิเสธรายการนี้\nบันทึกรายการอื่นต่อหรือไม่?")) {
+						return false;
+					}
+				}
+				addHidden("tp_pd" + (i + 1), pidEl.value);
+				addHidden("tp_amount" + (i + 1), qtyTechFmt(amount));
+				addHidden("tp_sn" + (i + 1), pickupTechSnFromRow(row));
+			}
+
+			return true;
+		}
+
+		/**
+		 * เติม hidden ลง form_tech_save จากรายการที่รวบรวมแล้ว (โหมดเซต)
+		 *
+		 * @param {Array<{productId:string,amount:string,sn:string}>} lines
+		 * @param {HTMLFormElement} form
+		 * @returns {boolean}
+		 */
+		function pickupTechFillFormFromLineItems(lines, form) {
+			var old = form.querySelectorAll("input[data-tech-line]");
+			for (var o = 0; o < old.length; o++) {
+				form.removeChild(old[o]);
+			}
+
+			function addHidden(name, value) {
+				var input = document.createElement("input");
+				input.type = "hidden";
+				input.name = name;
+				input.value = value === null || value === undefined ? "" : String(value);
+				input.setAttribute("data-tech-line", "1");
+				form.appendChild(input);
+			}
+
+			var purposeType = pickupGetPurposeType();
+			if (purposeType === "") {
+				alert("กรุณาเลือกวัตถุประสงค์");
+				return false;
+			}
+			if (!lines || !lines.length) {
+				alert("ไม่พบรายการคลังช่างสำหรับบันทึก");
+				return false;
+			}
+			if (lines.length > 10) {
+				alert("รายการคลังช่างเกิน 10 รายการต่อครั้ง — แบ่งบันทึกหรือลดรายการ");
+				return false;
+			}
+
+			addHidden("tp_count", String(lines.length));
+			addHidden("tp_purpose", purposeType);
+			addHidden("tp_remarks", pickupMaTechPartsDetailNote());
+			addHidden("log_by", document.getElementById("log_by").value);
+
+			for (var i = 0; i < lines.length; i++) {
+				var line = lines[i];
+				if (!line || !line.productId) {
+					alert("รายการคลังช่างที่ " + (i + 1) + " ยังไม่ได้เลือกอะไหล่");
+					return false;
+				}
+				var amount = parseFloat(line.amount);
+				if (isNaN(amount) || amount <= 0) {
+					alert("รายการคลังช่างที่ " + (i + 1) + " กรุณากรอกจำนวนเบิกมากกว่า 0");
+					return false;
+				}
+				var product = pickupTechProductById(line.productId);
+				if (product && amount > parseFloat(product.quantity)) {
+					if (!confirm("รายการคลังช่างที่ " + (i + 1) + " จำนวนเบิก (" + qtyTechFmt(amount) + ") เกินคงเหลือ (" + qtyTechFmt(product.quantity) + ") — ระบบคลังช่างจะปฏิเสธรายการนี้\nบันทึกรายการอื่นต่อหรือไม่?")) {
+						return false;
+					}
+				}
+				addHidden("tp_pd" + (i + 1), line.productId);
+				addHidden("tp_amount" + (i + 1), qtyTechFmt(amount));
+				addHidden("tp_sn" + (i + 1), line.sn ? String(line.sn) : "");
+			}
+
+			return true;
+		}
+
+		/**
+		 * แปลง response JSON จาก pickup_tech_parts_save ว่าสำเร็จครบตามจำนวนที่ส่งหรือไม่
+		 *
+		 * @param {string} text body จาก fetch
+		 * @param {number} expected จำนวนรายการที่ส่ง
+		 * @return {{ok:boolean,payload:object|null}}
+		 */
+		function pickupTechParseSaveResponse(text, expected) {
+			var trimmed = String(text).replace(/^\uFEFF/, "").trim();
+			var jsonText = trimmed;
+			var brace = trimmed.indexOf("{");
+			if (brace > 0) {
+				jsonText = trimmed.substring(brace);
+			}
+			var payload = null;
+			try {
+				payload = JSON.parse(jsonText);
+			} catch (parseErr) {
+				if (expected > 0 && trimmed.indexOf("tp-res--ok") !== -1) {
+					return { ok: true, payload: null };
+				}
+				return { ok: false, payload: null };
+			}
+			var okCount = Number(payload && payload.ok_count);
+			var total = Number(payload && payload.total);
+			var allOk = expected > 0 && okCount === expected && total === expected;
+			if (payload && payload.ok === true && expected > 0) {
+				allOk = true;
+			}
+			return { ok: allOk, payload: payload };
+		}
+
+		/**
+		 * POST เบิกคลังช่าง (fetch) — ใช้ก่อนบันทึกคลังกลางเมื่อมีทั้งสองประเภท
+		 *
+		 * @param {NodeList|Array} rows แถว DOM โหมดคลังช่างล้วน
+		 * @param {function(boolean):void} onDone
+		 */
+		function pickupTechPostRows(rows, onDone) {
+			var form = document.getElementById("form_tech_save");
+			if (!form || !pickupTechFillFormFromRows(rows, form)) {
+				if (typeof onDone === "function") {
+					onDone(false);
+				}
+				return;
+			}
+			pickupTechPostFormFetch(form, rows.length, onDone);
+		}
+
+		/**
+		 * POST เบิกคลังช่างจากรายการที่รวบรวมในโหมดเซต
+		 *
+		 * @param {Array<object>} lines จาก pickupCollectSetTechLinesForSave()
+		 * @param {function(boolean):void} onDone
+		 */
+		function pickupTechPostSaveLines(lines, onDone) {
+			var form = document.getElementById("form_tech_save");
+			if (!form || !pickupTechFillFormFromLineItems(lines, form)) {
+				if (typeof onDone === "function") {
+					onDone(false);
+				}
+				return;
+			}
+			pickupTechPostFormFetch(form, lines.length, onDone);
+		}
+
+		/**
+		 * ส่ง form_tech_save ด้วย fetch และเก็บเลขเอกสาร Parts ต่อแถว
+		 *
+		 * @param {HTMLFormElement} form
+		 * @param {number} expectedLineCount
+		 * @param {function(boolean):void} onDone
+		 */
+		function pickupTechPostFormFetch(form, expectedLineCount, onDone) {
+			var fmt = document.createElement("input");
+			fmt.type = "hidden";
+			fmt.name = "tp_response_format";
+			fmt.value = "json";
+			fmt.setAttribute("data-tech-line", "1");
+			form.appendChild(fmt);
+
+			var body = new FormData(form);
+			fetch(form.action, { method: "POST", body: body, credentials: "same-origin" })
+				.then(function(res) {
+					return res.text();
+				})
+				.then(function(text) {
+					var parsed = pickupTechParseSaveResponse(text, expectedLineCount);
+					var hasOk = parsed.ok;
+					pickupSetTechPartsDocNos = [];
+					var payload = parsed.payload;
+					if (payload && payload.results) {
+						for (var pi = 0; pi < payload.results.length; pi++) {
+							var pr = payload.results[pi];
+							pickupSetTechPartsDocNos.push(pr && pr.ok && pr.doc_no ? String(pr.doc_no) : "");
+						}
+					}
+					if (payload && !hasOk && Number(payload.ok_count) > 0) {
+						alert("บันทึกคลังช่างไม่ครบทุกรายการ (" + payload.ok_count + "/" + payload.total + ") — ตรวจสอบประวัติ Parts ก่อนกด Save อีกครั้ง");
+					} else if (!hasOk) {
+						alert("บันทึกคลังช่างไม่สำเร็จ — ตรวจสอบรายการก่อนบันทึกคลังกลาง");
+					}
+					if (typeof onDone === "function") {
+						onDone(hasOk);
+					}
+				})
+				.catch(function() {
+					alert("ส่งคำขอเบิกคลังช่างไม่สำเร็จ");
+					if (typeof onDone === "function") {
+						onDone(false);
+					}
+				});
+		}
+
+		/**
+		 * ส่งข้อมูลไป pre_pickup_save.php ด้วย POST (รองรับอาร์เรย์ยาวและ tech_*)
+		 *
+		 * @param {string} preType วัตถุประสงค์การเบิก
+		 * @param {Array<object>} techSaveLines รายการคลังช่างพร้อม parts doc (ถ้ามี)
+		 */
+		function pickupSubmitPrePickupSave(preType, techSaveLines) {
+			var form = document.getElementById("form_pre_pickup_save");
+			if (!form) {
+				alert("ไม่พบฟอร์มบันทึกคลังกลาง — โหลดหน้าใหม่");
+				return;
+			}
+			var dyn = form.querySelectorAll("input[data-pre-pickup-dyn]");
+			for (var d = 0; d < dyn.length; d++) {
+				form.removeChild(dyn[d]);
+			}
+
+			function addHidden(name, value) {
+				var input = document.createElement("input");
+				input.type = "hidden";
+				input.name = name;
+				input.value = value === null || value === undefined ? "" : String(value);
+				input.setAttribute("data-pre-pickup-dyn", "1");
+				form.appendChild(input);
+			}
+
+			var sets = pickupCollectSetRows();
+			var manualKeys = Object.keys(pickupSetManualLines);
+
+			addHidden("pre_date", document.getElementById("log_date").value);
+			addHidden("pre_type", preType);
+			addHidden("pre_remarks", document.getElementById("log_remarks").value);
+			addHidden("search_id", document.getElementById("search_id").value);
+
+			var si;
+			for (si = 0; si < sets.length; si++) {
+				addHidden("pre_product[]", sets[si].product);
+				addHidden("pre_amount[]", sets[si].amount);
+			}
+			for (var m = 0; m < manualKeys.length; m++) {
+				var manualId = manualKeys[m];
+				if (pickupSetOmittedPartIds[manualId]) {
+					continue;
+				}
+				var manualRow = pickupSetManualLines[manualId];
+				addHidden("manual_part_id[]", manualId);
+				addHidden("manual_part_qty[]", manualRow.pick);
+				addHidden("manual_product_name[]", manualRow.productName || "");
+			}
+			for (var omitKey in pickupSetOmittedPartIds) {
+				if (Object.prototype.hasOwnProperty.call(pickupSetOmittedPartIds, omitKey)) {
+					addHidden("omit_part_id[]", omitKey);
+				}
+			}
+			techSaveLines = techSaveLines || [];
+			if (techSaveLines.length > 0) {
+				addHidden("tech_purpose", pickupGetPurposeType());
+			}
+			for (var ts = 0; ts < techSaveLines.length; ts++) {
+				var tl = techSaveLines[ts];
+				addHidden("tech_product_id[]", tl.productId);
+				addHidden("tech_part_name[]", tl.label);
+				addHidden("tech_amount[]", tl.amount);
+				addHidden("tech_sn[]", tl.sn);
+				addHidden("tech_set_product[]", tl.setProduct);
+				var partsDoc = pickupSetTechPartsDocNos[ts] ? String(pickupSetTechPartsDocNos[ts]) : "";
+				addHidden("tech_parts_doc_no[]", partsDoc);
+			}
+			form.submit();
+		}
+
+		/**
+		 * เก็บรายการโหมดคลังช่าง → POST ไป pickup_tech_parts_save.php
+		 *
+		 * หมายเหตุ: แต่ละบรรทัด = ใบเบิก OUT แยกของคลังช่าง (ตัดสต็อกทันทีทีละรายการ)
+		 */
+		function save_pickup_tech() {
+			if (!document.getElementById("log_by").value) {
+				alert("ไม่พบชื่อผู้บันทึกจาก session — กรุณาเข้าสู่ระบบ SSO ใหม่");
+				return;
+			}
+			if (!PICKUP_TECH_PRODUCTS.length) {
+				alert("ไม่มีรายการอะไหล่คลังช่าง — ตรวจสอบการเชื่อมต่อระบบ Parts");
+				return;
+			}
+			var rows = document.querySelectorAll("#pickup_tech_tbody .pickup-tech-line");
+			if (!rows.length) {
+				alert("กรุณากด「เพิ่มรายการ」เพื่อเลือกอะไหล่ก่อนบันทึก");
+				return;
+			}
+			if (pickupGetPurposeType() === "") {
+				alert("กรุณาเลือกวัตถุประสงค์");
+				return;
+			}
+
+			var form = document.getElementById("form_tech_save");
+			if (!form) {
+				alert("ไม่พบฟอร์มบันทึก — โหลดหน้าใหม่อีกครั้ง");
+				return;
+			}
+			if (!pickupTechFillFormFromRows(rows, form)) {
+				return;
+			}
+			form.submit();
 		}
 
 		function pickupUnifiedSwitchMode(mode) {
@@ -898,75 +2262,136 @@ function pickup_ma_parse_repair_detail($detail)
 			}
 			if (mode === "set") {
 				pickupUnifiedClearMaLines();
+				pickupTechClearLines();
 			} else if (mode === "ma") {
 				pickupUnifiedClearSetLines();
+				pickupTechClearLines();
+			} else if (mode === "tech") {
+				pickupUnifiedClearSetLines();
+				pickupUnifiedClearMaLines();
 			}
 			pickupUnifiedApplyMode(mode);
 			if (mode === "ma") {
 				openPickupMaAddModal();
 			} else if (mode === "set") {
 				openPickupSetAddModal();
+			} else if (mode === "tech") {
+				pickupTechAddLine();
 			}
+		}
+
+		function pickupSetSaveBusyStart(btn) {
+			if (!btn) {
+				return;
+			}
+			if (!btn.getAttribute("data-label-was")) {
+				btn.setAttribute("data-label-was", btn.textContent);
+			}
+			btn.disabled = true;
+			btn.textContent = "กำลังบันทึก…";
+		}
+
+		function pickupSetSaveBusyEnd(btn) {
+			if (!btn) {
+				return;
+			}
+			btn.disabled = false;
+			var was = btn.getAttribute("data-label-was");
+			btn.textContent = was ? was : "Save";
 		}
 
 		function save_pickup_set() {
 			pickupMaSyncLogRemarks();
+			pickupSetEnsureTechRendered();
+			pickupSetTechSyncFromDom();
+			pickupSetTechPartsDocNos = [];
 			var sets = pickupCollectSetRows();
 			var manualKeys = Object.keys(pickupSetManualLines);
-			if (!sets.length && manualKeys.length === 0) {
-				alert("กรุณาโหลดเซตจาก Product หรือเพิ่มรายการแยก");
+			var hasTech = pickupSetHasTechForSave();
+			var techSaveLines = [];
+			var hasRealInv = pickupSetHasInventoryPartsForSave();
+			if (!sets.length && !hasRealInv && !hasTech) {
+				alert("กรุณาโหลดเซตจาก Product เพิ่มรายการแยก หรือเพิ่มเบิกจากคลังช่าง");
 				return;
 			}
-			if (document.getElementById("pickup_set_has_rows").value !== "1") {
+			if ((hasRealInv || hasTech) && document.getElementById("pickup_set_has_rows").value !== "1") {
 				alert("ไม่พบรายการในตาราง — ตรวจสอบ Product หรือรายการที่เพิ่ม");
 				return;
+			}
+			if (hasRealInv) {
+				var hasManual = false;
+				for (var mk2 = 0; mk2 < manualKeys.length; mk2++) {
+					if (!pickupSetOmittedPartIds[manualKeys[mk2]]) {
+						hasManual = true;
+						break;
+					}
+				}
+				if (!sets.length && !hasManual) {
+					alert("ไม่พบข้อมูลชุด Product — กด「เปลี่ยนชุด」เลือก Product และจำนวนชุดก่อนบันทึก");
+					return;
+				}
+			}
+			if (hasTech) {
+				techSaveLines = pickupCollectSetTechLinesForSave();
+				if (!techSaveLines.length) {
+					alert("กรุณาเลือกอะไหล่คลังช่างให้ครบทุกแถวก่อนบันทึก");
+					return;
+				}
+			}
+			if (pickupIsRepairPurpose()) {
+				var jobNo = document.getElementById("search_id");
+				var jobVal = jobNo ? String(jobNo.value).trim() : "";
+				if (jobVal === "") {
+					alert("กรุณาระบุเลขใบงานซ่อมก่อนบันทึก");
+					return;
+				}
 			}
 			var preType = pickupGetPurposeType();
 			if (preType === "") {
 				alert("กรุณาเลือกวัตถุประสงค์");
 				return;
 			}
-			var dataUpdate =
-				"pre_date=" + encodeURIComponent(document.getElementById("log_date").value) +
-				"&pre_type=" + encodeURIComponent(preType) +
-				"&pre_by=" + encodeURIComponent(document.getElementById("log_by").value) +
-				"&pre_remarks=" + encodeURIComponent(document.getElementById("log_remarks").value) +
-				"&search_id=" + encodeURIComponent(document.getElementById("search_id").value);
-			for (var i = 0; i < sets.length; i++) {
-				dataUpdate += "&pre_product[]=" + encodeURIComponent(sets[i].product);
-				dataUpdate += "&pre_amount[]=" + encodeURIComponent(sets[i].amount);
+			if (!document.getElementById("log_by").value) {
+				alert("ไม่พบชื่อผู้บันทึกจาก session — กรุณาเข้าสู่ระบบ SSO ใหม่");
+				return;
 			}
-			for (var m = 0; m < manualKeys.length; m++) {
-				var manualId = manualKeys[m];
-				if (pickupSetOmittedPartIds[manualId]) {
-					continue;
-				}
-				var manualRow = pickupSetManualLines[manualId];
-				dataUpdate += "&manual_part_id[]=" + encodeURIComponent(manualId);
-				dataUpdate += "&manual_part_qty[]=" + encodeURIComponent(manualRow.pick);
-				dataUpdate += "&manual_product_name[]=" + encodeURIComponent(manualRow.productName || "");
+
+			if (hasTech) {
+				var saveBtn = document.getElementById("pickup_unified_save_btn");
+				pickupSetSaveBusyStart(saveBtn);
+				pickupTechPostSaveLines(techSaveLines, function(ok) {
+					if (ok) {
+						pickupSubmitPrePickupSave(preType, techSaveLines);
+						return;
+					}
+					pickupSetSaveBusyEnd(saveBtn);
+				});
+				return;
 			}
-			for (var omitKey in pickupSetOmittedPartIds) {
-				if (Object.prototype.hasOwnProperty.call(pickupSetOmittedPartIds, omitKey)) {
-					dataUpdate += "&omit_part_id[]=" + encodeURIComponent(omitKey);
-				}
-			}
-			window.location = "pre_pickup_save.php?" + dataUpdate;
+			pickupSubmitPrePickupSave(preType, techSaveLines);
 		}
 
 		function save_job() {
+			if (!pickupRequirePurpose()) {
+				return;
+			}
 			pickupMaSyncLogRemarks();
 			if (document.getElementById("log_by").value == "") {
 				alert("ไม่พบชื่อผู้บันทึกจาก session — กรุณาเข้าสู่ระบบ SSO ใหม่");
 				return;
 			}
 			if (pickupGetWorkMode() === "") {
-				alert("กรุณาเลือกโหมดการเบิก (เซตหรือแยกรายการ)");
+				alert("กรุณาเลือกโหมดการเบิก (เซต / แยกรายการ / คลังช่าง)");
 				return;
 			}
 
 			if (pickupGetWorkMode() === "set") {
 				save_pickup_set();
+				return;
+			}
+
+			if (pickupGetWorkMode() === "tech") {
+				save_pickup_tech();
 				return;
 			}
 
@@ -1533,6 +2958,7 @@ function pickup_ma_parse_repair_detail($detail)
 				alert("กรุณาเลือก Product และจำนวนชุด");
 				return;
 			}
+			pickupSetClearAllLinesBeforeReload();
 			var barProd = document.querySelector("#pickup_set_bars .pickup-set-row-product");
 			if (barProd) {
 				barProd.value = modalPd.value;
@@ -2016,9 +3442,12 @@ function pickup_ma_parse_repair_detail($detail)
 			$pickupInitialMode = 'set';
 		} elseif (isset($_GET['mode']) && $_GET['mode'] === 'ma') {
 			$pickupInitialMode = 'ma';
+		} elseif (isset($_GET['mode']) && $_GET['mode'] === 'tech') {
+			$pickupInitialMode = 'tech';
 		}
 		$pickupShowSetBody = $pickupInitialMode === 'set';
 		$pickupShowMaBody = $pickupInitialMode === 'ma';
+		$pickupShowTechBody = $pickupInitialMode === 'tech';
 		$pickupShowLinesFooter = $pickupInitialMode !== '';
 		$pickupProductIds = array();
 		$pickupProductNames = array();
@@ -2129,6 +3558,8 @@ function pickup_ma_parse_repair_detail($detail)
 			<section class="inv-card pickup-unified-lines-card pickup-unified-lines-card--locked">
 				<input type="hidden" id="pickup_work_mode" value="<?php echo htmlspecialchars($pickupInitialMode, ENT_QUOTES, 'UTF-8'); ?>" />
 				<input type="hidden" id="pickup_set_has_rows" value="0" />
+				<form id="form_tech_save" name="form_tech_save" method="post" action="pickup_tech_parts_save.php" hidden></form>
+				<form id="form_pre_pickup_save" name="form_pre_pickup_save" method="post" action="pre_pickup_save.php" hidden></form>
 				<div class="pickup-unified-lines-gate" id="pickup_lines_gate">
 				<div class="pickup-unified-lines-gate__overlay" id="pickup_lines_gate_overlay" role="presentation" onclick="pickupRequirePurpose(); return false;">
 					<p class="pickup-unified-lines-gate__overlay-inner">เลือกวัตถุประสงค์ด้านบนก่อนเพิ่มรายการเบิก</p>
@@ -2179,7 +3610,7 @@ function pickup_ma_parse_repair_detail($detail)
 							</div>
 						</div>
 					</div>
-					<p id="pickup_set_mode_hint" class="pickup-set-mode-hint">ชุดซ่อม: รายการ Part ที่ผูก Product ใน repair_formula</p>
+					<p id="pickup_set_mode_hint" class="pickup-set-mode-hint">ชุดซ่อม: repair_formula + อะไหล่คลังช่างจาก repair_formula_tech (ถ้ามี)</p>
 					<div id="pickup_set_selection_summary" class="pickup-set-selection-summary is-empty" hidden>
 						<div class="pickup-set-selection-summary__main">
 							<span class="pickup-set-selection-summary__label">ชุดที่เลือก</span>
@@ -2203,12 +3634,13 @@ function pickup_ma_parse_repair_detail($detail)
 								</tr>
 							</thead>
 							<tbody id="pickup_set_tbody">
-								<tr><td colspan="7" class="pickup-set-empty">เลือกโหมดเซตแล้วโหลดชุดจาก popup หรือกด「เพิ่มเบิกแยกรายการ」</td></tr>
+								<tr><td colspan="7" class="pickup-set-empty">เลือกโหมดเซตแล้วโหลดชุดจาก popup หรือกด「เพิ่มเบิกแยกรายการ」/「เพิ่มเบิกจากคลังช่าง」</td></tr>
 							</tbody>
 						</table>
 					</div>
 					<div class="pickup-set-table-foot">
-						<button type="button" class="inv-btn inv-btn--ghost" onclick="pickupGoSeparateLinePickup(); return false;"><i class="fa fa-list-ul"></i> เพิ่มเบิกแยกรายการ</button>
+						<button type="button" class="inv-btn inv-btn--ghost pickup-set-foot-add-ma" onclick="pickupGoSeparateLinePickup(); return false;"><i class="fa fa-list-ul"></i> เพิ่มเบิกแยกรายการ</button>
+						<button type="button" class="inv-btn inv-btn--ghost pickup-set-foot-add-tech" data-tech-available="<?php echo $pickupTechAvailable ? '1' : '0'; ?>"<?php echo $pickupTechAvailable ? '' : ' disabled="disabled"'; ?> onclick="<?php echo $pickupTechAvailable ? 'pickupGoTechWarehousePickup(); return false;' : 'return false;'; ?>" title="เลือกอะไหล่คลังช่างเพิ่มในตาราง — บันทึกแล้วตัดสต็อกทันที (ระบบ Parts)"><i class="fa fa-cubes"></i> เพิ่มเบิกจากคลังช่าง</button>
 					</div>
 					</div>
 				</div>
@@ -2216,6 +3648,7 @@ function pickup_ma_parse_repair_detail($detail)
 					<div class="pickup-ma-line-tools" id="pickup_ma_tools" style="display:<?php echo $pickupShowMaBody ? '' : 'none'; ?>;">
 						<div class="pickup-ma-line-tools__actions">
 							<button type="button" class="inv-btn inv-btn--primary" onclick="openPickupMaAddModal(); return false;"><i class="fa fa-plus"></i> เพิ่มรายการ</button>
+							<button type="button" class="inv-btn inv-btn--ghost" data-tech-available="<?php echo $pickupTechAvailable ? '1' : '0'; ?>"<?php echo $pickupTechAvailable ? '' : ' disabled="disabled"'; ?> onclick="<?php echo $pickupTechAvailable ? 'pickupGoTechWarehousePickup(); return false;' : 'return false;'; ?>" title="เพิ่มอะไหล่คลังช่างในตารางเซต"><i class="fa fa-cubes"></i> เพิ่มเบิกจากคลังช่าง</button>
 						</div>
 					</div>
 		<form id="form_add_stock" name="form_add_stock" method="post" action="save_stock">
@@ -2514,13 +3947,48 @@ function pickup_ma_parse_repair_detail($detail)
 				</div>
 		</form>
 				</div>
+				<div id="pickup_body_tech" class="inv-card__body pickup-unified-body" style="display:<?php echo $pickupShowTechBody ? 'block' : 'none'; ?>;">
+					<?php if (!$pickupTechAvailable) { ?>
+					<p class="pickup-set-mode-hint tp-notice tp-notice--error"><?php echo htmlspecialchars($pickupTechError !== '' ? $pickupTechError : 'ระบบคลังอะไหล่ช่างเชื่อมต่อไม่ได้', ENT_QUOTES, 'UTF-8'); ?> — โหมดนี้พร้อมใช้เมื่อเชื่อมต่อได้ (โหมดเบิกอื่นยังใช้งานได้ปกติ)</p>
+					<?php } elseif (count($pickupTechProducts) === 0) { ?>
+					<p class="pickup-set-mode-hint tp-notice">คลังอะไหล่ช่างยังไม่มีรายการอะไหล่ที่ใช้งานอยู่</p>
+					<?php } else { ?>
+					<div class="pickup-ma-line-tools" id="pickup_tech_tools" style="display:<?php echo $pickupShowTechBody ? '' : 'none'; ?>;">
+						<p class="pickup-set-mode-hint" style="margin: 8px 0 0 0;">อะไหล่จากคลังช่าง (ระบบ Parts) — บันทึกแล้วตัดสต็อกทันที แต่ละรายการได้ใบเบิก OUT แยก และประวัติอยู่ในระบบ Parts</p>
+					</div>
+					<div class="pickup-unified-table-card">
+						<div class="inv-table-wrap">
+							<table id="pickup_tech_table" class="inv-table pickup-unified-lines-table" width="100%">
+								<thead>
+									<tr>
+										<th class="inv-col-num">ลำดับ</th>
+										<th>อะไหล่คลังช่าง</th>
+										<th class="inv-col-num">คงเหลือ</th>
+										<th class="inv-col-num">จำนวนเบิก</th>
+										<th>S/N เครื่อง (ถ้ามี)</th>
+										<th class="inv-col-action">ลบ</th>
+									</tr>
+								</thead>
+								<tbody id="pickup_tech_tbody">
+									<tr id="pickup_tech_empty_hint" class="pickup-ma-empty-row">
+										<td colspan="6" class="pickup-set-empty">ยังไม่มีรายการ — กด「เพิ่มรายการ」เพื่อเลือกอะไหล่จากคลังช่าง</td>
+									</tr>
+								</tbody>
+							</table>
+						</div>
+						<div class="pickup-set-table-foot">
+							<button type="button" class="inv-btn inv-btn--ghost" onclick="pickupTechAddLine(); return false;" title="เพิ่มแถวเบิกอะไหล่คลังช่าง"><i class="fa fa-plus"></i> เพิ่มรายการ</button>
+						</div>
+					</div>
+					<?php } ?>
+				</div>
+				</div>
 				<div class="inv-card__footer pickup-unified-footer" id="pickup_unified_footer" style="display:<?php echo $pickupShowLinesFooter ? '' : 'none'; ?>;">
 					<input type="hidden" id="count_sp" name="count_sp" />
 					<div class="pickup-ma-save-row">
 						<?php inventory_render_recorder_field('log_by', 'log_by', 'ผู้บันทึก', 'pickup-ma-recorder-field'); ?>
-						<button type="button" class="inv-btn inv-btn--primary" onclick="javascript:save_job();">Save</button>
+						<button type="button" class="inv-btn inv-btn--primary" id="pickup_unified_save_btn" onclick="javascript:save_job();">Save</button>
 					</div>
-				</div>
 				</div>
 			</section>
 
@@ -2562,6 +4030,9 @@ function pickup_ma_parse_repair_detail($detail)
 		echo 'pickupMaRenderAllDisplayRows();';
 		echo '$("#pickup_ma_customer_com, #pickup_ma_product_sn, #pickup_ma_machine_type, #pickup_ma_product_model, #pickup_ma_ma_sn, #pickup_ma_ma_note").on("input change", pickupMaSyncLogRemarks);';
 		echo 'pickupSyncUnifiedClearButton();';
+		echo 'pickupSetTechInitModalQtyInput();';
+		echo 'pickupSetTechPickerInitMenu();';
+		echo 'document.addEventListener("click", function(ev) { var wrap = document.getElementById("pickup_set_tech_product_picker"); if (!wrap || wrap.contains(ev.target)) { return; } pickupSetTechPickerClose(); });';
 		echo '});';
 		echo '</script>';
 		?>
@@ -2660,6 +4131,56 @@ function pickup_ma_parse_repair_detail($detail)
 		<footer class="pickup-add-line-panel__foot">
 			<button type="button" class="inv-btn inv-btn--ghost" onclick="closePickupSetAddModal();">ยกเลิก</button>
 			<button type="button" class="inv-btn inv-btn--primary" onclick="submitPickupSetAddModal();"><i class="fa fa-check"></i> โหลดรายการ</button>
+		</footer>
+	</div>
+</div>
+
+<div id="pickup_set_tech_add_modal" class="pickup-modal pickup-modal--add-line pickup-modal--tech-line" aria-hidden="true" role="dialog" aria-labelledby="pickup_set_tech_modal_title">
+	<div class="pickup-modal__backdrop" onclick="closePickupSetTechAddModal();"></div>
+	<div class="pickup-modal__panel pickup-add-line-panel">
+		<button type="button" class="pickup-add-line-panel__close" aria-label="ปิด" onclick="closePickupSetTechAddModal(); return false;"><i class="fa fa-times"></i></button>
+		<header class="pickup-add-line-panel__head">
+			<span class="pickup-add-line-panel__icon pickup-add-line-panel__icon--tech" aria-hidden="true"><i class="fa fa-cubes"></i></span>
+			<div>
+				<h2 id="pickup_set_tech_modal_title" class="pickup-add-line-panel__title">เพิ่มเบิกจากคลังช่าง</h2>
+				<p class="pickup-add-line-panel__desc">เลือกอะไหล่และจำนวน — บันทึกเอกสารแล้วตัดสต็อก Parts ทันที</p>
+			</div>
+		</header>
+		<div class="pickup-add-line-panel__body">
+			<div class="inv-field pickup-add-line-field">
+				<label for="pickup_set_tech_picker_trigger">อะไหล่คลังช่าง</label>
+				<div class="pickup-tech-product-picker" id="pickup_set_tech_product_picker">
+					<button type="button" class="pickup-tech-product-picker__trigger inv-select" id="pickup_set_tech_picker_trigger" aria-haspopup="listbox" aria-expanded="false" onclick="pickupSetTechPickerToggle(); return false;">
+						<span class="pickup-tech-product-picker__thumb" id="pickup_set_tech_picker_thumb"></span>
+						<span class="pickup-tech-product-picker__label" id="pickup_set_tech_picker_label">-- เลือกอะไหล่คลังช่าง --</span>
+						<i class="fa fa-chevron-down pickup-tech-product-picker__chev" aria-hidden="true"></i>
+					</button>
+					<div class="pickup-tech-product-picker__menu" id="pickup_set_tech_picker_menu" role="listbox" hidden></div>
+					<select class="pickup-tech-product-picker__native" id="pickup_set_tech_modal_product" name="pickup_set_tech_modal_product" tabindex="-1" aria-hidden="true"></select>
+				</div>
+			</div>
+			<div class="pickup-add-line-stats" aria-live="polite">
+				<div class="pickup-add-line-stat">
+					<span class="pickup-add-line-stat__label">ขั้นต่ำสต็อก</span>
+					<span class="pickup-add-line-stat__value" id="pickup_set_tech_modal_min">—</span>
+				</div>
+				<div class="pickup-add-line-stat">
+					<span class="pickup-add-line-stat__label">คงเหลือ</span>
+					<span class="pickup-add-line-stat__value pickup-add-line-stat__value--stock" id="pickup_set_tech_modal_stock">—</span>
+				</div>
+			</div>
+			<div class="inv-field pickup-add-line-field pickup-add-line-field--qty">
+				<label for="pickup_set_tech_modal_amount">จำนวนเบิก</label>
+				<div class="pickup-qty-stepper">
+					<button type="button" class="pickup-qty-stepper__btn" aria-label="ลดจำนวน" onclick="pickupSetTechModalQtyStep(-1); return false;">−</button>
+					<input class="inv-input pickup-qty-stepper__input pickup-tech-qty pickup-qty-stepper__input--locked" type="number" id="pickup_set_tech_modal_amount" name="pickup_set_tech_modal_amount" min="0.01" step="0.01" inputmode="decimal" value="1" readonly aria-readonly="true" tabindex="-1" />
+					<button type="button" class="pickup-qty-stepper__btn" aria-label="เพิ่มจำนวน" onclick="pickupSetTechModalQtyStep(1); return false;">+</button>
+				</div>
+			</div>
+		</div>
+		<footer class="pickup-add-line-panel__foot">
+			<button type="button" class="inv-btn inv-btn--ghost" onclick="closePickupSetTechAddModal();">ยกเลิก</button>
+			<button type="button" class="inv-btn inv-btn--primary" onclick="submitPickupSetTechAddModal();"><i class="fa fa-check"></i> เพิ่มรายการ</button>
 		</footer>
 	</div>
 </div>

@@ -8,13 +8,14 @@
  * Flow ????:
  * 1. ???????? log_date, vendor, log_by ????????? pd_sp/sn_sp/amount ?????? 5 ???
  * 2. ?????????? log ????????? part_amount / part_diff_stock / part_status_purchase
- * 3. redirect ?? `stock_overview.php`
+ * 3. ตั้ง session flash แล้ว redirect — สำเร็จไป stock_overview.php ผิดพลาดกลับ stock_add.php
  *
  * ????????: POST stock_save.php ????? count_sp=1 ??? sn_sp1=54
  */
 
 require_once __DIR__ . '/connect.php';
 require_once __DIR__ . '/inventory_session_actor.php';
+require_once __DIR__ . '/stock_flash.php';
 
 header('Content-Type: text/html; charset=UTF-8');
 header('X-Content-Type-Options: nosniff');
@@ -135,27 +136,29 @@ function stock_save_amount($key)
 }
 
 /**
- * ??????????????????? redirect ?? stock overview
+ * บันทึกสำเร็จ — ตั้ง flash แล้วไปหน้าภาพรวม stock
  *
- * @param string $message ?????????????
- * @param bool $success true ?????????????????
+ * @param string $message ข้อความสำเร็จ
  * @return void
  */
-function stock_save_render_result($message, $success)
+function stock_save_redirect_overview($message)
 {
-    $class = $success ? 'success' : 'error';
-    $refresh = $success ? '<meta http-equiv="refresh" content="2;url=stock_overview.php">' : '';
+    stock_flash_set($message, 'success');
+    header('Location: stock_overview.php', true, 303);
+    exit;
+}
 
-    echo '<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8">';
-    echo $refresh;
-    echo '<title>' . stock_save_h(stock_save_msg('title')) . '</title>';
-    echo '<style>body{font-family:sans-serif;max-width:760px;margin:3rem auto;color:#334155}';
-    echo '.success{color:#166534;background:#dcfce7;padding:1rem;border-radius:8px}';
-    echo '.error{color:#991b1b;background:#fee2e2;padding:1rem;border-radius:8px}</style>';
-    echo '</head><body><div class="' . stock_save_h($class) . '">' . stock_save_h($message) . '</div>';
-
-    echo '<p><a href="stock_overview.php">' . stock_save_h(stock_save_msg('back')) . '</a></p>';
-    echo '<p><a href="stock_add.php">' . stock_save_h(json_decode('"\u0e01\u0e25\u0e31\u0e1a\u0e44\u0e1b\u0e40\u0e1e\u0e34\u0e48\u0e21 Stock"')) . '</a></p></body></html>';
+/**
+ * บันทึกไม่สำเร็จ — ตั้ง flash แล้วกลับหน้าเพิ่ม stock
+ *
+ * @param string $message ข้อความผิดพลาด
+ * @return void
+ */
+function stock_save_redirect_add_error($message)
+{
+    stock_flash_set($message, 'error');
+    header('Location: stock_add.php', true, 303);
+    exit;
 }
 
 /**
@@ -304,18 +307,49 @@ function stock_save_ensure_log_autoincrement($conn)
 }
 
 /**
- * ?????? stock 1 ??????
+ * บันทึกชื่อ vendor ลง tbl_vendor ถ้ายังไม่มี — ให้ค้นหาครั้งถัดไปเจอใน autocomplete
  *
- * @param mysqli $conn connection ?????????
- * @param string $logDate ????????????
- * @param string $logType ?????? log
- * @param string $logBy ?????????
- * @param string $vendor ???? vendor
- * @param int $productId ???? product
- * @param int $partId ???? part
- * @param float $logAmount ?????????????
- * @param string $logPrice ????
- * @param string $remarks ????????
+ * @param mysqli $conn connection
+ * @param string $vendorName ชื่อร้านจากฟอร์ม
+ * @return void
+ */
+function stock_save_ensure_vendor_in_catalog($conn, $vendorName)
+{
+    $vendorName = trim((string) $vendorName);
+    if ($vendorName === '' || !($conn instanceof mysqli)) {
+        return;
+    }
+
+    $stmt = mysqli_prepare(
+        $conn,
+        'INSERT INTO `tbl_vendor` (`vname`) SELECT ? FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM `tbl_vendor` WHERE `vname` = ? LIMIT 1)'
+    );
+    if ($stmt === false) {
+        error_log('[stock_save_ensure_vendor_in_catalog] ' . mysqli_error($conn));
+
+        return;
+    }
+
+    mysqli_stmt_bind_param($stmt, 'ss', $vendorName, $vendorName);
+    if (!mysqli_stmt_execute($stmt)) {
+        error_log('[stock_save_ensure_vendor_in_catalog] execute: ' . mysqli_stmt_error($stmt));
+    }
+    mysqli_stmt_close($stmt);
+}
+
+/**
+ * บันทึก stock 1 แถวลง log_stock และอัปเดต stock ของ part
+ *
+ * @param mysqli $conn connection ฐานข้อมูล
+ * @param string $logDate วันที่ log
+ * @param string $logType ประเภท log
+ * @param string $logBy ผู้บันทึก
+ * @param string $vendor ชื่อ vendor
+ * @param int $productId รหัส product
+ * @param int $partId รหัส part
+ * @param float $logAmount จำนวน
+ * @param string $logPrice ราคา
+ * @param string $remarks หมายเหตุ
  * @return void
  */
 function stock_save_process_row($conn, $logDate, $logType, $logBy, $vendor, $productId, $partId, $logAmount, $logPrice, $remarks)
@@ -377,9 +411,8 @@ function stock_save_process_row($conn, $logDate, $logType, $logBy, $vendor, $pro
 // ? Main ?????????????????????????????????????????????????????????????????????
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    stock_save_render_result(stock_save_msg('form_only'), false);
     db_close($connect);
-    exit;
+    stock_save_redirect_add_error(stock_save_msg('form_only'));
 }
 
 $logDate = stock_save_text('log_date', 30);
@@ -387,23 +420,20 @@ $logType = stock_save_text('log_type', 100);
 try {
     $logBy = inventory_actor_name_for_save(100);
 } catch (RuntimeException $actorError) {
-    stock_save_render_result(stock_save_msg('missing_header'), false);
     db_close($connect);
-    exit;
+    stock_save_redirect_add_error(stock_save_msg('missing_header'));
 }
 $vendor = stock_save_text('vendor_com', 255);
 $rowCount = stock_save_int('count_sp', 0);
 
 if ($logDate === '' || $logBy === '' || $vendor === '') {
-    stock_save_render_result(stock_save_msg('missing_header'), false);
     db_close($connect);
-    exit;
+    stock_save_redirect_add_error(stock_save_msg('missing_header'));
 }
 
 if ($rowCount <= 0 || $rowCount > 5) {
-    stock_save_render_result(stock_save_msg('invalid_count'), false);
     db_close($connect);
-    exit;
+    stock_save_redirect_add_error(stock_save_msg('invalid_count'));
 }
 
 if ($logType === '') {
@@ -414,6 +444,8 @@ try {
     if (!stock_save_ensure_log_autoincrement($connect)) {
         throw new Exception(stock_save_msg('log_prepare'));
     }
+
+    stock_save_ensure_vendor_in_catalog($connect, $vendor);
 
     mysqli_begin_transaction($connect);
 
@@ -459,10 +491,12 @@ try {
     }
 
     mysqli_commit($connect);
-    stock_save_render_result(sprintf(stock_save_msg('success'), $savedRows), true);
+    db_close($connect);
+    stock_save_redirect_overview(sprintf(stock_save_msg('success'), $savedRows));
 } catch (Exception $e) {
     mysqli_rollback($connect);
-    stock_save_render_result($e->getMessage(), false);
+    db_close($connect);
+    stock_save_redirect_add_error($e->getMessage());
 }
 
 db_close($connect);

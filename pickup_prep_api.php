@@ -15,6 +15,7 @@
 
 require_once __DIR__ . '/connect.php';
 require_once __DIR__ . '/pickup_prep_board_auth.php';
+require_once __DIR__ . '/pickup_pre_stock_tech.php';
 
 header('Content-Type: application/json; charset=UTF-8');
 header('X-Content-Type-Options: nosniff');
@@ -255,6 +256,13 @@ function pickup_prep_api_fetch_list($conn)
         );
     }
 
+    $preIds = array();
+    foreach ($documentList as $docRow) {
+        if (!empty($docRow['pre_id'])) {
+            $preIds[$docRow['pre_id']] = true;
+        }
+    }
+
     return array(
         'summary' => array(
             'lines' => $totalLines,
@@ -263,7 +271,97 @@ function pickup_prep_api_fetch_list($conn)
             'documents' => count($documentList),
         ),
         'documents' => $documentList,
+        'tech_part_groups' => pickup_prep_api_tech_part_groups($conn, array_keys($preIds)),
     );
+}
+
+/**
+ * จัดกลุ่มรายการคลังช่างที่ผูกเอกสารรอจ่าย (แสดงบนมือถือ — ไม่ติ๊กจัด, อ้างอิงเท่านั้น)
+ *
+ * @param mysqli            $conn   connection
+ * @param array<int, string> $preIds รายการ pre_id ที่ยัง pre
+ * @return array<int, array<string, mixed>>
+ */
+function pickup_prep_api_tech_part_groups($conn, array $preIds)
+{
+    if ($preIds === array() || !($conn instanceof mysqli)) {
+        return array();
+    }
+    if (!pickup_pre_stock_tech_ensure_table($conn)) {
+        return array();
+    }
+
+    $groups = array();
+    foreach ($preIds as $preId) {
+        $preId = trim((string) $preId);
+        if ($preId === '') {
+            continue;
+        }
+        $techLines = pickup_pre_stock_tech_fetch_lines($conn, $preId);
+        if ($techLines === array()) {
+            continue;
+        }
+
+        $docType = '';
+        $docRemarks = '';
+        $headerStmt = mysqli_prepare(
+            $conn,
+            'SELECT `pre_type`, `pre_remarks` FROM `pre_stock` WHERE `pre_id` = ? AND TRIM(`pre_status`) = ? LIMIT 1'
+        );
+        if ($headerStmt !== false) {
+            $statusPre = 'pre';
+            mysqli_stmt_bind_param($headerStmt, 'ss', $preId, $statusPre);
+            if (mysqli_stmt_execute($headerStmt)) {
+                mysqli_stmt_bind_result($headerStmt, $docType, $docRemarks);
+                mysqli_stmt_fetch($headerStmt);
+            }
+            mysqli_stmt_close($headerStmt);
+        }
+
+        foreach ($techLines as $techLine) {
+            $techProductId = isset($techLine['tech_product_id']) ? (int) $techLine['tech_product_id'] : 0;
+            $displayName = isset($techLine['part_name']) ? trim((string) $techLine['part_name']) : '';
+            $displayName = pickup_pre_stock_tech_display_part_name($displayName, $techProductId);
+            if ($displayName === '') {
+                continue;
+            }
+            $partKey = $techProductId > 0 ? 'tech-' . $techProductId : 'tech-' . md5($displayName);
+
+            if (!isset($groups[$partKey])) {
+                $groups[$partKey] = array(
+                    'part_key' => $partKey,
+                    'part_name' => $displayName,
+                    'lines' => array(),
+                );
+            }
+
+            $sn = isset($techLine['remarks']) ? trim((string) $techLine['remarks']) : '';
+            $partsDoc = isset($techLine['parts_doc_no']) ? trim((string) $techLine['parts_doc_no']) : '';
+            $purpose = isset($techLine['product']) ? trim((string) $techLine['product']) : '';
+            if ($purpose === '' && $docType !== '') {
+                $purpose = $docType;
+            }
+
+            $groups[$partKey]['lines'][] = array(
+                'is_tech' => true,
+                'pre_id' => $preId,
+                'pre_type' => $purpose,
+                'pre_product' => '',
+                'pre_amount' => isset($techLine['amount']) ? (string) $techLine['amount'] : '',
+                'line_sn' => $sn,
+                'parts_doc_no' => $partsDoc,
+                'doc_remarks' => trim((string) $docRemarks),
+                'prepared' => true,
+            );
+        }
+    }
+
+    $out = array_values($groups);
+    usort($out, static function ($a, $b) {
+        return strcmp((string) $a['part_name'], (string) $b['part_name']);
+    });
+
+    return $out;
 }
 
 /**

@@ -1079,6 +1079,8 @@ function pickup_ma_parse_repair_detail($detail)
 
 		function pickupSetRemoveTechLine(seq) {
 			var id = String(seq);
+			var tr = document.querySelector("#pickup_set_tbody tr[data-tech-seq='" + id + "']");
+			if (tr) { tr.parentNode.removeChild(tr); }
 			pickupSetTechStore = pickupSetTechStore.filter(function(item) {
 				return String(item.seq) !== id;
 			});

@@ -1,0 +1,68 @@
+# สถานะ deploy pickup บน server production (อัปเดตเมื่อผู้ใช้แจ้งว่าอัปโหลดแล้ว)
+package=2026-11-18-r1-pickup
+recorded=2026-11-18T00:00:00+00:00
+note=แพ็กถัดไป (incremental) รวมเฉพาะไฟล์ที่ MD5 เปลี่ยนจากรายการด้านล่าง
+
+path | md5
+------------------------------------------------------------------------
+css/inventory-ui.css | bd1fc4068c598483a5ae1dd6d63ff8dc
+css/pickup-prep.css | dd2d35df331cc03e454a8198dc117b0f
+formula_manage.php | 03d56be43ab4e7ac6eb9bf2250a5eb9f
+images/pickup-lift-walk-1.gif | 5f5371eb0425171b12190f5285dde3fd
+images/pickup-lift-walk-2.gif | 5f5371eb0425171b12190f5285dde3fd
+images/pickup-lift-walk-3.gif | 5f5371eb0425171b12190f5285dde3fd
+images/pickup-lift-walk-4.gif | 5f5371eb0425171b12190f5285dde3fd
+images/pickup-lift-walk-5.gif | 5f5371eb0425171b12190f5285dde3fd
+images/pickup-lift-walk-6.gif | 5f5371eb0425171b12190f5285dde3fd
+images/pickup-lift-walk-7.gif | 5f5371eb0425171b12190f5285dde3fd
+images/pickup-lift-walk.gif | 5f5371eb0425171b12190f5285dde3fd
+inventory_config.php | 40eebce8aff0448759c10ae04b4a9dc0
+inventory_request_timing.php | af6a344ee3308ed6c958293661852150
+inventory_session_actor.php | 37fb7aecf8c6b431582e030d97753b2a
+inventory_ui_fonts.php | 21dd4ef741cb97df16cd7cede2727898
+inventory_ui_head.php | 06543ea208e90ab53396d7f7cecf9e34
+inventory_version.php | d547c78fa9c6a15328ae74137d6567bf
+js/pickup-lift-call.js | e19f50e0f9b26b2e048eca78a6937407
+list_stock.php | 138433d500436d7d90fa6be9917ea22a
+part_add.php | 6eb20d0d553d04942ee64b899a08e0ad
+part_save.php | 6c19e39937c380bb6b252a2a393b79fa
+pickup_constants.php | 74c206418362b488bd5e9de312498335
+pickup_document_lines.php | 87ade73e41eef17e87b5b8da08f636b9
+pickup_history.php | 9462887f5c8d4d69a571ad1a60413cc1
+pickup_history_lib.php | 4e2a0ee77fdca73793efc6273d202c3b
+pickup_history_lines.php | f33ab1a5c35a7280f127ca92455ce577
+pickup_lift_call_fragment.php | 379db73f817eee35e0b1406595bdc9b4
+pickup_list_order.php | cda2d0e908e489bfbe328d963d7d2f98
+pickup_list_order_detail.php | 80bf37d201739686e8a437b009ce2d61
+pickup_list_order_edit.php | 1b462934a3f5278dad95adbeb83488cd
+pickup_ma.php | dee5c7bf369b385615cded00054a7e6e
+pickup_ma_production_catalog.php | 690854bff12b50b3be9a8bafde77ff81
+pickup_ma_save.php | bcec7933d5d9692c811c33d4615bbd22
+pickup_overview.php | 7c5fba1287b59b8d1b067ec46ff4e5fb
+pickup_pre_stock_tech.php | bc67b651223932842b6905a2c0503c2a
+pickup_prep_api.php | e156790cc2d2a3cfc23f12686f0bfdcd
+pickup_prep_board.php | f10821c8da9dc047666b48b7bb372a78
+pickup_prep_board_auth.php | 89646b74451d9d8028acf37334abe1bf
+pickup_prep_board_status.php | 083f0477c34a78c0cbabbd7180089a59
+pickup_repair_formula_tech.php | a00b53f2f7fc1108069db6e56463129c
+pickup_repair_part_product.php | 3e692dd67f29b791c2d9a36daadf9bc4
+pickup_save_log.php | ed543288e440d0948b6831122eb21eca
+pickup_set_formula.php | b6b14d26886eaf643af132eb40b8cf64
+pickup_set_repair_tech.php | 377b16f16a9c462498107ae8ee4f712e
+pickup_tech_parts.php | 7da3cede3dd7b84ad51691c3dce21b0c
+pickup_tech_parts_save.php | 8b53cdd94c36722f346601c0b12d8689
+pre_pickup_save.php | 7a2117fd3aa450a23a8f04d690a1d407
+production_pre_pickup.php | dd5dff119d7349b32e169155759ddcfc
+search_cusname.php | 8b176e8e3b1bb80b408339ee6726819f
+stock_add.php | f52d551d3eebc6a82d7094545ef880c8
+stock_add_history.php | f128de6c17452dd540633676e873673e
+stock_log_edit.php | 6a0a42152fbe1d592aed6f9db6d9ca83
+stock_log_save.php | d325b02f2d523a343862471ba50833b3
+stock_flash.php | 36dd377c40e4534fb255ebb96a3d821d
+stock_overview.php | 3ae5612f9718262ab29c8f1c63a85ce5
+stock_save.php | 9a8c0834443aeba8e66b3f89b375ad3e
+title-h.php | 97237cbb73d801dd79eeb4fe1ded34aa
+vendor_add.php | ccb1690215270749869e1aea26023aac
+vendor_edit.php | 4f8d9d8bd52415c66e327de68e36df3f
+vendor_manage.php | 8347aeb9246d25a730f62dc298239f47
+vendor_save.php | e3f206c6cce63d6561eeea6b7a0c8f62

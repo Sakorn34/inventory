@@ -1,4 +1,0 @@
-package=pickup-edit-pre-document
-label=Inventory — แก้เอกสารเบิกรอคลัง + หน้ารายการเบิก
-built=2026-11-03T07:12:32+00:00
-web_files=5

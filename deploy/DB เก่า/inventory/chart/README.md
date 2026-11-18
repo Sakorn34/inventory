@@ -1,2 +1,0 @@
-# chartjs-tuts
-chartjs-tuts

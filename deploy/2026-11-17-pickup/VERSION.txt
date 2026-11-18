@@ -1,6 +1,0 @@
-package=2026-11-17-pickup
-label=Inventory — โมดูลเบิกของ (pickup + pickup_ma + UI ฟอนต์)
-built=2026-11-17T09:35:45+00:00
-mode=incremental
-baseline=
-web_files=1

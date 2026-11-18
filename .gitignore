@@ -41,3 +41,7 @@
 # ไฟล์ระบบ Windows
 Thumbs.db
 desktop.ini
+
+# แพ็กไฟล์ deploy ขึ้น server — สำเนาโค้ด + config ของแต่ละรอบ ไม่ต้องอยู่ใน repo
+/deploy/*
+!/deploy/README.txt

@@ -1,6 +1,0 @@
-package=2026-11-14-r2-pickup-lift-qty-pickup
-label=Inventory — โมดูลเบิกของ (pickup + pickup_ma + UI ฟอนต์)
-built=2026-11-14T08:00:20+00:00
-mode=incremental
-baseline=
-web_files=3

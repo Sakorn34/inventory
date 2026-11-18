@@ -1,8 +1,0 @@
-# MANIFEST — Inventory — โมดูลเบิกของ (pickup + pickup_ma + UI ฟอนต์)
-# สร้างเมื่อ: 2026-11-17 09:55:47
-# ใช้เปรียบเทียบ MD5 บน server หลัง copy (เช่น ผ่าน check_server_files.php)
-
-relative_path | bytes | md5 | modified
-------------------------------------------------------------------------
-www/title-h.php | 5939 | 97237cbb73d801dd79eeb4fe1ded34aa | 2026-11-17 09:35:39
-www/inventory_version.php | 1131 | 3ba1d6508a41c7c2e108ef2fc3d6c5c8 | 2026-11-17 09:55:41

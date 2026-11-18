@@ -15,7 +15,7 @@ return array(
     'line_to_id' => 'Ca921f77e83f896748e5959bbf915c84e',
 
     // token สำหรับหน้ามือถือ pickup_prep_board.php?token=... (สุ่มยาว ≥32 ตัวอักษร)
-    'pickup_prep_board_token' => 'b7f3c9e2b1d84f6a0e5c8d2b9f1a4e7c3d6b8f0a2e5c1d9b4f7a0e3c6d8b1f4',
+    'pickup_prep_board_token' => '',
 
     // ปุ่มช่วยยกของ → Node-RED ใน Wi‑Fi ออฟฟิศ (ตั้งเป็นค่าว่างบน cloud เพื่อซ่อนปุ่ม)
     'node_red_call_lift_url' => 'http://192.168.2.208:1880/endpoint/call_Lift',

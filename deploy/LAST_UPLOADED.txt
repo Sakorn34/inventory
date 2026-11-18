@@ -1,6 +1,6 @@
 # สถานะ deploy pickup บน server production (อัปเดตเมื่อผู้ใช้แจ้งว่าอัปโหลดแล้ว)
-package=2026-11-18-r1-pickup
-recorded=2026-11-18T00:00:00+00:00
+package=2026-11-18-r2-pickup
+recorded=2026-11-18T01:00:00+00:00
 note=แพ็กถัดไป (incremental) รวมเฉพาะไฟล์ที่ MD5 เปลี่ยนจากรายการด้านล่าง
 
 path | md5
@@ -21,7 +21,7 @@ inventory_request_timing.php | af6a344ee3308ed6c958293661852150
 inventory_session_actor.php | 37fb7aecf8c6b431582e030d97753b2a
 inventory_ui_fonts.php | 21dd4ef741cb97df16cd7cede2727898
 inventory_ui_head.php | 06543ea208e90ab53396d7f7cecf9e34
-inventory_version.php | d547c78fa9c6a15328ae74137d6567bf
+inventory_version.php | 1d4c2a938c3068a57a924ddc52eea954
 js/pickup-lift-call.js | e19f50e0f9b26b2e048eca78a6937407
 list_stock.php | 138433d500436d7d90fa6be9917ea22a
 part_add.php | 6eb20d0d553d04942ee64b899a08e0ad

@@ -73,7 +73,23 @@ $invPageMs = (string) inv_page_elapsed_ms();
 <p class="inv-navbar__meta-line inv-navbar__meta-line--version">v<?php echo $h($invReleaseVersion); ?></p>
 <?php } ?>
 <?php if ($invPageMs !== '') { ?>
-<p class="inv-navbar__meta-line inv-navbar__meta-line--detail">หน้า <?php echo $h($invPageMs); ?> ms</p>
+<p class="inv-navbar__meta-line inv-navbar__meta-line--detail" id="inv_timing_line">เซิร์ฟเวอร์ <?php echo $h($invPageMs); ?> ms</p>
+<script>
+(function(){
+    var el=document.getElementById('inv_timing_line');
+    if(!el||!window.performance)return;
+    function fmt(ms){return ms<1000?ms+' ms':(ms/1000).toFixed(1)+' วิ';}
+    function update(){
+        var ms=0;
+        var nav=performance.getEntriesByType&&performance.getEntriesByType('navigation');
+        if(nav&&nav.length&&nav[0].loadEventEnd>0){ms=Math.round(nav[0].loadEventEnd);}
+        else if(performance.timing&&performance.timing.loadEventEnd){ms=performance.timing.loadEventEnd-performance.timing.navigationStart;}
+        if(ms>0){el.textContent=el.textContent+' · หน้า '+fmt(ms);}
+    }
+    if(document.readyState==='complete'){setTimeout(update,0);}
+    else{window.addEventListener('load',function(){setTimeout(update,50);});}
+})();
+</script>
 <?php } ?>
 </aside>
 <?php } ?>

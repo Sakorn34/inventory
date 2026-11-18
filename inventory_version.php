@@ -15,7 +15,7 @@ if (!defined('INVENTORY_RELEASE_DATE')) {
 }
 
 if (!defined('INVENTORY_APP_META_LABEL')) {
-    define('INVENTORY_APP_META_LABEL', 'Inventory · Production');
+    define('INVENTORY_APP_META_LABEL', '© bitCOMBINE');
 }
 
 /** วันที่เริ่มดูแล/พัฒนาระบบ (แสดงบน navbar) — อัปเดตเมื่อเปลี่ยนทีมดูแล */

@@ -1,6 +1,6 @@
 # สถานะ deploy pickup บน server production (อัปเดตเมื่อผู้ใช้แจ้งว่าอัปโหลดแล้ว)
-package=2026-11-18-r2-pickup
-recorded=2026-11-18T01:00:00+00:00
+package=2026-11-18-r3-pickup
+recorded=2026-11-18T02:00:00+00:00
 note=แพ็กถัดไป (incremental) รวมเฉพาะไฟล์ที่ MD5 เปลี่ยนจากรายการด้านล่าง
 
 path | md5
@@ -61,7 +61,7 @@ stock_log_save.php | d325b02f2d523a343862471ba50833b3
 stock_flash.php | 36dd377c40e4534fb255ebb96a3d821d
 stock_overview.php | 3ae5612f9718262ab29c8f1c63a85ce5
 stock_save.php | 9a8c0834443aeba8e66b3f89b375ad3e
-title-h.php | 97237cbb73d801dd79eeb4fe1ded34aa
+title-h.php | a677ad9323c77f75348ca2892f44cdbf
 vendor_add.php | ccb1690215270749869e1aea26023aac
 vendor_edit.php | 4f8d9d8bd52415c66e327de68e36df3f
 vendor_manage.php | 8347aeb9246d25a730f62dc298239f47

@@ -814,44 +814,31 @@ body.prep-board {
   box-shadow: 0 0 0 4px rgba(255, 138, 61, 0.2);
 }
 
-/* ลานเล่นทีมน้องกล่อง — จำนวนตัวตามจำนวนคน เดิน/วิ่ง/กระโดดด้วย JS */
-.prep-board__lift-label {
-  order: 1;
-}
-
-.prep-board__lift-stepper {
-  order: 2;
+/* ทีมน้องกล่องวิ่งทั่วการ์ด — อยู่ชั้นหลังปุ่ม/ข้อความ ไม่รับการแตะ (JS คุมการเคลื่อนที่) */
+.prep-board__lift-body {
+  position: relative;
 }
 
 .prep-board__lift-crew {
-  order: 3;
-  position: relative;
-  flex: 0 0 100%;
-  height: 52px;
-  margin: -0.15rem 0 -0.3rem;
-  border-radius: 12px;
-  background: #fff8ec;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
   pointer-events: none;
 }
 
-.prep-board__lift-crew::after {
-  content: "";
-  position: absolute;
-  left: 8px;
-  right: 8px;
-  bottom: 7px;
-  border-bottom: 2px dashed rgba(201, 138, 75, 0.35);
-}
-
-.prep-board__lift-form .pickup-overview__lift-btn-shell {
-  order: 4;
+.prep-board__lift-label,
+.prep-board__lift-stepper,
+.prep-board__lift-form .pickup-overview__lift-btn-shell,
+.prep-board__lift-hint,
+.prep-board__lift-status {
+  position: relative;
+  z-index: 1;
 }
 
 .prep-board__crew-kid {
   position: absolute;
   left: 0;
-  bottom: 7px;
-  z-index: 1;
+  top: 0;
   width: 30px;
   height: 32px;
   transition: opacity 0.3s ease;
@@ -878,9 +865,9 @@ body.prep-board {
 
 .prep-board__crew-more {
   position: absolute;
-  top: 3px;
-  right: 6px;
-  z-index: 2;
+  left: 8px;
+  bottom: 6px;
+  z-index: 999;
   padding: 0 0.4rem;
   border-radius: 9px;
   background: var(--prep-orange);

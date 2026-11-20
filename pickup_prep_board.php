@@ -37,7 +37,7 @@ header('Referrer-Policy: no-referrer');
 <link rel="apple-touch-icon" href="images/bitcombine-logo.png" />
 <?php require_once __DIR__ . '/inventory_ui_fonts.php'; ?>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mitr:wght@500&amp;display=swap" />
-<link rel="stylesheet" href="css/pickup-prep.css?v=18" />
+<link rel="stylesheet" href="css/pickup-prep.css?v=19" />
 </head>
 <body class="prep-board">
 <?php if (!$tokenOk) {
@@ -747,6 +747,7 @@ header('Referrer-Policy: no-referrer');
     + '<path d="M12.5 21q3.5 3 7 0" fill="none" stroke="#2b1a07" stroke-width="1.6" stroke-linecap="round"/>'
     + '<circle cx="7" cy="20" r="1.8" fill="#f2a07a" opacity=".7"/><circle cx="25" cy="20" r="1.8" fill="#f2a07a" opacity=".7"/>'
     + "</svg>";
+  var KID_H = 32;
   var crew = [];
   var crewLast = 0;
   var crewLeaving = false;
@@ -755,40 +756,48 @@ header('Referrer-Policy: no-referrer');
     return min + Math.random() * (max - min);
   }
 
+  function clamp(v, min, max) {
+    return Math.max(min, Math.min(max, v));
+  }
+
   function crewMaxX() {
     return Math.max(0, crewEl.clientWidth - KID_W);
+  }
+
+  function crewMaxY() {
+    return Math.max(0, crewEl.clientHeight - KID_H);
   }
 
   function crewCapacity() {
     return Math.max(1, Math.min(12, Math.floor(crewEl.clientWidth / 26)));
   }
 
-  function crewHop(kid, vy) {
+  /** z = ความสูงจากพื้น, vz > 0 คือพุ่งขึ้น */
+  function crewHop(kid, vz) {
     kid.mode = "hop";
-    kid.vy = vy;
+    kid.vz = vz;
   }
 
-  /** ท่าต่อไปแบบสุ่ม: เดิน 45% วิ่ง 20% หยุดมองรอบตัว 25% กระโดด 10% */
+  /** ท่าต่อไปแบบสุ่ม: เดินไปจุดใหม่ 40% วิ่ง 22% หยุดมองรอบตัว 26% กระโดด 12% */
   function crewPickMove(kid) {
     var r = Math.random();
-    if (r < 0.45) {
-      kid.mode = "walk";
-      kid.speed = rand(16, 30);
-      kid.t = rand(1.5, 4);
-    } else if (r < 0.65) {
-      kid.mode = "run";
-      kid.speed = rand(60, 90);
-      kid.t = rand(0.6, 1.5);
-    } else if (r < 0.9) {
+    if (r < 0.62) {
+      kid.mode = r < 0.4 ? "walk" : "run";
+      kid.speed = kid.mode === "walk" ? rand(18, 34) : rand(65, 100);
+      kid.tx = rand(0, crewMaxX());
+      kid.ty = rand(0, crewMaxY());
+      kid.t = 8;
+    } else if (r < 0.88) {
       kid.mode = "idle";
-      kid.speed = 0;
-      kid.t = rand(0.6, 2);
+      kid.t = rand(0.5, 2);
+      if (Math.random() < 0.5) {
+        kid.dir = -kid.dir;
+      }
     } else {
-      kid.speed = rand(10, 30);
-      crewHop(kid, rand(-200, -150));
-    }
-    if (Math.random() < 0.3) {
-      kid.dir = -kid.dir;
+      kid.tx = kid.x;
+      kid.ty = kid.y;
+      kid.speed = 0;
+      crewHop(kid, rand(160, 220));
     }
   }
 
@@ -798,18 +807,24 @@ header('Referrer-Policy: no-referrer');
     el.innerHTML = CREW_KID_SVG;
     el.querySelector(".kid-eyes").style.animationDelay = rand(0, 4).toFixed(2) + "s";
     crewEl.insertBefore(el, crewEl.querySelector(".prep-board__crew-more"));
+    var x = rand(0, crewMaxX());
+    var y = rand(0, crewMaxY());
     var kid = {
       el: el,
       svg: el.firstChild,
       footL: el.querySelector(".kid-foot-l"),
       footR: el.querySelector(".kid-foot-r"),
-      x: rand(0, crewMaxX()),
-      y: dropIn ? -46 : 0,
-      vy: 0,
+      x: x,
+      y: y,
+      z: dropIn ? 90 : 0,
+      vz: 0,
+      tx: x,
+      ty: y,
       dir: Math.random() < 0.5 ? -1 : 1,
       speed: 0,
       mode: dropIn ? "hop" : "idle",
       t: rand(0.2, 1),
+      cool: 0,
       phase: rand(0, 6)
     };
     crew.push(kid);
@@ -822,35 +837,64 @@ header('Referrer-Policy: no-referrer');
     var s = Math.sin(kid.phase);
     var bob = moving ? -Math.abs(s) * 2.2 * amp : 0;
     var tilt = moving ? s * 5 * amp : (kid.mode === "hop" ? -8 : 0);
-    kid.el.style.transform = "translate(" + kid.x.toFixed(1) + "px," + (kid.y + bob).toFixed(1) + "px)";
+    kid.el.style.transform = "translate(" + kid.x.toFixed(1) + "px," + (kid.y - kid.z + bob).toFixed(1) + "px)";
+    kid.el.style.zIndex = String(Math.round(kid.y) + 1);
     kid.svg.style.transform = "scaleX(" + kid.dir + ") rotate(" + tilt.toFixed(1) + "deg)";
     kid.footL.style.transform = "translateY(" + (moving ? Math.min(0, s) * 2.5 : 0).toFixed(1) + "px)";
     kid.footR.style.transform = "translateY(" + (moving ? Math.min(0, -s) * 2.5 : 0).toFixed(1) + "px)";
   }
 
-  /** เดินชนกันหันกลับ / ตัวที่เร็วกว่ากระโดดข้ามตัวข้างหน้า */
+  /** เดินเข้าหาเป้า (tx, ty) — คืน true เมื่อถึง */
+  function crewMoveToward(kid, dt) {
+    var dx = kid.tx - kid.x;
+    var dy = kid.ty - kid.y;
+    var d = Math.sqrt(dx * dx + dy * dy);
+    if (Math.abs(dx) > 0.5) {
+      kid.dir = dx > 0 ? 1 : -1;
+    }
+    var stepLen = kid.speed * dt;
+    if (d <= stepLen || d < 0.5) {
+      kid.x = kid.tx;
+      kid.y = kid.ty;
+      return true;
+    }
+    kid.x += (dx / d) * stepLen;
+    kid.y += (dy / d) * stepLen;
+    return false;
+  }
+
+  /** ชนกันแล้วแตกฮือวิ่งหนีคนละทาง ตัวหนึ่งกระโดดตกใจ */
   function crewInteract() {
-    var ground = crew.filter(function (k) {
-      return k.mode === "walk" || k.mode === "run" || k.mode === "idle";
-    }).sort(function (a, b) {
-      return a.x - b.x;
-    });
-    for (var i = 0; i + 1 < ground.length; i++) {
-      var a = ground[i];
-      var b = ground[i + 1];
-      if (b.x - a.x > 16) {
-        continue;
-      }
-      if (a.dir > 0 && b.dir < 0 && (a.mode !== "idle" || b.mode !== "idle")) {
-        a.dir = -1;
-        b.dir = 1;
-        crewHop(Math.random() < 0.5 ? a : b, -150);
-      } else if (a.dir === b.dir) {
-        var behind = a.dir > 0 ? a : b;
-        var ahead = behind === a ? b : a;
-        if (behind.speed > ahead.speed + 5) {
-          crewHop(behind, -210);
+    var maxX = crewMaxX();
+    var maxY = crewMaxY();
+    for (var i = 0; i < crew.length; i++) {
+      for (var j = i + 1; j < crew.length; j++) {
+        var a = crew[i];
+        var b = crew[j];
+        if (a.z > 0 || b.z > 0 || a.cool > 0 || b.cool > 0 || a.mode === "hop" || b.mode === "hop") {
+          continue;
         }
+        if (a.mode === "idle" && b.mode === "idle") {
+          continue;
+        }
+        var dx = b.x - a.x;
+        var dy = b.y - a.y;
+        var d = Math.sqrt(dx * dx + dy * dy);
+        if (d > 18) {
+          continue;
+        }
+        var ux = d > 0 ? dx / d : 1;
+        var uy = d > 0 ? dy / d : 0;
+        [[a, -1], [b, 1]].forEach(function (pair) {
+          var k = pair[0];
+          k.tx = clamp(k.x + pair[1] * ux * rand(45, 90), 0, maxX);
+          k.ty = clamp(k.y + pair[1] * uy * rand(20, 50) + rand(-15, 15), 0, maxY);
+          k.mode = "run";
+          k.speed = rand(70, 100);
+          k.t = 3;
+          k.cool = 1.2;
+        });
+        crewHop(Math.random() < 0.5 ? a : b, 170);
       }
     }
   }
@@ -872,36 +916,33 @@ header('Referrer-Policy: no-referrer');
     var maxX = crewMaxX();
     crew.forEach(function (kid) {
       kid.t -= dt;
+      kid.cool = Math.max(0, kid.cool - dt);
       if (kid.mode === "hop") {
-        kid.vy += GRAVITY * dt;
-        kid.y += kid.vy * dt;
-        kid.x += kid.dir * kid.speed * dt;
-        if (kid.y >= 0 && kid.vy > 0) {
-          kid.y = 0;
-          kid.vy = 0;
+        kid.vz -= GRAVITY * dt;
+        kid.z += kid.vz * dt;
+        if (kid.speed > 0) {
+          crewMoveToward(kid, dt);
+        }
+        if (kid.z <= 0 && kid.vz < 0) {
+          kid.z = 0;
+          kid.vz = 0;
           if (crewLeaving) {
             kid.mode = "leave";
             kid.speed = Math.max(kid.speed, 240);
+            kid.tx = maxX + 80;
+            kid.ty = kid.y;
           } else {
             crewPickMove(kid);
           }
         }
       } else if (kid.mode === "leave") {
-        kid.x += kid.speed * dt;
-      } else {
-        if (kid.mode !== "idle") {
-          kid.x += kid.dir * kid.speed * dt;
-        }
-        if (kid.t <= 0) {
+        crewMoveToward(kid, dt);
+      } else if (kid.mode === "walk" || kid.mode === "run") {
+        if (crewMoveToward(kid, dt) || kid.t <= 0) {
           crewPickMove(kid);
         }
-      }
-      if (!crewLeaving) {
-        if (kid.x < 0 && kid.dir < 0) {
-          kid.dir = 1;
-        } else if (kid.x > maxX && kid.dir > 0) {
-          kid.dir = -1;
-        }
+      } else if (kid.t <= 0) {
+        crewPickMove(kid);
       }
       if (kid.mode !== "idle") {
         kid.phase += dt * Math.max(6, kid.speed * 0.32);
@@ -916,17 +957,22 @@ header('Referrer-Policy: no-referrer');
     }
   }
 
-  /** ทั้งทีมออกพ้นขอบขวาแล้ว — เรียงแถวเดินกลับเข้ามาจากซ้าย */
+  /** ทั้งทีมออกพ้นขอบขวาแล้ว — เรียงแถวเดินกลับเข้ามาจากซ้าย กระจายไปทั่วการ์ด */
   function crewReturn() {
+    var maxX = crewMaxX();
+    var maxY = crewMaxY();
     crewLeaving = false;
     crew.forEach(function (kid, i) {
-      kid.x = -36 - i * 30;
-      kid.y = 0;
-      kid.vy = 0;
+      kid.x = -40 - i * 34;
+      kid.y = rand(0, maxY);
+      kid.z = 0;
+      kid.vz = 0;
       kid.dir = 1;
       kid.mode = "walk";
-      kid.speed = rand(35, 55);
-      kid.t = rand(1.2, 2.5) + i * 0.5;
+      kid.speed = rand(40, 60);
+      kid.tx = rand(maxX * 0.15, maxX * 0.85);
+      kid.ty = rand(0, maxY);
+      kid.t = 10;
     });
   }
 
@@ -948,7 +994,8 @@ header('Referrer-Policy: no-referrer');
     if (reduceMotion) {
       crew.forEach(function (kid, i) {
         kid.x = (crewMaxX() * (i + 0.5)) / crew.length;
-        kid.y = 0;
+        kid.y = crewMaxY();
+        kid.z = 0;
         kid.mode = "idle";
         crewDraw(kid);
       });
@@ -993,9 +1040,10 @@ header('Referrer-Policy: no-referrer');
       }
       crewLeaving = true;
       crew.forEach(function (kid) {
-        kid.dir = 1;
         kid.speed = rand(240, 320);
-        crewHop(kid, rand(-220, -170));
+        kid.tx = crewMaxX() + 80;
+        kid.ty = kid.y;
+        crewHop(kid, rand(170, 220));
       });
     });
   }

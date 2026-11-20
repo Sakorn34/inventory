@@ -61,28 +61,25 @@
 
   /**
    * ต้องเรียกตรงจาก handler ของการแตะ — Safari iOS อนุญาต popup เฉพาะช่วงนั้น
-   * (ห้ามใส่ "noopener" ใน window.open เพราะจะคืน null เสมอแม้แท็บเปิดได้)
+   * เปิด URL ปลายทางตรงๆ: แท็บเปล่าแล้วตัด opener ทำให้ Safari ไม่ยอมเปลี่ยนหน้าแท็บ (ค้างหน้าขาว)
+   * ห้ามใส่ "noopener"/"noreferrer" เพราะ window.open จะคืน null เสมอ และต้องใช้ ref เปลี่ยนไป URL หลักหลัง prelude
    */
   function pickupLiftSubmitViaTab(url) {
-    var tab = global.open("", "_blank");
+    var cfg = pickupLiftConfig();
+    var tab = global.open(cfg.preludeUrl ? cfg.preludeUrl : url, "_blank");
     if (!tab) {
       // popup ถูกบล็อก — ไปที่ Node-RED ในแท็บนี้แทน กด back กลับมาได้
       global.location.href = url;
       return;
     }
-    try {
-      tab.opener = null;
-    } catch (ignore) {
-      // intentional
-    }
-    var cfg = pickupLiftConfig();
     if (cfg.preludeUrl) {
-      tab.location.href = cfg.preludeUrl;
       global.setTimeout(function () {
-        tab.location.href = url;
+        try {
+          tab.location.href = url;
+        } catch (ignore) {
+          // intentional
+        }
       }, pickupLiftPreludeDelayMs());
-    } else {
-      tab.location.href = url;
     }
     pickupLiftShowSentNotice();
   }

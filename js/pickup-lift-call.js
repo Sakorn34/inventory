@@ -20,13 +20,22 @@
     if (hostname === "localhost" || hostname === "127.0.0.1") {
       return true;
     }
+    // Private IP ranges
     if (/^192\.168\.\d{1,3}\.\d{1,3}$/.test(hostname)) {
       return true;
     }
     if (/^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(hostname)) {
       return true;
     }
-    return /^172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}$/.test(hostname);
+    if (/^172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}$/.test(hostname)) {
+      return true;
+    }
+    // Intranet hostnames without a dot (e.g. WIN-XXXXX, DESKTOP-123, server)
+    if (hostname.indexOf(".") === -1) {
+      return true;
+    }
+    // Common local TLDs: .local (mDNS), .lan, .internal, .intranet, .home
+    return /\.(local|lan|internal|intranet|home)$/i.test(hostname);
   }
 
   function pickupLiftSetSectionVisible(show) {

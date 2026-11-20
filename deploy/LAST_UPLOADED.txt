@@ -1,12 +1,12 @@
 # สถานะ deploy pickup บน server production (อัปเดตเมื่อผู้ใช้แจ้งว่าอัปโหลดแล้ว)
-package=2026-11-18-r3-pickup
-recorded=2026-11-18T02:00:00+00:00
+package=2026-11-20-r4-pickup
+recorded=2026-11-20T00:00:00+00:00
 note=แพ็กถัดไป (incremental) รวมเฉพาะไฟล์ที่ MD5 เปลี่ยนจากรายการด้านล่าง
 
 path | md5
 ------------------------------------------------------------------------
 css/inventory-ui.css | bd1fc4068c598483a5ae1dd6d63ff8dc
-css/pickup-prep.css | dd2d35df331cc03e454a8198dc117b0f
+css/pickup-prep.css | 4988c2b9ba525be37a5fe1683ff49c7c
 formula_manage.php | 03d56be43ab4e7ac6eb9bf2250a5eb9f
 images/pickup-lift-walk-1.gif | 5f5371eb0425171b12190f5285dde3fd
 images/pickup-lift-walk-2.gif | 5f5371eb0425171b12190f5285dde3fd
@@ -21,7 +21,7 @@ inventory_request_timing.php | af6a344ee3308ed6c958293661852150
 inventory_session_actor.php | 37fb7aecf8c6b431582e030d97753b2a
 inventory_ui_fonts.php | 21dd4ef741cb97df16cd7cede2727898
 inventory_ui_head.php | 06543ea208e90ab53396d7f7cecf9e34
-inventory_version.php | 1d4c2a938c3068a57a924ddc52eea954
+inventory_version.php | 675dd673e3ea2c10c32591876037d578
 js/pickup-lift-call.js | e19f50e0f9b26b2e048eca78a6937407
 list_stock.php | 138433d500436d7d90fa6be9917ea22a
 part_add.php | 6eb20d0d553d04942ee64b899a08e0ad
@@ -41,7 +41,7 @@ pickup_ma_save.php | bcec7933d5d9692c811c33d4615bbd22
 pickup_overview.php | 7c5fba1287b59b8d1b067ec46ff4e5fb
 pickup_pre_stock_tech.php | bc67b651223932842b6905a2c0503c2a
 pickup_prep_api.php | e156790cc2d2a3cfc23f12686f0bfdcd
-pickup_prep_board.php | f10821c8da9dc047666b48b7bb372a78
+pickup_prep_board.php | 8ef6f93844eea732f2ff93b0b0cadda2
 pickup_prep_board_auth.php | 89646b74451d9d8028acf37334abe1bf
 pickup_prep_board_status.php | 083f0477c34a78c0cbabbd7180089a59
 pickup_repair_formula_tech.php | a00b53f2f7fc1108069db6e56463129c

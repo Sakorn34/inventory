@@ -36,7 +36,7 @@ header('Referrer-Policy: no-referrer');
 <link rel="icon" type="image/png" href="images/bitcombine-logo.png" />
 <link rel="apple-touch-icon" href="images/bitcombine-logo.png" />
 <?php require_once __DIR__ . '/inventory_ui_fonts.php'; ?>
-<link rel="stylesheet" href="css/pickup-prep.css?v=13" />
+<link rel="stylesheet" href="css/pickup-prep.css?v=14" />
 </head>
 <body class="prep-board">
 <?php if (!$tokenOk) {
@@ -80,7 +80,10 @@ header('Referrer-Policy: no-referrer');
     <button type="button" class="prep-board__filter" data-filter="prepared" role="tab">จัดแล้ว</button>
   </div>
   <main class="prep-board__main" id="prep_main" aria-live="polite">
-    <p class="prep-board__state">กำลังโหลดรายการ…</p>
+    <span class="prep-board__sr-only">กำลังโหลดรายการ…</span>
+    <?php for ($sk = 0; $sk < 3; $sk++) { ?>
+    <div class="prep-board__skeleton" aria-hidden="true"><div class="prep-board__skeleton-bar prep-board__skeleton-bar--title"></div><div class="prep-board__skeleton-bar prep-board__skeleton-bar--short"></div><div class="prep-board__skeleton-bar"></div></div>
+    <?php } ?>
   </main>
   <?php
   $pickupLiftUi = array(
@@ -116,6 +119,38 @@ header('Referrer-Policy: no-referrer');
   var techPartGroups = [];
   var refreshTimer = null;
   var toastTimer = null;
+  var hasRendered = false;
+
+  function bump(el) {
+    if (!el) {
+      return;
+    }
+    el.classList.remove("is-bump");
+    void el.offsetWidth;
+    el.classList.add("is-bump");
+  }
+
+  function setStatValue(id, value) {
+    var el = document.getElementById(id);
+    if (!el) {
+      return;
+    }
+    var next = String(value);
+    if (el.textContent !== next) {
+      el.textContent = next;
+      if (hasRendered) {
+        bump(el);
+      }
+    }
+  }
+
+  function skeletonHtml() {
+    var bar = '<div class="prep-board__skeleton" aria-hidden="true">'
+      + '<div class="prep-board__skeleton-bar prep-board__skeleton-bar--title"></div>'
+      + '<div class="prep-board__skeleton-bar prep-board__skeleton-bar--short"></div>'
+      + '<div class="prep-board__skeleton-bar"></div></div>';
+    return '<span class="prep-board__sr-only">กำลังโหลดรายการ…</span>' + bar + bar + bar;
+  }
 
   function showPrepToast(message) {
     var toast = document.getElementById("prep_toast");
@@ -182,9 +217,9 @@ header('Referrer-Policy: no-referrer');
       return;
     }
     stats.hidden = false;
-    document.getElementById("prep_stat_prepared").textContent = String(summary.prepared);
-    document.getElementById("prep_stat_pending").textContent = String(summary.pending);
-    document.getElementById("prep_stat_docs").textContent = String(summary.documents);
+    setStatValue("prep_stat_prepared", summary.prepared);
+    setStatValue("prep_stat_pending", summary.pending);
+    setStatValue("prep_stat_docs", summary.documents);
     setSubtitle("จัดแล้ว " + summary.prepared + " / " + summary.lines + " รายการ");
   }
 
@@ -284,11 +319,13 @@ header('Referrer-Policy: no-referrer');
     return false;
   }
 
-  function renderList() {
+  function renderList(animate) {
     var main = document.getElementById("prep_main");
     if (!main) {
       return;
     }
+    main.classList.toggle("is-enter", !!animate);
+    hasRendered = true;
 
     if (!documents.length && !techPartGroups.length) {
       var hint = window.prepEmptyHint || "";
@@ -303,10 +340,12 @@ header('Referrer-Policy: no-referrer');
     }
 
     var html = "";
+    var cardIndex = 0;
     buildPartGroups().forEach(function (group) {
       if (!partGroupHasVisibleLines(group)) {
         return;
       }
+      var staggerIndex = Math.min(cardIndex++, 8);
 
       var preparedCount = 0;
       var pickableCount = 0;
@@ -328,7 +367,7 @@ header('Referrer-Policy: no-referrer');
       var displayPartName = prepBoardDisplayPartName(group.part_name);
       var techOnlyGroup = pickableCount === 0 && lineTotal > 0;
 
-      html += '<article class="prep-board__doc prep-board__part-group' + (techOnlyGroup ? " prep-board__part-group--tech-only" : "") + '" data-part-key="' + escapeHtml(group.part_key) + '">';
+      html += '<article class="prep-board__doc prep-board__part-group' + (techOnlyGroup ? " prep-board__part-group--tech-only" : "") + '" style="--i:' + staggerIndex + '" data-part-key="' + escapeHtml(group.part_key) + '">';
       if (!techOnlyGroup) {
         html += '<div class="prep-board__doc-head">';
         html += '<div class="prep-board__part-title">' + escapeHtml(displayPartName || group.part_name) + "</div>";
@@ -443,8 +482,18 @@ header('Referrer-Policy: no-referrer');
 
   function loadList() {
     var main = document.getElementById("prep_main");
-    if (main) {
-      main.innerHTML = '<p class="prep-board__state">กำลังโหลดรายการ…</p>';
+    var firstLoad = !hasRendered;
+    var refreshEl = document.getElementById("prep_refresh_btn");
+    if (main && firstLoad && !main.querySelector(".prep-board__skeleton")) {
+      main.innerHTML = skeletonHtml();
+    }
+    if (refreshEl) {
+      refreshEl.classList.add("is-loading");
+    }
+    function doneLoading() {
+      if (refreshEl) {
+        refreshEl.classList.remove("is-loading");
+      }
     }
 
     fetch(apiUrl("list"), {
@@ -458,6 +507,7 @@ header('Referrer-Policy: no-referrer');
         });
       })
       .then(function (result) {
+        doneLoading();
         if (!result.body || !result.body.ok) {
           var msg = (result.body && result.body.message) ? result.body.message : "โหลดไม่สำเร็จ";
           if (main) {
@@ -469,9 +519,10 @@ header('Referrer-Policy: no-referrer');
         techPartGroups = result.body.tech_part_groups || [];
         updateStats(result.body.summary);
         window.prepEmptyHint = result.body.empty_hint || "";
-        renderList();
+        renderList(firstLoad);
       })
       .catch(function () {
+        doneLoading();
         if (main) {
           main.innerHTML = '<p class="prep-board__state prep-board__state--error">เชื่อมต่อไม่ได้</p>';
         }
@@ -542,7 +593,14 @@ header('Referrer-Policy: no-referrer');
       });
       btn.classList.add("is-active");
       filterMode = btn.getAttribute("data-filter") || "all";
-      renderList();
+      renderList(true);
+    });
+  });
+
+  var liftQtyInput = document.getElementById("pickup_lift_need_no");
+  document.querySelectorAll("#pickup_lift_section .pickup-lift-qty-stepper__btn").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      bump(liftQtyInput);
     });
   });
 

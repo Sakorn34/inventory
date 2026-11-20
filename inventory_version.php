@@ -7,20 +7,20 @@
  */
 
 if (!defined('INVENTORY_RELEASE_VERSION')) {
-    define('INVENTORY_RELEASE_VERSION', '2026.11.18-r1');
+    define('INVENTORY_RELEASE_VERSION', '2026.11.20-r3');
 }
 
 if (!defined('INVENTORY_RELEASE_DATE')) {
-    define('INVENTORY_RELEASE_DATE', '2026-11-18');
+    define('INVENTORY_RELEASE_DATE', '2026-11-20');
 }
 
 if (!defined('INVENTORY_APP_META_LABEL')) {
-    define('INVENTORY_APP_META_LABEL', '© bitCOMBINE');
+    define('INVENTORY_APP_META_LABEL', '© bitCOMBINE · Inventory');
 }
 
 /** วันที่เริ่มดูแล/พัฒนาระบบ (แสดงบน navbar) — อัปเดตเมื่อเปลี่ยนทีมดูแล */
 if (!defined('INVENTORY_MAINTENANCE_SINCE_LABEL')) {
-    define('INVENTORY_MAINTENANCE_SINCE_LABEL', '3 พ.ย. 2569');
+    define('INVENTORY_MAINTENANCE_SINCE_LABEL', 'Production · 3 พ.ย. 2569');
 }
 
 if (!defined('INVENTORY_MAINTENANCE_SINCE_DATE')) {

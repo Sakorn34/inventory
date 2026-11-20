@@ -567,6 +567,7 @@ body.prep-board {
   min-height: 2.35rem;
   min-width: 3.25rem;
   padding: 0.55rem 0.35rem;
+  text-align: center;
 }
 
 .prep-board__lift-btn {

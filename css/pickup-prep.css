@@ -814,6 +814,62 @@ body.prep-board {
   box-shadow: 0 0 0 4px rgba(255, 138, 61, 0.2);
 }
 
+/* ทีมน้องกล่อง — จำนวนตัวตามจำนวนคนที่เลือก */
+.prep-board__lift-crew {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 26px;
+  height: 36px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.prep-board__crew-kid {
+  flex: none;
+  width: 26px;
+  height: 28px;
+  margin-left: -8px;
+  animation: prep-bob 1.8s ease-in-out infinite;
+  animation-delay: calc(var(--i, 0) * 0.15s);
+}
+
+.prep-board__crew-kid:first-child {
+  margin-left: 0;
+}
+
+.prep-board__crew-kid svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.prep-board__crew-kid.is-in {
+  animation: prep-crew-in 0.45s var(--prep-spring) both, prep-bob 1.8s ease-in-out 0.45s infinite;
+}
+
+.prep-board__crew-kid.is-out {
+  animation: prep-crew-out 0.3s ease-in forwards;
+}
+
+.prep-board__lift-crew.is-go .prep-board__crew-kid {
+  animation: prep-crew-go 0.9s cubic-bezier(0.5, 0, 0.7, 0.4) forwards;
+  animation-delay: calc(var(--i, 0) * 0.06s);
+}
+
+.prep-board__crew-more {
+  position: absolute;
+  top: -6px;
+  right: -2px;
+  padding: 0 0.4rem;
+  border-radius: 9px;
+  background: var(--prep-orange);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
 .prep-board__lift-stepper {
   display: inline-flex;
   align-items: stretch;
@@ -1354,6 +1410,61 @@ body.pickup-lift-dialog-open {
 
   to {
     transform: translate(var(--x), 110vh) rotate(540deg);
+  }
+}
+
+@keyframes prep-crew-in {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.3);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes prep-crew-out {
+  to {
+    opacity: 0;
+    transform: translateY(16px) scale(0.3);
+  }
+}
+
+@keyframes prep-crew-go {
+  0% {
+    transform: none;
+  }
+
+  30% {
+    transform: translateY(-12px);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateX(160px);
+  }
+}
+
+@media (min-width: 420px) {
+  .prep-board__lift-crew {
+    height: 42px;
+  }
+
+  .prep-board__crew-kid {
+    width: 34px;
+    height: 36px;
+  }
+}
+
+@media (max-width: 400px) {
+  .prep-board__lift-stepper .pickup-lift-qty-stepper__btn {
+    width: 36px;
+  }
+
+  .prep-board__lift-stepper .pickup-lift-qty-stepper__input {
+    width: 2.6rem;
   }
 }
 

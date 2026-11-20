@@ -64,6 +64,7 @@ $pickupLiftUi += array(
     'status' => 'pickup-overview__lift-status',
     'hint' => 'pickup-overview__lift-hint',
     'ping' => 'pickup-overview__lift-ping',
+    'crew' => '',
 );
 
 $pickupNodeRedCallLiftUrl = inventory_config_node_red_call_lift_url();
@@ -90,6 +91,9 @@ $pickupLiftWalkMedia = pickup_lift_dialog_walk_media_manifest();
     <p id="pickup_lift_status" class="<?php echo htmlspecialchars($pickupLiftUi['status'], ENT_QUOTES, 'UTF-8'); ?>" hidden></p>
     <form id="pickup_call_person" class="<?php echo htmlspecialchars($pickupLiftUi['form'], ENT_QUOTES, 'UTF-8'); ?>" method="get" action="<?php echo htmlspecialchars($pickupNodeRedCallLiftUrl, ENT_QUOTES, 'UTF-8'); ?>" onsubmit="return pickupLiftOnFormSubmit(event);">
       <label class="<?php echo htmlspecialchars($pickupLiftUi['label'], ENT_QUOTES, 'UTF-8'); ?>" for="pickup_lift_need_no">ช่วยยกของ :</label>
+<?php if ($pickupLiftUi['crew'] !== '') { ?>
+      <div class="<?php echo htmlspecialchars($pickupLiftUi['crew'], ENT_QUOTES, 'UTF-8'); ?>" id="pickup_lift_crew" aria-hidden="true"></div>
+<?php } ?>
       <div class="<?php echo htmlspecialchars($pickupLiftUi['stepper'], ENT_QUOTES, 'UTF-8'); ?>">
         <button type="button" class="<?php echo htmlspecialchars($pickupLiftUi['stepper_btn'], ENT_QUOTES, 'UTF-8'); ?>" aria-label="ลดจำนวนคน" onclick="pickupLiftQtyStep(-1); return false;">−</button>
         <input class="<?php echo htmlspecialchars($pickupLiftUi['input'], ENT_QUOTES, 'UTF-8'); ?>" type="number" id="pickup_lift_need_no" name="amount" min="1" max="99" step="1" value="1" inputmode="numeric" autocomplete="off" aria-label="จำนวนคนที่ต้องการ" readonly aria-readonly="true" tabindex="-1" />

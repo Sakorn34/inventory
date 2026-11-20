@@ -151,4 +151,4 @@ window.pickupLiftConfig = <?php echo json_encode(array(
     'walkMediaByCount' => $pickupLiftWalkMedia['byCount'],
 ), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
 </script>
-<script src="js/pickup-lift-call.js?v=10"></script>
+<script src="js/pickup-lift-call.js?v=11"></script>

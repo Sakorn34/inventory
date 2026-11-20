@@ -8,6 +8,8 @@
   var pickupLiftStatusHideTimer = null;
   var pickupLiftDialogOnOk = null;
   var pickupLiftDialogBound = false;
+  var pickupLiftCallTab = null;
+  var pickupLiftCallTabAt = 0;
 
   function pickupLiftConfig() {
     return global.pickupLiftConfig || {};
@@ -81,7 +83,32 @@
         }
       }, pickupLiftPreludeDelayMs());
     }
+    pickupLiftCallTab = tab;
+    pickupLiftCallTabAt = Date.now();
     pickupLiftShowSentNotice();
+  }
+
+  /**
+   * Node-RED redirect แท็บไปที่อยู่ inventory เก่า (192.168.2.199) ที่เปิดไม่ได้แล้ว แก้ flow ไม่ได้
+   * — พอผู้ใช้สลับกลับมาหน้านี้ ปิดแท็บที่ค้างให้ (แท็บที่เปิดด้วย script ปิดจากหน้านี้ได้)
+   */
+  function pickupLiftCloseCallTab() {
+    if (!pickupLiftCallTab || document.visibilityState === "hidden") {
+      return;
+    }
+    if (Date.now() - pickupLiftCallTabAt < 1500) {
+      return;
+    }
+    var tab = pickupLiftCallTab;
+    pickupLiftCallTab = null;
+    try {
+      if (!tab.closed) {
+        tab.close();
+      }
+    } catch (ignore) {
+      // intentional
+    }
+    pickupLiftShowSentNotice("เรียกช่วยยกของแล้ว — ปิดแท็บที่เปิดค้างให้แล้ว");
   }
 
   function pickupLiftStartCall() {
@@ -96,7 +123,7 @@
     pickupLiftPingPrelude(pickupLiftSubmitMain);
   }
 
-  function pickupLiftShowSentNotice() {
+  function pickupLiftShowSentNotice(text) {
     var status = document.getElementById("pickup_lift_status");
     if (!status) {
       return;
@@ -105,7 +132,7 @@
       global.clearTimeout(pickupLiftStatusHideTimer);
       pickupLiftStatusHideTimer = null;
     }
-    status.textContent = "ส่งคำขอช่วยยกของแล้ว — รอเสียงแจ้งจากลำโพง";
+    status.textContent = text || "ส่งคำขอช่วยยกของแล้ว — รอเสียงแจ้งจากลำโพง";
     status.hidden = false;
     status.classList.add("is-flashing");
     pickupLiftStatusHideTimer = global.setTimeout(function () {
@@ -522,6 +549,10 @@
   } else {
     pickupLiftInitDom();
   }
+
+  document.addEventListener("visibilitychange", pickupLiftCloseCallTab);
+  global.addEventListener("focus", pickupLiftCloseCallTab);
+  global.addEventListener("pageshow", pickupLiftCloseCallTab);
 
   global.pickupLiftInitOfficeVisibility = pickupLiftInitOfficeVisibility;
   global.pickupLiftHelp = pickupLiftHelp;

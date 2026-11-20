@@ -283,7 +283,7 @@ function inventory_config_node_red_call_lift_delivery()
  */
 function inventory_config_node_red_call_lift_visibility()
 {
-    $mode = strtolower(trim(inventory_config_get('node_red_call_lift_visibility', 'always')));
+    $mode = strtolower(trim(inventory_config_get('node_red_call_lift_visibility', 'auto')));
     if ($mode === 'always' || $mode === 'never') {
         return $mode;
     }

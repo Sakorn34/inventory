@@ -540,6 +540,7 @@
   function pickupLiftInitDom() {
     pickupLiftInitQtyInput();
     pickupLiftInitCallButtonGlow();
+    pickupLiftInitOfficeVisibility();
   }
 
   if (document.readyState === "loading") {

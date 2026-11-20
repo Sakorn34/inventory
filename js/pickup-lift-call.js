@@ -54,6 +54,22 @@
     pickupLiftSetSectionVisible(pickupLiftIsPrivateHost(global.location.hostname));
   }
 
+  function pickupLiftFireRequest(url) {
+    if (global.fetch) {
+      try {
+        global.fetch(url, { mode: "no-cors" });
+      } catch (ignore) {
+        // intentional — iOS Safari blocks hidden-iframe src changes; fetch is the fallback
+      }
+      return;
+    }
+    // Legacy fallback: browsers without fetch (very old)
+    var pingFrame = document.getElementById("pickup_lift_ping");
+    if (pingFrame) {
+      pingFrame.src = url;
+    }
+  }
+
   function pickupLiftPingPrelude(done) {
     var cfg = pickupLiftConfig();
     if (!cfg.preludeUrl) {
@@ -62,10 +78,7 @@
       }
       return;
     }
-    var pingFrame = document.getElementById("pickup_lift_ping");
-    if (pingFrame) {
-      pingFrame.src = cfg.preludeUrl;
-    }
+    pickupLiftFireRequest(cfg.preludeUrl);
     global.setTimeout(function () {
       if (typeof done === "function") {
         done();
@@ -142,11 +155,7 @@
       pickupLiftShowSentNotice();
       return;
     }
-    var pingFrame = document.getElementById("pickup_lift_ping");
-    if (!pingFrame) {
-      return;
-    }
-    pingFrame.src = url;
+    pickupLiftFireRequest(url);
     pickupLiftShowSentNotice();
   }
 

@@ -54,19 +54,37 @@
     pickupLiftSetSectionVisible(pickupLiftIsPrivateHost(global.location.hostname));
   }
 
+  function pickupLiftIsIOS() {
+    return /iPad|iPhone|iPod/.test(navigator.userAgent);
+  }
+
   function pickupLiftFireRequest(url) {
+    // iOS Local Network Privacy (iOS 14+) silently blocks background fetch/XHR/iframe
+    // requests to private-network IPs from web pages. window.open() is a user-visible
+    // navigation so iOS allows it; the tab may briefly appear and close is handled by UX.
+    if (pickupLiftIsIOS()) {
+      var tab = global.open(url, "_blank", "noopener,noreferrer");
+      if (!tab) {
+        // Popup blocker active on iOS — last resort: iframe (better than nothing)
+        var pingFrame = document.getElementById("pickup_lift_ping");
+        if (pingFrame) {
+          pingFrame.src = url;
+        }
+      }
+      return;
+    }
     if (global.fetch) {
       try {
         global.fetch(url, { mode: "no-cors" });
       } catch (ignore) {
-        // intentional — iOS Safari blocks hidden-iframe src changes; fetch is the fallback
+        // intentional
       }
       return;
     }
-    // Legacy fallback: browsers without fetch (very old)
-    var pingFrame = document.getElementById("pickup_lift_ping");
-    if (pingFrame) {
-      pingFrame.src = url;
+    // Legacy fallback: browsers without fetch
+    var pingFrameLegacy = document.getElementById("pickup_lift_ping");
+    if (pingFrameLegacy) {
+      pingFrameLegacy.src = url;
     }
   }
 

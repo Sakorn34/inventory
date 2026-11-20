@@ -37,7 +37,7 @@ header('Referrer-Policy: no-referrer');
 <link rel="apple-touch-icon" href="images/bitcombine-logo.png" />
 <?php require_once __DIR__ . '/inventory_ui_fonts.php'; ?>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mitr:wght@500&amp;display=swap" />
-<link rel="stylesheet" href="css/pickup-prep.css?v=16" />
+<link rel="stylesheet" href="css/pickup-prep.css?v=18" />
 </head>
 <body class="prep-board">
 <?php if (!$tokenOk) {
@@ -735,30 +735,223 @@ header('Referrer-Policy: no-referrer');
 
   var liftQtyInput = document.getElementById("pickup_lift_need_no");
   var crewEl = document.getElementById("pickup_lift_crew");
-  var CREW_KID_SVG = '<svg viewBox="0 0 32 34"><rect x="8" y="28" width="5" height="5" rx="1.5" fill="#4a2c05"/><rect x="19" y="28" width="5" height="5" rx="1.5" fill="#4a2c05"/><rect x="2" y="4" width="28" height="25" rx="5" fill="#c98a4b"/><rect x="13" y="4" width="6" height="8" fill="#e9c08f"/><circle cx="11" cy="15" r="3.6" fill="#fff"/><circle cx="21" cy="15" r="3.6" fill="#fff"/><circle cx="11.6" cy="15.6" r="1.7" fill="#2b1a07"/><circle cx="21.6" cy="15.6" r="1.7" fill="#2b1a07"/><path d="M12.5 21q3.5 3 7 0" fill="none" stroke="#2b1a07" stroke-width="1.6" stroke-linecap="round"/><circle cx="7" cy="20" r="1.8" fill="#f2a07a" opacity=".7"/><circle cx="25" cy="20" r="1.8" fill="#f2a07a" opacity=".7"/></svg>';
+  var KID_W = 30;
+  var GRAVITY = 900;
+  var CREW_KID_SVG = '<svg viewBox="0 0 32 34">'
+    + '<rect class="kid-foot-l" x="8" y="28" width="5" height="5" rx="1.5" fill="#4a2c05"/>'
+    + '<rect class="kid-foot-r" x="19" y="28" width="5" height="5" rx="1.5" fill="#4a2c05"/>'
+    + '<rect x="2" y="4" width="28" height="25" rx="5" fill="#c98a4b"/>'
+    + '<rect x="13" y="4" width="6" height="8" fill="#e9c08f"/>'
+    + '<g class="kid-eyes"><circle cx="11" cy="15" r="3.6" fill="#fff"/><circle cx="21" cy="15" r="3.6" fill="#fff"/>'
+    + '<circle cx="11.9" cy="15.6" r="1.7" fill="#2b1a07"/><circle cx="21.9" cy="15.6" r="1.7" fill="#2b1a07"/></g>'
+    + '<path d="M12.5 21q3.5 3 7 0" fill="none" stroke="#2b1a07" stroke-width="1.6" stroke-linecap="round"/>'
+    + '<circle cx="7" cy="20" r="1.8" fill="#f2a07a" opacity=".7"/><circle cx="25" cy="20" r="1.8" fill="#f2a07a" opacity=".7"/>'
+    + "</svg>";
+  var crew = [];
+  var crewLast = 0;
+  var crewLeaving = false;
 
-  /** น้องกล่องซ้อนกัน 8px (กว้าง 26px บนมือถือ / 34px จอกว้าง ตาม CSS) — แสดงเท่าที่พื้นที่พอ เกินนั้นขึ้นป้าย +N */
-  function renderCrew() {
-    if (!crewEl || !liftQtyInput || crewEl.classList.contains("is-go")) {
+  function rand(min, max) {
+    return min + Math.random() * (max - min);
+  }
+
+  function crewMaxX() {
+    return Math.max(0, crewEl.clientWidth - KID_W);
+  }
+
+  function crewCapacity() {
+    return Math.max(1, Math.min(12, Math.floor(crewEl.clientWidth / 26)));
+  }
+
+  function crewHop(kid, vy) {
+    kid.mode = "hop";
+    kid.vy = vy;
+  }
+
+  /** ท่าต่อไปแบบสุ่ม: เดิน 45% วิ่ง 20% หยุดมองรอบตัว 25% กระโดด 10% */
+  function crewPickMove(kid) {
+    var r = Math.random();
+    if (r < 0.45) {
+      kid.mode = "walk";
+      kid.speed = rand(16, 30);
+      kid.t = rand(1.5, 4);
+    } else if (r < 0.65) {
+      kid.mode = "run";
+      kid.speed = rand(60, 90);
+      kid.t = rand(0.6, 1.5);
+    } else if (r < 0.9) {
+      kid.mode = "idle";
+      kid.speed = 0;
+      kid.t = rand(0.6, 2);
+    } else {
+      kid.speed = rand(10, 30);
+      crewHop(kid, rand(-200, -150));
+    }
+    if (Math.random() < 0.3) {
+      kid.dir = -kid.dir;
+    }
+  }
+
+  function crewAdd(dropIn) {
+    var el = document.createElement("span");
+    el.className = "prep-board__crew-kid";
+    el.innerHTML = CREW_KID_SVG;
+    el.querySelector(".kid-eyes").style.animationDelay = rand(0, 4).toFixed(2) + "s";
+    crewEl.insertBefore(el, crewEl.querySelector(".prep-board__crew-more"));
+    var kid = {
+      el: el,
+      svg: el.firstChild,
+      footL: el.querySelector(".kid-foot-l"),
+      footR: el.querySelector(".kid-foot-r"),
+      x: rand(0, crewMaxX()),
+      y: dropIn ? -46 : 0,
+      vy: 0,
+      dir: Math.random() < 0.5 ? -1 : 1,
+      speed: 0,
+      mode: dropIn ? "hop" : "idle",
+      t: rand(0.2, 1),
+      phase: rand(0, 6)
+    };
+    crew.push(kid);
+    crewDraw(kid);
+  }
+
+  function crewDraw(kid) {
+    var moving = kid.mode === "walk" || kid.mode === "run" || kid.mode === "leave";
+    var amp = kid.mode === "walk" ? 1 : 1.5;
+    var s = Math.sin(kid.phase);
+    var bob = moving ? -Math.abs(s) * 2.2 * amp : 0;
+    var tilt = moving ? s * 5 * amp : (kid.mode === "hop" ? -8 : 0);
+    kid.el.style.transform = "translate(" + kid.x.toFixed(1) + "px," + (kid.y + bob).toFixed(1) + "px)";
+    kid.svg.style.transform = "scaleX(" + kid.dir + ") rotate(" + tilt.toFixed(1) + "deg)";
+    kid.footL.style.transform = "translateY(" + (moving ? Math.min(0, s) * 2.5 : 0).toFixed(1) + "px)";
+    kid.footR.style.transform = "translateY(" + (moving ? Math.min(0, -s) * 2.5 : 0).toFixed(1) + "px)";
+  }
+
+  /** เดินชนกันหันกลับ / ตัวที่เร็วกว่ากระโดดข้ามตัวข้างหน้า */
+  function crewInteract() {
+    var ground = crew.filter(function (k) {
+      return k.mode === "walk" || k.mode === "run" || k.mode === "idle";
+    }).sort(function (a, b) {
+      return a.x - b.x;
+    });
+    for (var i = 0; i + 1 < ground.length; i++) {
+      var a = ground[i];
+      var b = ground[i + 1];
+      if (b.x - a.x > 16) {
+        continue;
+      }
+      if (a.dir > 0 && b.dir < 0 && (a.mode !== "idle" || b.mode !== "idle")) {
+        a.dir = -1;
+        b.dir = 1;
+        crewHop(Math.random() < 0.5 ? a : b, -150);
+      } else if (a.dir === b.dir) {
+        var behind = a.dir > 0 ? a : b;
+        var ahead = behind === a ? b : a;
+        if (behind.speed > ahead.speed + 5) {
+          crewHop(behind, -210);
+        }
+      }
+    }
+  }
+
+  /** แบ่งเวลาที่ผ่านไปเป็นช่วงละ 20ms — เฟรมกระตุกก็ยังเคลื่อนที่ตามเวลาจริง (เพดาน 1 วินาที กันกระโดดหลังสลับแท็บ) */
+  function crewStep(now) {
+    var elapsed = Math.min(1, Math.max(0, (now - crewLast) / 1000));
+    crewLast = now;
+    while (elapsed > 0) {
+      var dt = Math.min(0.02, elapsed);
+      elapsed -= dt;
+      crewTick(dt);
+    }
+    crew.forEach(crewDraw);
+    window.requestAnimationFrame(crewStep);
+  }
+
+  function crewTick(dt) {
+    var maxX = crewMaxX();
+    crew.forEach(function (kid) {
+      kid.t -= dt;
+      if (kid.mode === "hop") {
+        kid.vy += GRAVITY * dt;
+        kid.y += kid.vy * dt;
+        kid.x += kid.dir * kid.speed * dt;
+        if (kid.y >= 0 && kid.vy > 0) {
+          kid.y = 0;
+          kid.vy = 0;
+          if (crewLeaving) {
+            kid.mode = "leave";
+            kid.speed = Math.max(kid.speed, 240);
+          } else {
+            crewPickMove(kid);
+          }
+        }
+      } else if (kid.mode === "leave") {
+        kid.x += kid.speed * dt;
+      } else {
+        if (kid.mode !== "idle") {
+          kid.x += kid.dir * kid.speed * dt;
+        }
+        if (kid.t <= 0) {
+          crewPickMove(kid);
+        }
+      }
+      if (!crewLeaving) {
+        if (kid.x < 0 && kid.dir < 0) {
+          kid.dir = 1;
+        } else if (kid.x > maxX && kid.dir > 0) {
+          kid.dir = -1;
+        }
+      }
+      if (kid.mode !== "idle") {
+        kid.phase += dt * Math.max(6, kid.speed * 0.32);
+      }
+    });
+    if (!crewLeaving) {
+      crewInteract();
+    } else if (!crew.some(function (k) {
+      return (k.mode === "leave" || k.mode === "hop") && k.x <= maxX + 40;
+    })) {
+      crewReturn();
+    }
+  }
+
+  /** ทั้งทีมออกพ้นขอบขวาแล้ว — เรียงแถวเดินกลับเข้ามาจากซ้าย */
+  function crewReturn() {
+    crewLeaving = false;
+    crew.forEach(function (kid, i) {
+      kid.x = -36 - i * 30;
+      kid.y = 0;
+      kid.vy = 0;
+      kid.dir = 1;
+      kid.mode = "walk";
+      kid.speed = rand(35, 55);
+      kid.t = rand(1.2, 2.5) + i * 0.5;
+    });
+  }
+
+  /** จำนวนตัวตามช่องจำนวนคน — เกินพื้นที่ขึ้นป้าย +N */
+  function crewSync(dropIn) {
+    if (!crewEl || !liftQtyInput) {
       return;
     }
-    var kidSize = window.matchMedia && window.matchMedia("(min-width: 420px)").matches ? 34 : 26;
     var wanted = Math.max(1, parseInt(liftQtyInput.value, 10) || 1);
-    var fit = Math.max(1, Math.floor((crewEl.clientWidth - kidSize) / (kidSize - 8)) + 1);
-    var shown = Math.min(wanted, fit);
-    var kids = crewEl.querySelectorAll(".prep-board__crew-kid:not(.is-out)");
-    var i;
-    for (i = kids.length; i < shown; i++) {
-      var kid = document.createElement("span");
-      kid.className = "prep-board__crew-kid is-in";
-      kid.style.setProperty("--i", String(i));
-      kid.innerHTML = CREW_KID_SVG;
-      crewEl.insertBefore(kid, crewEl.querySelector(".prep-board__crew-more"));
+    var shown = Math.min(wanted, crewCapacity());
+    while (crew.length < shown) {
+      crewAdd(dropIn && !reduceMotion);
     }
-    for (i = kids.length - 1; i >= shown; i--) {
-      kids[i].classList.remove("is-in");
-      kids[i].classList.add("is-out");
-      window.setTimeout(kids[i].remove.bind(kids[i]), 300);
+    while (crew.length > shown) {
+      var gone = crew.pop();
+      gone.el.classList.add("is-out");
+      window.setTimeout(gone.el.remove.bind(gone.el), 320);
+    }
+    if (reduceMotion) {
+      crew.forEach(function (kid, i) {
+        kid.x = (crewMaxX() * (i + 0.5)) / crew.length;
+        kid.y = 0;
+        kid.mode = "idle";
+        crewDraw(kid);
+      });
     }
     var more = crewEl.querySelector(".prep-board__crew-more");
     if (wanted > shown) {
@@ -773,29 +966,37 @@ header('Referrer-Policy: no-referrer');
     }
   }
 
-  document.querySelectorAll("#pickup_lift_section .pickup-lift-qty-stepper__btn").forEach(function (btn) {
-    btn.addEventListener("click", function () {
-      bump(liftQtyInput);
-      renderCrew();
+  if (crewEl) {
+    document.querySelectorAll("#pickup_lift_section .pickup-lift-qty-stepper__btn").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        bump(liftQtyInput);
+        crewSync(true);
+      });
     });
-  });
-  window.addEventListener("resize", renderCrew);
-  renderCrew();
+    window.addEventListener("resize", function () {
+      crewSync(false);
+    });
+    crewSync(false);
+    if (!reduceMotion) {
+      crewLast = performance.now();
+      window.requestAnimationFrame(crewStep);
+    }
+  }
 
-  // กดยืนยันเรียก (ไม่ใช่ปุ่มตกลงของ alert) — ทีมน้องกล่องกระโดดวิ่งออกไป แล้วกลับมาใหม่
+  // กดยืนยันเรียก (ไม่ใช่ปุ่มตกลงของ alert) — ทั้งทีมกระโดดวิ่งออกขวา แล้วเดินกลับเข้ามาจากซ้าย
   var liftOkBtn = document.getElementById("pickup_lift_dialog_ok");
   var liftCancelBtn = document.getElementById("pickup_lift_dialog_cancel");
-  if (crewEl && liftOkBtn && liftCancelBtn) {
+  if (crewEl && liftOkBtn && liftCancelBtn && !reduceMotion) {
     liftOkBtn.addEventListener("click", function () {
-      if (liftCancelBtn.hidden || crewEl.classList.contains("is-go")) {
+      if (liftCancelBtn.hidden || crewLeaving) {
         return;
       }
-      crewEl.classList.add("is-go");
-      window.setTimeout(function () {
-        crewEl.classList.remove("is-go");
-        crewEl.innerHTML = "";
-        renderCrew();
-      }, 1300);
+      crewLeaving = true;
+      crew.forEach(function (kid) {
+        kid.dir = 1;
+        kid.speed = rand(240, 320);
+        crewHop(kid, rand(-220, -170));
+      });
     });
   }
 

@@ -70,7 +70,8 @@ $pickupNodeRedCallLiftUrl = inventory_config_node_red_call_lift_url();
 $pickupLiftCallEnabled = inventory_config_is_safe_http_url($pickupNodeRedCallLiftUrl);
 $pickupLiftVisibility = inventory_config_node_red_call_lift_visibility();
 $pickupLiftSectionRender = $pickupLiftCallEnabled && $pickupLiftVisibility !== 'never';
-$pickupLiftSectionHiddenInitially = $pickupLiftSectionRender && $pickupLiftVisibility === 'auto';
+// For 'auto': render visible — JS hides if not on LAN (safe fallback: visible if JS is old/absent)
+$pickupLiftSectionHiddenInitially = $pickupLiftSectionRender && $pickupLiftVisibility === 'never';
 
 if (!$pickupLiftSectionRender) {
     return;

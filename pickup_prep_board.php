@@ -37,7 +37,7 @@ header('Referrer-Policy: no-referrer');
 <link rel="apple-touch-icon" href="images/bitcombine-logo.png" />
 <?php require_once __DIR__ . '/inventory_ui_fonts.php'; ?>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mitr:wght@500&amp;display=swap" />
-<link rel="stylesheet" href="css/pickup-prep.css?v=19" />
+<link rel="stylesheet" href="css/pickup-prep.css?v=20" />
 </head>
 <body class="prep-board">
 <?php if (!$tokenOk) {
@@ -736,6 +736,8 @@ header('Referrer-Policy: no-referrer');
   var liftQtyInput = document.getElementById("pickup_lift_need_no");
   var crewEl = document.getElementById("pickup_lift_crew");
   var KID_W = 30;
+  var KID_H = 32;
+  var CELL = 6;
   var GRAVITY = 900;
   var CREW_KID_SVG = '<svg viewBox="0 0 32 34">'
     + '<rect class="kid-foot-l" x="8" y="28" width="5" height="5" rx="1.5" fill="#4a2c05"/>'
@@ -747,10 +749,19 @@ header('Referrer-Policy: no-referrer');
     + '<path d="M12.5 21q3.5 3 7 0" fill="none" stroke="#2b1a07" stroke-width="1.6" stroke-linecap="round"/>'
     + '<circle cx="7" cy="20" r="1.8" fill="#f2a07a" opacity=".7"/><circle cx="25" cy="20" r="1.8" fill="#f2a07a" opacity=".7"/>'
     + "</svg>";
-  var KID_H = 32;
+  var CREW_OBSTACLES = [
+    ".prep-board__lift-label",
+    ".prep-board__lift-stepper",
+    ".pickup-overview__lift-btn-shell",
+    ".prep-board__lift-hint",
+    ".prep-board__lift-status",
+    ".prep-board__crew-more"
+  ];
   var crew = [];
   var crewLast = 0;
   var crewLeaving = false;
+  var crewReturnTimer = null;
+  var grid = null;
 
   function rand(min, max) {
     return min + Math.random() * (max - min);
@@ -760,17 +771,163 @@ header('Referrer-Policy: no-referrer');
     return Math.max(min, Math.min(max, v));
   }
 
-  function crewMaxX() {
-    return Math.max(0, crewEl.clientWidth - KID_W);
+  /* ─ แผนที่พื้นที่ว่าง: ตาราง 6px — ช่องว่างคือวางน้องกล่อง (มุมซ้ายบน) ตรงนั้นแล้วไม่ทับข้อความ/ปุ่ม ─ */
+
+  function crewBuildGrid() {
+    var section = document.getElementById("pickup_lift_section");
+    var base = crewEl.getBoundingClientRect();
+    var rects = [];
+    CREW_OBSTACLES.forEach(function (sel) {
+      var el = section.querySelector(sel);
+      if (!el || el.hidden) {
+        return;
+      }
+      var r = el.getBoundingClientRect();
+      if (r.width === 0 || r.height === 0) {
+        return;
+      }
+      rects.push([r.left - base.left - 3, r.top - base.top - 3, r.right - base.left + 3, r.bottom - base.top + 3]);
+    });
+    var sig = Math.round(base.width) + "x" + Math.round(base.height) + "|" + rects.map(function (r) {
+      return r.map(Math.round).join(",");
+    }).join(";");
+    if (grid && grid.sig === sig) {
+      return false;
+    }
+    var cols = Math.max(1, Math.floor((base.width - KID_W) / CELL) + 1);
+    var rows = Math.max(1, Math.floor((base.height - KID_H) / CELL) + 1);
+    var total = cols * rows;
+    var free = new Uint8Array(total);
+    var comp = new Int16Array(total);
+    var i;
+    for (i = 0; i < total; i++) {
+      var x = (i % cols) * CELL;
+      var y = Math.floor(i / cols) * CELL;
+      var ok = 1;
+      for (var k = 0; k < rects.length; k++) {
+        var r = rects[k];
+        if (x < r[2] && x + KID_W > r[0] && y < r[3] && y + KID_H > r[1]) {
+          ok = 0;
+          break;
+        }
+      }
+      free[i] = ok;
+      comp[i] = -1;
+    }
+    var comps = [];
+    for (i = 0; i < total; i++) {
+      if (!free[i] || comp[i] !== -1) {
+        continue;
+      }
+      var id = comps.length;
+      var cells = [i];
+      comp[i] = id;
+      for (var q = 0; q < cells.length; q++) {
+        crewNeighbours(cells[q], cols, rows).forEach(function (n) {
+          if (free[n] && comp[n] === -1) {
+            comp[n] = id;
+            cells.push(n);
+          }
+        });
+      }
+      comps.push(cells);
+    }
+    grid = { cols: cols, rows: rows, free: free, comp: comp, comps: comps, sig: sig, freeCount: comps.reduce(function (s, c) {
+      return s + c.length;
+    }, 0) };
+    return true;
   }
 
-  function crewMaxY() {
-    return Math.max(0, crewEl.clientHeight - KID_H);
+  function crewNeighbours(i, cols, rows) {
+    var gx = i % cols;
+    var gy = Math.floor(i / cols);
+    var out = [];
+    for (var dy = -1; dy <= 1; dy++) {
+      for (var dx = -1; dx <= 1; dx++) {
+        var nx = gx + dx;
+        var ny = gy + dy;
+        if ((dx || dy) && nx >= 0 && ny >= 0 && nx < cols && ny < rows) {
+          out.push(ny * cols + nx);
+        }
+      }
+    }
+    return out;
+  }
+
+  function crewCellOf(x, y) {
+    var gx = clamp(Math.round(x / CELL), 0, grid.cols - 1);
+    var gy = clamp(Math.round(y / CELL), 0, grid.rows - 1);
+    return gy * grid.cols + gx;
+  }
+
+  function crewCellXY(i) {
+    return [(i % grid.cols) * CELL, Math.floor(i / grid.cols) * CELL];
+  }
+
+  /** ช่องว่างที่ใกล้ที่สุด (กรณีปุ่ม/ข้อความขยับมาทับตัวที่ยืนอยู่) */
+  function crewNearestFree(start) {
+    var seen = {};
+    var queue = [start];
+    seen[start] = true;
+    for (var q = 0; q < queue.length; q++) {
+      if (grid.free[queue[q]]) {
+        return queue[q];
+      }
+      crewNeighbours(queue[q], grid.cols, grid.rows).forEach(function (n) {
+        if (!seen[n]) {
+          seen[n] = true;
+          queue.push(n);
+        }
+      });
+    }
+    return -1;
+  }
+
+  /** สุ่มพื้นที่ตามขนาด แล้วสุ่มช่องในพื้นที่นั้น */
+  function crewRandomCell() {
+    var pick = Math.random() * grid.freeCount;
+    for (var c = 0; c < grid.comps.length; c++) {
+      if (pick < grid.comps[c].length) {
+        return grid.comps[c][Math.floor(pick)];
+      }
+      pick -= grid.comps[c].length;
+    }
+    return -1;
+  }
+
+  /** เส้นทางเดินอ้อมสิ่งกีดขวาง (BFS ในช่องว่าง) — คืนจุดแวะเป็นพิกัด px */
+  function crewPath(from, to) {
+    if (from === to) {
+      return [];
+    }
+    var prev = {};
+    prev[from] = -1;
+    var queue = [from];
+    for (var q = 0; q < queue.length && prev[to] === undefined; q++) {
+      crewNeighbours(queue[q], grid.cols, grid.rows).forEach(function (n) {
+        if (grid.free[n] && prev[n] === undefined) {
+          prev[n] = queue[q];
+          queue.push(n);
+        }
+      });
+    }
+    if (prev[to] === undefined) {
+      return [];
+    }
+    var cells = [];
+    for (var c = to; c !== from; c = prev[c]) {
+      cells.unshift(c);
+    }
+    return cells.filter(function (cell, idx) {
+      return idx % 3 === 2 || idx === cells.length - 1;
+    }).map(crewCellXY);
   }
 
   function crewCapacity() {
-    return Math.max(1, Math.min(12, Math.floor(crewEl.clientWidth / 26)));
+    return grid ? clamp(Math.floor(grid.freeCount / 28), 1, 12) : 1;
   }
+
+  /* ─ ตัวละคร ─ */
 
   /** z = ความสูงจากพื้น, vz > 0 คือพุ่งขึ้น */
   function crewHop(kid, vz) {
@@ -778,55 +935,88 @@ header('Referrer-Policy: no-referrer');
     kid.vz = vz;
   }
 
-  /** ท่าต่อไปแบบสุ่ม: เดินไปจุดใหม่ 40% วิ่ง 22% หยุดมองรอบตัว 26% กระโดด 12% */
+  /** กระโดดได้สูงไม่เกินช่องว่างเหนือหัว (ไม่ให้หัวโผล่ทับข้อความ/ปุ่ม) — ไม่มีที่ว่างก็ไม่กระโดด */
+  function crewHopSafe(kid, wantVz) {
+    var cell = crewCellOf(kid.x, kid.y);
+    var room = 0;
+    while (room < 40 && cell - grid.cols >= 0 && grid.free[cell - grid.cols]) {
+      cell -= grid.cols;
+      room += CELL;
+    }
+    if (room < 6) {
+      return false;
+    }
+    crewHop(kid, Math.min(wantVz, Math.sqrt(2 * GRAVITY * room)));
+    return true;
+  }
+
+  function crewGoTo(kid, cell, mode, speed) {
+    var path = cell < 0 ? [] : crewPath(crewCellOf(kid.x, kid.y), cell);
+    if (!path.length) {
+      return false;
+    }
+    kid.path = path;
+    kid.mode = mode;
+    kid.speed = speed;
+    kid.t = 12;
+    return true;
+  }
+
+  /** ท่าต่อไปแบบสุ่ม: เดิน 40% วิ่ง 22% หยุดมองรอบตัว 26% กระโดด 12% — เดินได้เฉพาะในพื้นที่ว่างเดียวกัน */
   function crewPickMove(kid) {
     var r = Math.random();
-    if (r < 0.62) {
-      kid.mode = r < 0.4 ? "walk" : "run";
-      kid.speed = kid.mode === "walk" ? rand(18, 34) : rand(65, 100);
-      kid.tx = rand(0, crewMaxX());
-      kid.ty = rand(0, crewMaxY());
-      kid.t = 8;
-    } else if (r < 0.88) {
-      kid.mode = "idle";
-      kid.t = rand(0.5, 2);
-      if (Math.random() < 0.5) {
-        kid.dir = -kid.dir;
+    var here = crewCellOf(kid.x, kid.y);
+    var area = grid.comp[here] >= 0 ? grid.comps[grid.comp[here]] : null;
+    if (r < 0.62 && area && area.length > 1) {
+      var target = area[Math.floor(Math.random() * area.length)];
+      var run = r >= 0.4;
+      if (crewGoTo(kid, target, run ? "run" : "walk", run ? rand(65, 100) : rand(18, 34))) {
+        return;
       }
-    } else {
-      kid.tx = kid.x;
-      kid.ty = kid.y;
-      kid.speed = 0;
-      crewHop(kid, rand(160, 220));
+    }
+    kid.path = [];
+    kid.speed = 0;
+    if (r >= 0.88 && area && crewHopSafe(kid, rand(160, 220))) {
+      return;
+    }
+    kid.mode = "idle";
+    kid.t = rand(0.5, 2);
+    if (Math.random() < 0.5) {
+      kid.dir = -kid.dir;
     }
   }
 
-  function crewAdd(dropIn) {
+  function crewPlace(kid) {
+    var cell = crewRandomCell();
+    var xy = cell >= 0 ? crewCellXY(cell) : [0, 0];
+    kid.x = xy[0];
+    kid.y = xy[1];
+    kid.z = 0;
+    kid.vz = 0;
+    kid.path = [];
+    kid.mode = "idle";
+    kid.t = rand(0.3, 1.2);
+    kid.grow = 0;
+  }
+
+  function crewAdd() {
     var el = document.createElement("span");
     el.className = "prep-board__crew-kid";
     el.innerHTML = CREW_KID_SVG;
     el.querySelector(".kid-eyes").style.animationDelay = rand(0, 4).toFixed(2) + "s";
     crewEl.insertBefore(el, crewEl.querySelector(".prep-board__crew-more"));
-    var x = rand(0, crewMaxX());
-    var y = rand(0, crewMaxY());
     var kid = {
       el: el,
       svg: el.firstChild,
       footL: el.querySelector(".kid-foot-l"),
       footR: el.querySelector(".kid-foot-r"),
-      x: x,
-      y: y,
-      z: dropIn ? 90 : 0,
-      vz: 0,
-      tx: x,
-      ty: y,
       dir: Math.random() < 0.5 ? -1 : 1,
       speed: 0,
-      mode: dropIn ? "hop" : "idle",
-      t: rand(0.2, 1),
       cool: 0,
       phase: rand(0, 6)
     };
+    crewPlace(kid);
+    kid.grow = reduceMotion ? 1 : 0;
     crew.push(kid);
     crewDraw(kid);
   }
@@ -837,36 +1027,41 @@ header('Referrer-Policy: no-referrer');
     var s = Math.sin(kid.phase);
     var bob = moving ? -Math.abs(s) * 2.2 * amp : 0;
     var tilt = moving ? s * 5 * amp : (kid.mode === "hop" ? -8 : 0);
+    var g = kid.grow >= 1 ? 1 : 1 + 2.7 * Math.pow(kid.grow - 1, 3) + 1.7 * Math.pow(kid.grow - 1, 2);
     kid.el.style.transform = "translate(" + kid.x.toFixed(1) + "px," + (kid.y - kid.z + bob).toFixed(1) + "px)";
     kid.el.style.zIndex = String(Math.round(kid.y) + 1);
-    kid.svg.style.transform = "scaleX(" + kid.dir + ") rotate(" + tilt.toFixed(1) + "deg)";
+    kid.svg.style.transform = "scale(" + g.toFixed(3) + ") scaleX(" + kid.dir + ") rotate(" + tilt.toFixed(1) + "deg)";
     kid.footL.style.transform = "translateY(" + (moving ? Math.min(0, s) * 2.5 : 0).toFixed(1) + "px)";
     kid.footR.style.transform = "translateY(" + (moving ? Math.min(0, -s) * 2.5 : 0).toFixed(1) + "px)";
   }
 
-  /** เดินเข้าหาเป้า (tx, ty) — คืน true เมื่อถึง */
-  function crewMoveToward(kid, dt) {
-    var dx = kid.tx - kid.x;
-    var dy = kid.ty - kid.y;
-    var d = Math.sqrt(dx * dx + dy * dy);
-    if (Math.abs(dx) > 0.5) {
-      kid.dir = dx > 0 ? 1 : -1;
+  /** เดินตามจุดแวะ — คืน true เมื่อถึงปลายทาง */
+  function crewFollow(kid, dt) {
+    var budget = kid.speed * dt;
+    while (kid.path.length && budget > 0) {
+      var p = kid.path[0];
+      var dx = p[0] - kid.x;
+      var dy = p[1] - kid.y;
+      var d = Math.sqrt(dx * dx + dy * dy);
+      if (Math.abs(dx) > 0.5) {
+        kid.dir = dx > 0 ? 1 : -1;
+      }
+      if (d <= budget) {
+        kid.x = p[0];
+        kid.y = p[1];
+        budget -= d;
+        kid.path.shift();
+      } else {
+        kid.x += (dx / d) * budget;
+        kid.y += (dy / d) * budget;
+        budget = 0;
+      }
     }
-    var stepLen = kid.speed * dt;
-    if (d <= stepLen || d < 0.5) {
-      kid.x = kid.tx;
-      kid.y = kid.ty;
-      return true;
-    }
-    kid.x += (dx / d) * stepLen;
-    kid.y += (dy / d) * stepLen;
-    return false;
+    return kid.path.length === 0;
   }
 
-  /** ชนกันแล้วแตกฮือวิ่งหนีคนละทาง ตัวหนึ่งกระโดดตกใจ */
+  /** ชนกันแล้วแตกฮือวิ่งหนีไปจุดที่ไกลจากอีกตัว ตัวหนึ่งกระโดดตกใจ */
   function crewInteract() {
-    var maxX = crewMaxX();
-    var maxY = crewMaxY();
     for (var i = 0; i < crew.length; i++) {
       for (var j = i + 1; j < crew.length; j++) {
         var a = crew[i];
@@ -879,22 +1074,32 @@ header('Referrer-Policy: no-referrer');
         }
         var dx = b.x - a.x;
         var dy = b.y - a.y;
-        var d = Math.sqrt(dx * dx + dy * dy);
-        if (d > 18) {
+        if (dx * dx + dy * dy > 18 * 18) {
           continue;
         }
-        var ux = d > 0 ? dx / d : 1;
-        var uy = d > 0 ? dy / d : 0;
-        [[a, -1], [b, 1]].forEach(function (pair) {
-          var k = pair[0];
-          k.tx = clamp(k.x + pair[1] * ux * rand(45, 90), 0, maxX);
-          k.ty = clamp(k.y + pair[1] * uy * rand(20, 50) + rand(-15, 15), 0, maxY);
-          k.mode = "run";
-          k.speed = rand(70, 100);
-          k.t = 3;
-          k.cool = 1.2;
+        [[a, b], [b, a]].forEach(function (pair) {
+          var me = pair[0];
+          var other = pair[1];
+          var here = crewCellOf(me.x, me.y);
+          var area = grid.comp[here] >= 0 ? grid.comps[grid.comp[here]] : null;
+          me.cool = 1.2;
+          if (!area) {
+            return;
+          }
+          var best = -1;
+          var bestD = -1;
+          for (var n = 0; n < 5; n++) {
+            var cand = area[Math.floor(Math.random() * area.length)];
+            var xy = crewCellXY(cand);
+            var dd = Math.pow(xy[0] - other.x, 2) + Math.pow(xy[1] - other.y, 2);
+            if (dd > bestD) {
+              bestD = dd;
+              best = cand;
+            }
+          }
+          crewGoTo(me, best, "run", rand(70, 100));
         });
-        crewHop(Math.random() < 0.5 ? a : b, 170);
+        crewHopSafe(Math.random() < 0.5 ? a : b, 170);
       }
     }
   }
@@ -913,32 +1118,39 @@ header('Referrer-Policy: no-referrer');
   }
 
   function crewTick(dt) {
-    var maxX = crewMaxX();
     crew.forEach(function (kid) {
       kid.t -= dt;
       kid.cool = Math.max(0, kid.cool - dt);
+      if (kid.grow < 1) {
+        kid.grow = Math.min(1, kid.grow + dt / 0.35);
+      }
+      if (kid.mode === "gone") {
+        return;
+      }
       if (kid.mode === "hop") {
         kid.vz -= GRAVITY * dt;
         kid.z += kid.vz * dt;
         if (kid.speed > 0) {
-          crewMoveToward(kid, dt);
+          crewFollow(kid, dt);
         }
         if (kid.z <= 0 && kid.vz < 0) {
           kid.z = 0;
           kid.vz = 0;
           if (crewLeaving) {
             kid.mode = "leave";
-            kid.speed = Math.max(kid.speed, 240);
-            kid.tx = maxX + 80;
-            kid.ty = kid.y;
+          } else if (kid.path.length) {
+            kid.mode = "run";
           } else {
             crewPickMove(kid);
           }
         }
       } else if (kid.mode === "leave") {
-        crewMoveToward(kid, dt);
+        if (crewFollow(kid, dt)) {
+          kid.mode = "gone";
+          kid.el.classList.add("is-out");
+        }
       } else if (kid.mode === "walk" || kid.mode === "run") {
-        if (crewMoveToward(kid, dt) || kid.t <= 0) {
+        if (crewFollow(kid, dt) || kid.t <= 0) {
           crewPickMove(kid);
         }
       } else if (kid.t <= 0) {
@@ -950,55 +1162,63 @@ header('Referrer-Policy: no-referrer');
     });
     if (!crewLeaving) {
       crewInteract();
-    } else if (!crew.some(function (k) {
-      return (k.mode === "leave" || k.mode === "hop") && k.x <= maxX + 40;
-    })) {
+    } else if (crew.every(function (k) { return k.mode === "gone"; })) {
       crewReturn();
     }
   }
 
-  /** ทั้งทีมออกพ้นขอบขวาแล้ว — เรียงแถวเดินกลับเข้ามาจากซ้าย กระจายไปทั่วการ์ด */
+  /** ออกไปครบแล้ว — โผล่กลับมาทีละตัวตามจุดว่างทั่วการ์ด */
   function crewReturn() {
-    var maxX = crewMaxX();
-    var maxY = crewMaxY();
+    if (crewReturnTimer) {
+      window.clearTimeout(crewReturnTimer);
+      crewReturnTimer = null;
+    }
     crewLeaving = false;
+    crewBuildGrid();
     crew.forEach(function (kid, i) {
-      kid.x = -40 - i * 34;
-      kid.y = rand(0, maxY);
-      kid.z = 0;
-      kid.vz = 0;
-      kid.dir = 1;
-      kid.mode = "walk";
-      kid.speed = rand(40, 60);
-      kid.tx = rand(maxX * 0.15, maxX * 0.85);
-      kid.ty = rand(0, maxY);
-      kid.t = 10;
+      crewPlace(kid);
+      kid.t = 0.4 + i * 0.25;
+      kid.el.classList.remove("is-out");
     });
   }
 
-  /** จำนวนตัวตามช่องจำนวนคน — เกินพื้นที่ขึ้นป้าย +N */
-  function crewSync(dropIn) {
+  /** ปุ่ม/ข้อความขยับ (หมุนจอ, แถบสถานะโผล่) — สร้างแผนที่ใหม่ ย้ายตัวที่โดนทับไปช่องว่างใกล้สุด */
+  function crewRelocate() {
+    crew.forEach(function (kid) {
+      var cell = crewCellOf(kid.x, kid.y);
+      kid.path = [];
+      if (!grid.free[cell]) {
+        var near = crewNearestFree(cell);
+        if (near >= 0) {
+          kid.path = [crewCellXY(near)];
+          kid.mode = "run";
+          kid.speed = 90;
+          kid.t = 3;
+          return;
+        }
+      }
+      if (kid.mode === "walk" || kid.mode === "run") {
+        kid.mode = "idle";
+        kid.t = rand(0.2, 0.8);
+      }
+    });
+  }
+
+  /** จำนวนตัวตามช่องจำนวนคน — เกินพื้นที่ว่างขึ้นป้าย +N */
+  function crewSync() {
     if (!crewEl || !liftQtyInput) {
       return;
     }
+    var changed = crewBuildGrid();
     var wanted = Math.max(1, parseInt(liftQtyInput.value, 10) || 1);
     var shown = Math.min(wanted, crewCapacity());
     while (crew.length < shown) {
-      crewAdd(dropIn && !reduceMotion);
+      crewAdd();
     }
     while (crew.length > shown) {
       var gone = crew.pop();
       gone.el.classList.add("is-out");
       window.setTimeout(gone.el.remove.bind(gone.el), 320);
-    }
-    if (reduceMotion) {
-      crew.forEach(function (kid, i) {
-        kid.x = (crewMaxX() * (i + 0.5)) / crew.length;
-        kid.y = crewMaxY();
-        kid.z = 0;
-        kid.mode = "idle";
-        crewDraw(kid);
-      });
     }
     var more = crewEl.querySelector(".prep-board__crew-more");
     if (wanted > shown) {
@@ -1011,26 +1231,28 @@ header('Referrer-Policy: no-referrer');
     } else if (more) {
       more.remove();
     }
+    if (changed && !crewLeaving) {
+      crewRelocate();
+    }
   }
 
   if (crewEl) {
     document.querySelectorAll("#pickup_lift_section .pickup-lift-qty-stepper__btn").forEach(function (btn) {
       btn.addEventListener("click", function () {
         bump(liftQtyInput);
-        crewSync(true);
+        crewSync();
       });
     });
-    window.addEventListener("resize", function () {
-      crewSync(false);
-    });
-    crewSync(false);
+    window.addEventListener("resize", crewSync);
+    crewSync();
     if (!reduceMotion) {
+      window.setInterval(crewSync, 500);
       crewLast = performance.now();
       window.requestAnimationFrame(crewStep);
     }
   }
 
-  // กดยืนยันเรียก (ไม่ใช่ปุ่มตกลงของ alert) — ทั้งทีมกระโดดวิ่งออกขวา แล้วเดินกลับเข้ามาจากซ้าย
+  // กดยืนยันเรียก (ไม่ใช่ปุ่มตกลงของ alert) — ทุกตัวกระโดดแล้ววิ่งไปขอบขวาของพื้นที่ตัวเอง หายไป แล้วโผล่กลับมา
   var liftOkBtn = document.getElementById("pickup_lift_dialog_ok");
   var liftCancelBtn = document.getElementById("pickup_lift_dialog_cancel");
   if (crewEl && liftOkBtn && liftCancelBtn && !reduceMotion) {
@@ -1040,11 +1262,18 @@ header('Referrer-Policy: no-referrer');
       }
       crewLeaving = true;
       crew.forEach(function (kid) {
-        kid.speed = rand(240, 320);
-        kid.tx = crewMaxX() + 80;
-        kid.ty = kid.y;
-        crewHop(kid, rand(170, 220));
+        var here = crewCellOf(kid.x, kid.y);
+        var area = grid.comp[here] >= 0 ? grid.comps[grid.comp[here]] : [here];
+        var exit = area.reduce(function (best, c) {
+          return (c % grid.cols) > (best % grid.cols) ? c : best;
+        }, area[0]);
+        kid.path = crewPath(here, exit);
+        kid.speed = rand(200, 260);
+        if (!crewHopSafe(kid, rand(170, 220))) {
+          kid.mode = "leave";
+        }
       });
+      crewReturnTimer = window.setTimeout(crewReturn, 3500);
     });
   }
 

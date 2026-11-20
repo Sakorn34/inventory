@@ -814,14 +814,25 @@ body.prep-board {
   box-shadow: 0 0 0 4px rgba(255, 138, 61, 0.2);
 }
 
-/* ทีมน้องกล่องวิ่งทั่วการ์ด — อยู่ชั้นหลังปุ่ม/ข้อความ ไม่รับการแตะ (JS คุมการเคลื่อนที่) */
+/* ทีมน้องกล่องวิ่งในพื้นที่ว่างของการ์ด — JS หาทางเดินอ้อมข้อความ/ปุ่ม; เว้นพื้นด้านล่างให้วิ่งเล่น */
 .prep-board__lift-body {
   position: relative;
+  padding-bottom: calc(1.05rem + 40px);
+}
+
+.prep-board__lift-body::after {
+  content: "";
+  position: absolute;
+  left: 1.05rem;
+  right: 1.05rem;
+  bottom: 0.85rem;
+  border-bottom: 2px dashed rgba(201, 138, 75, 0.3);
+  pointer-events: none;
 }
 
 .prep-board__lift-crew {
   position: absolute;
-  inset: 0;
+  inset: 0 0 12px;
   z-index: 0;
   pointer-events: none;
 }

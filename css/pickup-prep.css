@@ -473,10 +473,11 @@ body.prep-board {
   gap: 0.55rem 0.85rem;
 }
 
-@media (min-width: 481px) {
-  .prep-board__lift--like-overview .prep-board__lift-form {
-    flex-wrap: nowrap;
-  }
+.prep-board__lift-form .pickup-overview__lift-btn-shell {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  margin-top: 0.1rem;
 }
 
 .prep-board__lift-label {

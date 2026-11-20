@@ -1,12 +1,12 @@
 # สถานะ deploy pickup บน server production (อัปเดตเมื่อผู้ใช้แจ้งว่าอัปโหลดแล้ว)
-package=2026-11-20-r11-pickup
+package=2026-11-20-r14-pickup
 recorded=2026-11-20T00:00:00+00:00
 note=แพ็กถัดไป (incremental) รวมเฉพาะไฟล์ที่ MD5 เปลี่ยนจากรายการด้านล่าง
 
 path | md5
 ------------------------------------------------------------------------
 css/inventory-ui.css | bd1fc4068c598483a5ae1dd6d63ff8dc
-css/pickup-prep.css | 4988c2b9ba525be37a5fe1683ff49c7c
+css/pickup-prep.css | 35dc392a80dbc0e732e8eeff63f00a41
 formula_manage.php | 03d56be43ab4e7ac6eb9bf2250a5eb9f
 images/pickup-lift-walk-1.gif | 5f5371eb0425171b12190f5285dde3fd
 images/pickup-lift-walk-2.gif | 5f5371eb0425171b12190f5285dde3fd
@@ -21,7 +21,7 @@ inventory_request_timing.php | af6a344ee3308ed6c958293661852150
 inventory_session_actor.php | 37fb7aecf8c6b431582e030d97753b2a
 inventory_ui_fonts.php | 21dd4ef741cb97df16cd7cede2727898
 inventory_ui_head.php | 06543ea208e90ab53396d7f7cecf9e34
-inventory_version.php | 5e36f25342cd66a4ae9f19fefe1b75f3
+inventory_version.php | a8a2a1b3b43bcdea280d3c8afd0fcba1
 js/pickup-lift-call.js | 2150117b3881f7334eaffcb526aaaf79
 list_stock.php | 138433d500436d7d90fa6be9917ea22a
 part_add.php | 6eb20d0d553d04942ee64b899a08e0ad
@@ -31,7 +31,7 @@ pickup_document_lines.php | 87ade73e41eef17e87b5b8da08f636b9
 pickup_history.php | 9462887f5c8d4d69a571ad1a60413cc1
 pickup_history_lib.php | 4e2a0ee77fdca73793efc6273d202c3b
 pickup_history_lines.php | f33ab1a5c35a7280f127ca92455ce577
-pickup_lift_call_fragment.php | 920d8791d7537ece151cd046b0fe455f
+pickup_lift_call_fragment.php | 16498e7449d0e96b970783ddbf26ea92
 pickup_list_order.php | cda2d0e908e489bfbe328d963d7d2f98
 pickup_list_order_detail.php | 80bf37d201739686e8a437b009ce2d61
 pickup_list_order_edit.php | 1b462934a3f5278dad95adbeb83488cd
@@ -41,7 +41,7 @@ pickup_ma_save.php | bcec7933d5d9692c811c33d4615bbd22
 pickup_overview.php | 7c5fba1287b59b8d1b067ec46ff4e5fb
 pickup_pre_stock_tech.php | bc67b651223932842b6905a2c0503c2a
 pickup_prep_api.php | e156790cc2d2a3cfc23f12686f0bfdcd
-pickup_prep_board.php | 8ef6f93844eea732f2ff93b0b0cadda2
+pickup_prep_board.php | 176a63cb49ce74f5557c0764d1e1047d
 pickup_prep_board_auth.php | 89646b74451d9d8028acf37334abe1bf
 pickup_prep_board_status.php | 083f0477c34a78c0cbabbd7180089a59
 pickup_repair_formula_tech.php | a00b53f2f7fc1108069db6e56463129c

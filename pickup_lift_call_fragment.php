@@ -69,9 +69,9 @@ $pickupLiftUi += array(
 $pickupNodeRedCallLiftUrl = inventory_config_node_red_call_lift_url();
 $pickupLiftCallEnabled = inventory_config_is_safe_http_url($pickupNodeRedCallLiftUrl);
 $pickupLiftVisibility = inventory_config_node_red_call_lift_visibility();
-$pickupLiftSectionRender = $pickupLiftCallEnabled && $pickupLiftVisibility !== 'never';
-// For 'auto': render visible — JS hides if not on LAN (safe fallback: visible if JS is old/absent)
-$pickupLiftSectionHiddenInitially = $pickupLiftSectionRender && $pickupLiftVisibility === 'never';
+$pickupLiftSectionRender = $pickupLiftCallEnabled
+    && ($pickupLiftVisibility === 'always'
+        || ($pickupLiftVisibility === 'auto' && inventory_config_client_is_office_network()));
 
 if (!$pickupLiftSectionRender) {
     return;
@@ -84,7 +84,7 @@ $pickupLiftVolume = inventory_config_node_red_call_lift_volume();
 $pickupLiftDelivery = inventory_config_node_red_call_lift_delivery();
 $pickupLiftWalkMedia = pickup_lift_dialog_walk_media_manifest();
 ?>
-<section id="pickup_lift_section" class="<?php echo htmlspecialchars($pickupLiftUi['section'], ENT_QUOTES, 'UTF-8'); ?>" aria-label="ช่วยยกของ"<?php echo $pickupLiftSectionHiddenInitially ? ' hidden' : ''; ?>>
+<section id="pickup_lift_section" class="<?php echo htmlspecialchars($pickupLiftUi['section'], ENT_QUOTES, 'UTF-8'); ?>" aria-label="ช่วยยกของ">
   <div class="<?php echo htmlspecialchars($pickupLiftUi['body'], ENT_QUOTES, 'UTF-8'); ?>">
     <iframe id="pickup_lift_ping" name="pickup_lift_ping" class="<?php echo htmlspecialchars($pickupLiftUi['ping'], ENT_QUOTES, 'UTF-8'); ?>" title="" hidden></iframe>
     <p id="pickup_lift_status" class="<?php echo htmlspecialchars($pickupLiftUi['status'], ENT_QUOTES, 'UTF-8'); ?>" hidden></p>
@@ -139,7 +139,7 @@ $pickupLiftWalkMedia = pickup_lift_dialog_walk_media_manifest();
 window.pickupLiftConfig = <?php echo json_encode(array(
     'preludeUrl' => $pickupLiftPreludeEnabled ? $pickupLiftPreludeUrl : '',
     'preludeDelayMs' => (int) $pickupLiftPreludeDelayMs,
-    'visibility' => $pickupLiftVisibility,
+    'visibility' => 'always',
     'volume' => $pickupLiftVolume,
     'delivery' => $pickupLiftDelivery,
     'walkMediaMaxClip' => (int) $pickupLiftWalkMedia['maxClip'],
@@ -147,4 +147,4 @@ window.pickupLiftConfig = <?php echo json_encode(array(
     'walkMediaByCount' => $pickupLiftWalkMedia['byCount'],
 ), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
 </script>
-<script src="js/pickup-lift-call.js?v=8"></script>
+<script src="js/pickup-lift-call.js?v=9"></script>

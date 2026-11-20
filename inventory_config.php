@@ -64,6 +64,7 @@ function inventory_config_env_names()
         'node_red_call_lift_visibility' => 'INVENTORY_NODE_RED_CALL_LIFT_VISIBILITY',
         'node_red_call_lift_probe_url' => 'INVENTORY_NODE_RED_CALL_LIFT_PROBE_URL',
         'node_red_call_lift_volume' => 'INVENTORY_NODE_RED_CALL_LIFT_VOLUME',
+        'node_red_call_lift_office_ips' => 'INVENTORY_NODE_RED_CALL_LIFT_OFFICE_IPS',
     );
 }
 
@@ -277,7 +278,7 @@ function inventory_config_node_red_call_lift_delivery()
 }
 
 /**
- * การแสดงปุ่มช่วยยกของ: always (ค่าเริ่มต้น — รวม cloud) | auto (เฉพาะ IP ภายใน) | never
+ * การแสดงปุ่มช่วยยกของ: auto (ค่าเริ่มต้น — เฉพาะผู้ใช้ที่มาจาก IP ออฟฟิศ) | always | never
  *
  * @return string auto, always หรือ never
  */
@@ -289,6 +290,45 @@ function inventory_config_node_red_call_lift_visibility()
     }
 
     return 'auto';
+}
+
+/**
+ * IP สาธารณะของ Wi‑Fi ออฟฟิศ (คั่นด้วย comma) — เปลี่ยนเมื่อ ISP เปลี่ยน IP
+ *
+ * @return string[]
+ */
+function inventory_config_node_red_call_lift_office_ips()
+{
+    $raw = inventory_config_get('node_red_call_lift_office_ips', '183.89.61.125');
+    $ips = array();
+    foreach (explode(',', (string) $raw) as $ip) {
+        $ip = trim($ip);
+        if ($ip !== '') {
+            $ips[] = $ip;
+        }
+    }
+
+    return $ips;
+}
+
+/**
+ * ผู้ใช้เปิดหน้าจาก Wi‑Fi ออฟฟิศหรือไม่ — ดูจาก IP ที่ server เห็น (REMOTE_ADDR)
+ *
+ * นับ IP ภายใน/loopback ด้วย (กรณีเปิดผ่าน server ใน LAN หรือทดสอบ localhost)
+ *
+ * @return bool
+ */
+function inventory_config_client_is_office_network()
+{
+    $ip = isset($_SERVER['REMOTE_ADDR']) ? trim((string) $_SERVER['REMOTE_ADDR']) : '';
+    if ($ip === '' || filter_var($ip, FILTER_VALIDATE_IP) === false) {
+        return false;
+    }
+    if (in_array($ip, inventory_config_node_red_call_lift_office_ips(), true)) {
+        return true;
+    }
+
+    return filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false;
 }
 
 /**

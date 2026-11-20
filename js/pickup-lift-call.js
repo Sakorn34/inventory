@@ -13,104 +13,90 @@
     return global.pickupLiftConfig || {};
   }
 
-  function pickupLiftIsPrivateHost(hostname) {
-    if (!hostname) {
-      return false;
-    }
-    if (hostname === "localhost" || hostname === "127.0.0.1") {
-      return true;
-    }
-    // Private IP ranges
-    if (/^192\.168\.\d{1,3}\.\d{1,3}$/.test(hostname)) {
-      return true;
-    }
-    if (/^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(hostname)) {
-      return true;
-    }
-    if (/^172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}$/.test(hostname)) {
-      return true;
-    }
-    // Intranet hostnames without a dot (e.g. WIN-XXXXX, DESKTOP-123, server)
-    if (hostname.indexOf(".") === -1) {
-      return true;
-    }
-    // Common local TLDs: .local (mDNS), .lan, .internal, .intranet, .home
-    return /\.(local|lan|internal|intranet|home)$/i.test(hostname);
-  }
-
-  function pickupLiftSetSectionVisible(show) {
-    var section = document.getElementById("pickup_lift_section");
-    if (!section) {
-      return;
-    }
-    section.hidden = !show;
-  }
-
+  /** การแสดงการ์ดตัดสินที่ server แล้ว (IP ออฟฟิศ) — คงไว้ให้หน้าที่เรียกอยู่ */
   function pickupLiftInitOfficeVisibility() {
     var section = document.getElementById("pickup_lift_section");
-    if (!section) {
-      return;
+    if (section) {
+      section.hidden = pickupLiftConfig().visibility === "never";
     }
+  }
+
+  function pickupLiftDelivery() {
     var cfg = pickupLiftConfig();
-    if (cfg.visibility === "always") {
-      pickupLiftSetSectionVisible(true);
-      return;
-    }
-    if (cfg.visibility === "never") {
-      pickupLiftSetSectionVisible(false);
-      return;
-    }
-    pickupLiftSetSectionVisible(pickupLiftIsPrivateHost(global.location.hostname));
+    return cfg.delivery ? String(cfg.delivery).toLowerCase() : "iframe";
   }
 
-  function pickupLiftIsIOS() {
-    return /iPad|iPhone|iPod/.test(navigator.userAgent);
+  function pickupLiftPreludeDelayMs() {
+    var cfg = pickupLiftConfig();
+    return cfg.preludeDelayMs > 0 ? cfg.preludeDelayMs : 1200;
   }
 
-  function pickupLiftFireRequest(url) {
-    // iOS Local Network Privacy (iOS 14+) silently blocks background fetch/XHR/iframe
-    // requests to private-network IPs from web pages. window.open() is a user-visible
-    // navigation so iOS allows it; the tab may briefly appear and close is handled by UX.
-    if (pickupLiftIsIOS()) {
-      var tab = global.open(url, "_blank", "noopener,noreferrer");
-      if (!tab) {
-        // Popup blocker active on iOS — last resort: iframe (better than nothing)
-        var pingFrame = document.getElementById("pickup_lift_ping");
-        if (pingFrame) {
-          pingFrame.src = url;
-        }
-      }
-      return;
+  /**
+   * หน้า https เรียก http://192.168.x (Node-RED) แบบพื้นหลังไม่ได้ — โดนบล็อก mixed content
+   * ทางเดียวที่ผ่านคือเปิดเป็นแท็บใหม่ (top-level navigation)
+   */
+  function pickupLiftNeedsTab(url) {
+    if (pickupLiftDelivery() === "tab") {
+      return true;
     }
-    if (global.fetch) {
-      try {
-        global.fetch(url, { mode: "no-cors" });
-      } catch (ignore) {
-        // intentional
-      }
-      return;
-    }
-    // Legacy fallback: browsers without fetch
-    var pingFrameLegacy = document.getElementById("pickup_lift_ping");
-    if (pingFrameLegacy) {
-      pingFrameLegacy.src = url;
+    return global.location.protocol === "https:" && /^http:/i.test(url);
+  }
+
+  function pickupLiftFireBackground(url) {
+    var pingFrame = document.getElementById("pickup_lift_ping");
+    if (pingFrame) {
+      pingFrame.src = url;
     }
   }
 
   function pickupLiftPingPrelude(done) {
     var cfg = pickupLiftConfig();
     if (!cfg.preludeUrl) {
-      if (typeof done === "function") {
-        done();
-      }
+      done();
       return;
     }
-    pickupLiftFireRequest(cfg.preludeUrl);
-    global.setTimeout(function () {
-      if (typeof done === "function") {
-        done();
-      }
-    }, cfg.preludeDelayMs > 0 ? cfg.preludeDelayMs : 1200);
+    pickupLiftFireBackground(cfg.preludeUrl);
+    global.setTimeout(done, pickupLiftPreludeDelayMs());
+  }
+
+  /**
+   * ต้องเรียกตรงจาก handler ของการแตะ — Safari iOS อนุญาต popup เฉพาะช่วงนั้น
+   * (ห้ามใส่ "noopener" ใน window.open เพราะจะคืน null เสมอแม้แท็บเปิดได้)
+   */
+  function pickupLiftSubmitViaTab(url) {
+    var tab = global.open("", "_blank");
+    if (!tab) {
+      // popup ถูกบล็อก — ไปที่ Node-RED ในแท็บนี้แทน กด back กลับมาได้
+      global.location.href = url;
+      return;
+    }
+    try {
+      tab.opener = null;
+    } catch (ignore) {
+      // intentional
+    }
+    var cfg = pickupLiftConfig();
+    if (cfg.preludeUrl) {
+      tab.location.href = cfg.preludeUrl;
+      global.setTimeout(function () {
+        tab.location.href = url;
+      }, pickupLiftPreludeDelayMs());
+    } else {
+      tab.location.href = url;
+    }
+    pickupLiftShowSentNotice();
+  }
+
+  function pickupLiftStartCall() {
+    var url = pickupLiftBuildMainUrl();
+    if (url === "") {
+      return;
+    }
+    if (pickupLiftDelivery() !== "same" && pickupLiftNeedsTab(url)) {
+      pickupLiftSubmitViaTab(url);
+      return;
+    }
+    pickupLiftPingPrelude(pickupLiftSubmitMain);
   }
 
   function pickupLiftShowSentNotice() {
@@ -157,9 +143,7 @@
     if (url === "") {
       return;
     }
-    var cfg = pickupLiftConfig();
-    var delivery = cfg.delivery ? String(cfg.delivery).toLowerCase() : "iframe";
-    if (delivery === "same") {
+    if (pickupLiftDelivery() === "same") {
       var form = document.getElementById("pickup_call_person");
       if (!form) {
         return;
@@ -168,21 +152,7 @@
       form.submit();
       return;
     }
-    if (delivery === "tab") {
-      var tab = global.open(url, "_blank", "noopener,noreferrer");
-      if (!tab) {
-        pickupLiftBindDialog();
-        pickupLiftDialogOpen({
-          mode: "alert",
-          title: "เปิดหน้าต่างไม่ได้",
-          message: "เบราว์เซอร์บล็อกหน้าต่างใหม่ — อนุญาต popup หรือตั้ง delivery เป็น iframe ใน config",
-        });
-        return;
-      }
-      pickupLiftShowSentNotice();
-      return;
-    }
-    pickupLiftFireRequest(url);
+    pickupLiftFireBackground(url);
     pickupLiftShowSentNotice();
   }
 
@@ -380,9 +350,7 @@
       title: "ยืนยันการเรียก",
       amount: amount,
       message: "แจ้งขอความช่วยเหลือยกของ " + String(amount) + " คน\nผ่านลำโพงในออฟฟิศหรือไม่",
-      onOk: function () {
-        pickupLiftPingPrelude(pickupLiftSubmitMain);
-      },
+      onOk: pickupLiftStartCall,
     });
     return false;
   }

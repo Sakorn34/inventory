@@ -27,9 +27,12 @@ return array(
     // ส่ง call_Lift: iframe = อยู่หน้าเดิม (อาจไม่มีเสียงคลิกเหมือนเปิดลิงก์ตรง) | tab = แท็บใหม่ใกล้ของเดิม/ทดสอบ URL | same = กระโดดไป Node-RED แบบ legacy
     'node_red_call_lift_delivery' => 'tab',
 
-    // auto = แสดงเมื่อเปิด inventory จาก IP ภายใน (เช่น 192.168.x) | always = แสดงบน cloud ด้วย (ใช้ในออฟฟิศผ่าน bit-online.net)
+    // auto = แสดงเฉพาะผู้ใช้ที่ server เห็นมาจาก IP ออฟฟิศ (ด้านล่าง) หรือ IP ภายใน | always = แสดงทุกที่ | never = ซ่อน
     // ไม่ใช้การ ping Node-RED (จะโดน popup ล็อกอิน ถ้า Node-RED มี Basic Auth)
-    'node_red_call_lift_visibility' => 'always',
+    'node_red_call_lift_visibility' => 'auto',
+
+    // IP สาธารณะของ Wi‑Fi ออฟฟิศ (ค้น "what is my ip" ขณะต่อ Wi‑Fi ออฟฟิศ) คั่นหลายค่าด้วย comma
+    'node_red_call_lift_office_ips' => '183.89.61.125',
 
     // ระดับเสียงตอนแจ้งยกของ 0–100 (ส่งเป็น ?volume= ไป call_Lift) — ต้องให้ flow Node-RED ใช้ค่านี้ก่อน Cast/TTS
     // ปล่อยว่างถ้าปรับที่ลำโพงหรือใน Node-RED อย่างเดียว (ถ้าหมุนลดเสียงที่ลำโพงแล้วพูดยังดัง มักมี node “ตั้ง volume” ใน flow)

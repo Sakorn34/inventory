@@ -30,13 +30,14 @@ header('Referrer-Policy: no-referrer');
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<meta name="theme-color" content="#1e3a5f" />
+<meta name="theme-color" content="#ffd98a" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <title>จัดของรอเบิก</title>
 <link rel="icon" type="image/png" href="images/bitcombine-logo.png" />
 <link rel="apple-touch-icon" href="images/bitcombine-logo.png" />
 <?php require_once __DIR__ . '/inventory_ui_fonts.php'; ?>
-<link rel="stylesheet" href="css/pickup-prep.css?v=14" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mitr:wght@500&amp;display=swap" />
+<link rel="stylesheet" href="css/pickup-prep.css?v=15" />
 </head>
 <body class="prep-board">
 <?php if (!$tokenOk) {
@@ -49,6 +50,11 @@ header('Referrer-Policy: no-referrer');
   </div>
 </div>
 <?php } else { ?>
+<div class="prep-board__sparkles" aria-hidden="true">
+  <?php foreach (array(array(8, 0), array(30, 5), array(52, 10), array(74, 2.5), array(90, 7.5)) as $sp) { ?>
+  <span class="prep-board__sparkle" style="left:<?php echo $sp[0]; ?>%;animation-delay:<?php echo $sp[1]; ?>s"></span>
+  <?php } ?>
+</div>
 <div class="prep-board__shell" id="prep_app" data-token="<?php echo $h($token); ?>">
   <header class="prep-board__header">
     <div class="prep-board__title-row">
@@ -57,7 +63,16 @@ header('Referrer-Policy: no-referrer');
         <p class="prep-board__subtitle prep-board__subtitle--hint">จัดกลุ่มตามชื่ออะไหล่ — หยิบครั้งเดียวต่อตัว</p>
         <p class="prep-board__subtitle" id="prep_subtitle">กำลังโหลด…</p>
       </div>
-      <button type="button" class="prep-board__refresh" id="prep_refresh_btn" aria-label="โหลดใหม่">↻</button>
+      <div class="prep-board__head-tools">
+        <span class="prep-board__bubble" aria-hidden="true">เย้! ครบแล้ว</span>
+        <div class="prep-board__mascot" id="prep_mascot" aria-hidden="true">
+          <span class="prep-board__mascot-body"></span>
+          <span class="prep-board__mascot-eye prep-board__mascot-eye--l"></span>
+          <span class="prep-board__mascot-eye prep-board__mascot-eye--r"></span>
+          <span class="prep-board__mascot-mouth"></span>
+        </div>
+        <button type="button" class="prep-board__refresh" id="prep_refresh_btn" aria-label="โหลดใหม่">↻</button>
+      </div>
     </div>
     <div class="prep-board__stats" id="prep_stats" hidden>
       <div class="prep-board__stat">
@@ -72,6 +87,21 @@ header('Referrer-Policy: no-referrer');
         <span class="prep-board__stat-value" id="prep_stat_docs">0</span>
         <span class="prep-board__stat-label">เอกสาร</span>
       </div>
+    </div>
+    <div class="prep-board__lane" aria-hidden="true">
+      <svg class="prep-board__forklift" viewBox="0 0 54 27">
+        <rect x="31" y="9" width="13" height="11" rx="1.5" fill="#c98a4b" stroke="#4a2c05" stroke-width="1.4"/>
+        <path d="M37.5 9v4.5" stroke="#e9c08f" stroke-width="3"/>
+        <rect x="27" y="2" width="3" height="19" fill="#4a2c05"/>
+        <rect x="27" y="19.5" width="18" height="2" fill="#4a2c05"/>
+        <path d="M10 11V4h11l3 7" fill="none" stroke="#4a2c05" stroke-width="1.6" stroke-linejoin="round"/>
+        <rect x="4" y="11" width="23" height="10" rx="2" fill="#f59e0b" stroke="#4a2c05" stroke-width="1.4"/>
+        <rect x="2" y="13" width="4" height="7" fill="#4a2c05"/>
+        <circle cx="9.5" cy="22" r="4" fill="#3d2606"/>
+        <circle cx="9.5" cy="22" r="1.5" fill="#ffd98a"/>
+        <circle cx="22" cy="22" r="4" fill="#3d2606"/>
+        <circle cx="22" cy="22" r="1.5" fill="#ffd98a"/>
+      </svg>
     </div>
   </header>
   <div class="prep-board__filters" role="tablist" aria-label="กรองรายการ">
@@ -141,6 +171,93 @@ header('Referrer-Policy: no-referrer');
       if (hasRendered) {
         bump(el);
       }
+    }
+  }
+
+  var reduceMotion = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+
+  function restartClass(el, cls) {
+    if (!el) {
+      return;
+    }
+    el.classList.remove(cls);
+    void el.offsetWidth;
+    el.classList.add(cls);
+  }
+
+  function burstStars(anchor) {
+    if (reduceMotion || !anchor) {
+      return;
+    }
+    var r = anchor.getBoundingClientRect();
+    var cx = r.left + r.width / 2;
+    var cy = r.top + r.height / 2;
+    for (var i = 0; i < 6; i++) {
+      var star = document.createElement("span");
+      var angle = (i / 6) * Math.PI * 2;
+      star.className = "prep-board__burst";
+      star.style.left = cx + "px";
+      star.style.top = cy + "px";
+      star.style.setProperty("--x", Math.round(Math.cos(angle) * 38) + "px");
+      star.style.setProperty("--y", Math.round(Math.sin(angle) * 38) + "px");
+      document.body.appendChild(star);
+      window.setTimeout(star.remove.bind(star), 800);
+    }
+  }
+
+  function celebrate() {
+    if (reduceMotion) {
+      return;
+    }
+    var colors = ["#f59e0b", "#22c55e", "#ff8a3d", "#60a5fa", "#f472b6"];
+    for (var i = 0; i < 36; i++) {
+      var piece = document.createElement("span");
+      piece.className = "prep-board__confetti";
+      piece.style.left = Math.round(Math.random() * 100) + "vw";
+      piece.style.background = colors[i % colors.length];
+      piece.style.animationDelay = Math.round(Math.random() * 450) + "ms";
+      piece.style.setProperty("--x", Math.round(Math.random() * 80 - 40) + "px");
+      document.body.appendChild(piece);
+      window.setTimeout(piece.remove.bind(piece), 2400);
+    }
+  }
+
+  /** ความคืบหน้าของการ์ดตาม part_key — นับเฉพาะรายการจากเอกสาร (ไม่รวมคลังช่าง) */
+  function partProgress(partKey) {
+    var prepared = 0;
+    var total = 0;
+    documents.forEach(function (doc) {
+      doc.lines.forEach(function (line) {
+        var key = line.pre_part ? String(line.pre_part) : line.part_name;
+        if (key === partKey) {
+          total++;
+          if (line.prepared) {
+            prepared++;
+          }
+        }
+      });
+    });
+    return { prepared: prepared, total: total };
+  }
+
+  function syncCard(card) {
+    if (!card) {
+      return;
+    }
+    var p = partProgress(card.getAttribute("data-part-key"));
+    var bar = card.querySelector(".prep-board__progress-bar");
+    var text = card.querySelector(".prep-board__progress-text");
+    if (bar) {
+      bar.style.width = (p.total > 0 ? Math.round((p.prepared / p.total) * 100) : 100) + "%";
+    }
+    if (text) {
+      text.textContent = "จัดแล้ว " + p.prepared + " / " + p.total + " รายการ";
+    }
+    var done = p.total > 0 && p.prepared === p.total;
+    var wasDone = card.classList.contains("is-done");
+    card.classList.toggle("is-done", done);
+    if (done && !wasDone && !reduceMotion) {
+      restartClass(card, "is-stamping");
     }
   }
 
@@ -217,6 +334,7 @@ header('Referrer-Policy: no-referrer');
       return;
     }
     stats.hidden = false;
+    app.classList.toggle("is-all-done", summary.lines > 0 && summary.pending === 0);
     setStatValue("prep_stat_prepared", summary.prepared);
     setStatValue("prep_stat_pending", summary.pending);
     setStatValue("prep_stat_docs", summary.documents);
@@ -367,9 +485,11 @@ header('Referrer-Policy: no-referrer');
       var displayPartName = prepBoardDisplayPartName(group.part_name);
       var techOnlyGroup = pickableCount === 0 && lineTotal > 0;
 
-      html += '<article class="prep-board__doc prep-board__part-group' + (techOnlyGroup ? " prep-board__part-group--tech-only" : "") + '" style="--i:' + staggerIndex + '" data-part-key="' + escapeHtml(group.part_key) + '">';
+      var groupDone = pickableCount > 0 && preparedCount === pickableCount;
+      html += '<article class="prep-board__doc prep-board__part-group' + (techOnlyGroup ? " prep-board__part-group--tech-only" : "") + (groupDone ? " is-done" : "") + '" style="--i:' + staggerIndex + '" data-part-key="' + escapeHtml(group.part_key) + '">';
       if (!techOnlyGroup) {
         html += '<div class="prep-board__doc-head">';
+        html += '<span class="prep-board__stamp" aria-hidden="true">จัดแล้ว!</span>';
         html += '<div class="prep-board__part-title">' + escapeHtml(displayPartName || group.part_name) + "</div>";
         html += '<div class="prep-board__part-summary">';
         html += '<span class="prep-board__part-total">รวม ' + escapeHtml(formatAmount(totalQty)) + " ชิ้น</span>";
@@ -536,6 +656,7 @@ header('Referrer-Policy: no-referrer');
     }
 
     var prev = found.line.prepared;
+    var wasAllDone = app.classList.contains("is-all-done");
     found.line.prepared = nextPrepared;
     recomputeDocProgress(found.doc);
     updateStats(recomputeSummary());
@@ -543,6 +664,15 @@ header('Referrer-Policy: no-referrer');
       rowEl.classList.toggle("is-prepared", nextPrepared);
       rowEl.setAttribute("data-prepared", nextPrepared ? "1" : "0");
       rowEl.classList.add("is-busy");
+      syncCard(rowEl.closest(".prep-board__doc"));
+      if (nextPrepared) {
+        restartClass(rowEl, "is-pop");
+        burstStars(rowEl.querySelector(".prep-board__check"));
+        restartClass(document.getElementById("prep_mascot"), "is-jump");
+      }
+    }
+    if (nextPrepared && !wasAllDone && app.classList.contains("is-all-done")) {
+      celebrate();
     }
 
     fetch(apiUrl("set_prepared"), {
@@ -572,7 +702,12 @@ header('Referrer-Policy: no-referrer');
           return;
         }
         showPrepToast("บันทึกแล้ว");
-        renderList();
+        // แถว/การ์ดอัปเดตในที่แล้ว — วาดใหม่เฉพาะตอนกรอง (ให้แถวหาย) และรอเอฟเฟกต์เล่นจบก่อน
+        if (filterMode !== "all") {
+          window.setTimeout(function () {
+            renderList();
+          }, 700);
+        }
       })
       .catch(function () {
         if (rowEl) {
@@ -603,6 +738,15 @@ header('Referrer-Policy: no-referrer');
       bump(liftQtyInput);
     });
   });
+
+  var mascot = document.getElementById("prep_mascot");
+  if (mascot) {
+    mascot.addEventListener("animationend", function (ev) {
+      if (ev.animationName === "prep-jump") {
+        mascot.classList.remove("is-jump");
+      }
+    });
+  }
 
   var refreshBtn = document.getElementById("prep_refresh_btn");
   if (refreshBtn) {

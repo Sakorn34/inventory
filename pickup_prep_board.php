@@ -37,7 +37,7 @@ header('Referrer-Policy: no-referrer');
 <link rel="apple-touch-icon" href="images/bitcombine-logo.png" />
 <?php require_once __DIR__ . '/inventory_ui_fonts.php'; ?>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mitr:wght@500&amp;display=swap" />
-<link rel="stylesheet" href="css/pickup-prep.css?v=20" />
+<link rel="stylesheet" href="css/pickup-prep.css?v=21" />
 </head>
 <body class="prep-board">
 <?php if (!$tokenOk) {
@@ -400,6 +400,8 @@ header('Referrer-Policy: no-referrer');
           pre_product: line.pre_product,
           pre_amount: line.pre_amount,
           prepared: line.prepared,
+          stock: line.stock,
+          paid_amount: line.paid_amount,
           pre_id: doc.pre_id,
           pre_date: doc.pre_date,
           pre_by: doc.pre_by,
@@ -469,10 +471,16 @@ header('Referrer-Policy: no-referrer');
       var preparedCount = 0;
       var pickableCount = 0;
       var totalQty = 0;
+      var needQty = 0;
+      var stockQty = null;
       var docIds = {};
       group.lines.forEach(function (line) {
         if (!line.is_tech) {
           pickableCount++;
+          needQty += parseAmount(line.pre_amount);
+          if (stockQty === null) {
+            stockQty = parseAmount(line.stock);
+          }
           if (line.prepared) {
             preparedCount++;
           }
@@ -480,6 +488,10 @@ header('Referrer-Policy: no-referrer');
         totalQty += parseAmount(line.pre_amount);
         docIds[line.pre_id] = true;
       });
+      // สต็อกยังไม่ถูกตัดจนกว่าคลังกดยืนยันจ่าย — เทียบกับยอดที่ต้องจัดทั้งหมดของอะไหล่ตัวนี้
+      var stockLeft = Math.max(0, stockQty || 0);
+      var stockState = stockLeft <= 0 ? "out" : (stockLeft < needQty ? "short" : "ok");
+      var stockTag = { ok: "พอ", short: "ของไม่พอ", out: "หมดคลัง" }[stockState];
       var lineTotal = group.lines.length;
       var pct = pickableCount > 0 ? Math.round((preparedCount / pickableCount) * 100) : 100;
       var docCount = Object.keys(docIds).length;
@@ -496,6 +508,8 @@ header('Referrer-Policy: no-referrer');
         html += '<span class="prep-board__part-total">รวม ' + escapeHtml(formatAmount(totalQty)) + " ชิ้น</span>";
         html += "<span>" + docCount + " เอกสาร · " + lineTotal + " รายการ</span>";
         html += "</div>";
+        html += '<div class="prep-board__stock">ต้องจัด <b>' + escapeHtml(formatAmount(needQty)) + "</b> · มีในคลัง " + escapeHtml(formatAmount(stockQty || 0))
+          + ' <span class="prep-board__stock-tag is-' + stockState + '">' + stockTag + "</span></div>";
         html += '<div class="prep-board__progress"><div class="prep-board__progress-bar" style="width:' + pct + '%"></div></div>';
         html += '<p class="prep-board__progress-text">จัดแล้ว ' + preparedCount + " / " + pickableCount + " รายการ</p>";
         html += "</div>";
@@ -504,6 +518,7 @@ header('Referrer-Policy: no-referrer');
       var sortedLines = group.lines.slice().sort(function (a, b) {
         return parseAmount(b.pre_amount) - parseAmount(a.pre_amount);
       });
+      var allocLeft = stockLeft;
       sortedLines.forEach(function (line) {
         if (line.is_tech) {
           if (filterMode === "pending") {
@@ -534,17 +549,29 @@ header('Referrer-Policy: no-referrer');
           html += "</div>";
           return;
         }
+        // แบ่งสต็อกให้แถวตามลำดับที่แสดง (คิดทุกแถว แม้ถูกกรองออก) — แถวที่ได้ไม่ครบบอก "จัดได้ N"
+        var lineAmt = parseAmount(line.pre_amount);
+        var canPick = Math.min(lineAmt, allocLeft);
+        allocLeft -= canPick;
         if (!lineMatchesFilter(line)) {
           return;
         }
+        var paidAmt = parseAmount(line.paid_amount);
+        var backTag = paidAmt > 0 ? ' <span class="prep-board__back-tag">ค้างจ่าย</span>' : "";
+        var paidNote = paidAmt > 0
+          ? " · จ่ายไปแล้ว " + escapeHtml(formatAmount(paidAmt)) + " จาก " + escapeHtml(formatAmount(paidAmt + lineAmt))
+          : "";
+        var canNote = canPick + 0.0001 < lineAmt
+          ? '<small class="prep-board__line-can">' + (canPick > 0 ? "จัดได้ " + escapeHtml(formatAmount(canPick)) : "รอของเข้า") + "</small>"
+          : "";
         var preparedClass = line.prepared ? " is-prepared" : "";
         html += '<div class="prep-board__line prep-board__line--alloc' + preparedClass + '" role="button" tabindex="0" data-pre-running="' + line.pre_running + '" data-prepared="' + (line.prepared ? "1" : "0") + '">';
         html += '<span class="prep-board__check" aria-hidden="true"><svg class="prep-board__check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></span>';
         html += '<div class="prep-board__line-body">';
-        html += '<div class="prep-board__line-name">' + escapeHtml(line.pre_id) + "</div>";
-        html += '<div class="prep-board__line-sub">' + escapeHtml(line.pre_by) + " · " + escapeHtml(line.pre_type) + " · " + escapeHtml(line.pre_product) + "</div>";
+        html += '<div class="prep-board__line-name">' + escapeHtml(line.pre_id) + backTag + "</div>";
+        html += '<div class="prep-board__line-sub">' + escapeHtml(line.pre_by) + " · " + escapeHtml(line.pre_type) + " · " + escapeHtml(line.pre_product) + paidNote + "</div>";
         html += "</div>";
-        html += '<div class="prep-board__line-qty">' + escapeHtml(formatAmount(parseAmount(line.pre_amount))) + " ชิ้น</div>";
+        html += '<div class="prep-board__line-qty">' + escapeHtml(formatAmount(lineAmt)) + " ชิ้น" + canNote + "</div>";
         html += "</div>";
       });
 

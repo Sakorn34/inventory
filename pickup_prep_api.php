@@ -157,7 +157,10 @@ function pickup_prep_api_fetch_list($conn)
     $sql = 'SELECT ps.`pre_running`, ps.`pre_id`, ps.`pre_date`, ps.`pre_by`, ps.`pre_type`,
                    ps.`pre_product`, ps.`pre_amount`, ps.`pre_remarks`, ps.`pre_check`,
                    ps.`pre_part`,
-                   COALESCE(NULLIF(TRIM(p.`part_name`), ""), CONCAT("Part ", ps.`pre_part`)) AS `part_name`
+                   COALESCE(NULLIF(TRIM(p.`part_name`), ""), CONCAT("Part ", ps.`pre_part`)) AS `part_name`,
+                   COALESCE(p.`part_amount`, 0) AS `part_stock`,
+                   (SELECT COALESCE(SUM(ls.`log_amount`), 0) FROM `log_stock` ls
+                    WHERE ls.`pre_id` = ps.`pre_id` AND ls.`log_part` = p.`part_name` AND ls.`log_product` = ps.`pre_product`) AS `paid_amount`
             FROM `pre_stock` ps
             LEFT JOIN `part` p ON ps.`pre_part` = p.`part_id`
             WHERE TRIM(ps.`pre_status`) = ?
@@ -189,7 +192,9 @@ function pickup_prep_api_fetch_list($conn)
         $preRemarks,
         $preCheck,
         $prePart,
-        $partName
+        $partName,
+        $partStock,
+        $paidAmount
     );
 
     $documents = array();
@@ -227,6 +232,8 @@ function pickup_prep_api_fetch_list($conn)
             'pre_product' => (string) $preProduct,
             'pre_amount' => (string) $preAmount,
             'prepared' => $isPrepared,
+            'stock' => (float) $partStock,
+            'paid_amount' => (float) $paidAmount,
         );
     }
 

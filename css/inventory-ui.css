@@ -2975,6 +2975,106 @@ body.pickup-lift-dialog-open {
   outline-offset: -2px;
 }
 
+/* จ่ายบางส่วน: สถานะสต็อก ช่องจำนวนจ่าย และยอดค้าง */
+.inv-app .pickup-doc-preview-line.is-short {
+  background: #fff7ed;
+  border-color: #fdba74;
+}
+
+.inv-app .pickup-doc-preview-line.is-out {
+  background: #fef2f2;
+  border-color: #fca5a5;
+}
+
+.inv-app .pickup-doc-preview-line__stock {
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.inv-app .pickup-doc-preview-line__stock.is-ok {
+  color: #047857;
+}
+
+.inv-app .pickup-doc-preview-line__stock.is-short {
+  color: #c2410c;
+}
+
+.inv-app .pickup-doc-preview-line__stock.is-out {
+  color: #b91c1c;
+}
+
+.inv-app .pickup-doc-preview-line__paid {
+  align-self: flex-start;
+  background: #fef3c7;
+  border: 1px dashed #f59e0b;
+  border-radius: 999px;
+  color: #92400e;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.05rem 0.5rem;
+}
+
+.inv-app .pickup-doc-preview-line__pay {
+  align-items: flex-end;
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.inv-app .pickup-doc-preview-line__pay label {
+  color: #64748b;
+  font-size: 0.7rem;
+}
+
+.inv-app .pickup-doc-preview-line__pay input {
+  border: 1.5px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.92rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  height: 2rem;
+  padding: 0 0.25rem;
+  text-align: center;
+  width: 4.25rem;
+}
+
+.inv-app .pickup-doc-preview-line__rem {
+  color: #c2410c;
+  font-size: 0.72rem;
+  font-weight: 700;
+  min-height: 1rem;
+}
+
+.inv-app .pickup-doc-preview-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.65rem 0 0;
+}
+
+.inv-app .pickup-doc-preview-summary span {
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.15rem 0.65rem;
+}
+
+.inv-app .pickup-doc-preview-summary .is-paid {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.inv-app .pickup-doc-preview-summary .is-pending {
+  background: #ffedd5;
+  color: #c2410c;
+}
+
+.inv-app .pickup-doc-preview-summary .is-closed {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
 .inv-app .pickup-doc-preview-line--readonly {
   gap: 0.85rem;
   padding: 0.85rem 1.05rem;

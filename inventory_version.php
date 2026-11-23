@@ -7,11 +7,11 @@
  */
 
 if (!defined('INVENTORY_RELEASE_VERSION')) {
-    define('INVENTORY_RELEASE_VERSION', '2026.11.20-r18');
+    define('INVENTORY_RELEASE_VERSION', '2026.11.23-r1');
 }
 
 if (!defined('INVENTORY_RELEASE_DATE')) {
-    define('INVENTORY_RELEASE_DATE', '2026-11-20');
+    define('INVENTORY_RELEASE_DATE', '2026-11-23');
 }
 
 if (!defined('INVENTORY_APP_META_LABEL')) {

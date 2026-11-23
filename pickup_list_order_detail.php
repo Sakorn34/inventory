@@ -214,10 +214,9 @@ function save_job(){
                         chk = "NO";
                       }
 
-                      data_row += "&log_part"+a+"="+encodeURIComponent(document.getElementById('pre_part'+a).value)
-                                + "&log_product"+a+"="+encodeURIComponent(document.getElementById('pre_pd'+a).value)
+                      // ส่งจำนวนในช่อง — server ตรวจไม่ให้เกินที่ขอ/สต็อก ส่วนที่เหลือค้างไว้ในเอกสาร
+                      data_row += "&pre_running"+a+"="+encodeURIComponent(document.getElementById('pre_running'+a).value)
                                 + "&log_amount"+a+"="+encodeURIComponent(document.getElementById('pre_amount'+a).value)
-								+ "&log_remarks"+a+"="+encodeURIComponent(document.getElementById('pre_remarks'+a).value)
                                 + "&check"+a+"="+encodeURIComponent(chk) ;
                     }
 					

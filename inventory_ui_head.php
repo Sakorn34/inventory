@@ -18,5 +18,6 @@ if (!defined('INVENTORY_UI_CSS_LINK_EMITTED')) {
     if (!defined('INVENTORY_UI_CSS')) {
         define('INVENTORY_UI_CSS', true);
     }
-    echo '<link rel="stylesheet" href="css/inventory-ui.css">' . "\n";
+    $invUiCssVer = @filemtime(__DIR__ . '/css/inventory-ui.css');
+    echo '<link rel="stylesheet" href="css/inventory-ui.css' . ($invUiCssVer ? '?v=' . (int) $invUiCssVer : '') . '">' . "\n";
 }

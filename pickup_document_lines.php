@@ -32,8 +32,11 @@ if ($preId === '' || !pickup_document_lines_valid_pre_id($preId)) {
     exit;
 }
 
-$sql = 'SELECT ps.`pre_date`, ps.`pre_by`, ps.`pre_type`, ps.`pre_product`, ps.`pre_amount`, ps.`pre_remarks`,
-               ps.`ts_mtn_number`, ps.`pre_part`, p.`part_name`
+// paid_amount = ยอดที่จ่ายไปแล้วจากแถวนี้ (จ่ายบางส่วน) — ดูจาก log_stock ของเอกสาร/อะไหล่/สินค้าเดียวกัน
+$sql = 'SELECT ps.`pre_running`, ps.`pre_date`, ps.`pre_by`, ps.`pre_type`, ps.`pre_product`, ps.`pre_amount`, ps.`pre_remarks`,
+               ps.`ts_mtn_number`, ps.`pre_part`, p.`part_name`, p.`part_amount`,
+               (SELECT COALESCE(SUM(ls.`log_amount`), 0) FROM `log_stock` ls
+                WHERE ls.`pre_id` = ps.`pre_id` AND ls.`log_part` = p.`part_name` AND ls.`log_product` = ps.`pre_product`) AS `paid_amount`
         FROM `pre_stock` ps
         INNER JOIN `part` p ON ps.`pre_part` = p.`part_id`
         WHERE ps.`pre_id` = ? AND ps.`pre_status` = ?
@@ -52,6 +55,7 @@ mysqli_stmt_bind_param($stmt, 'ss', $preId, $statusPre);
 mysqli_stmt_execute($stmt);
 mysqli_stmt_bind_result(
     $stmt,
+    $preRunning,
     $preDate,
     $preBy,
     $preType,
@@ -60,7 +64,9 @@ mysqli_stmt_bind_result(
     $preRemarks,
     $tsMtn,
     $prePart,
-    $partName
+    $partName,
+    $partStock,
+    $paidAmount
 );
 
 $lines = array();
@@ -83,6 +89,9 @@ while (mysqli_stmt_fetch($stmt)) {
     }
     $lines[] = array(
         'line_kind' => 'inventory',
+        'pre_running' => (int) $preRunning,
+        'stock' => (float) $partStock,
+        'paid_amount' => (float) $paidAmount,
         'part_id' => (int) $prePart,
         'part_name' => (string) $partName,
         'product' => (string) $preProduct,

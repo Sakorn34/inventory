@@ -176,6 +176,8 @@ function renderPickupDocPreview(data) {
         return;
     }
     pickupDocPreviewData = data;
+    pickupDocPreviewAllocate(data);
+    pickupDocPreviewBindInputs();
     title.textContent = data.pre_id;
     var metaParts = [
         data.pre_date || "",
@@ -216,17 +218,31 @@ function renderPickupDocPreview(data) {
                 "</li>";
             continue;
         }
+        var req = pickupDocNum(line.amount);
+        var stock = pickupDocNum(line.stock);
+        var pay = line.pay;
+        var stockState = stock <= 0 ? "is-out" : (stock < req ? "is-short" : "is-ok");
+        var stockText = stock <= 0 ? "หมดคลัง" : (stock < req ? "ไม่พอ" : "พอ");
+        var paidNote = pickupDocNum(line.paid_amount) > 0
+            ? '<span class="pickup-doc-preview-line__paid">ค้างจ่าย · จ่ายไปแล้ว ' + pickupDocFmt(line.paid_amount) + "</span>"
+            : "";
         linesHtml +=
-            '<li class="pickup-doc-preview-line">' +
+            '<li class="pickup-doc-preview-line' + (stockState === "is-ok" ? "" : " " + stockState) + '">' +
             '<label class="pickup-doc-preview-line__check" title="เลือกจ่ายรายการนี้">' +
-            '<input type="checkbox" class="pickup-doc-preview-chk" data-line-index="' + i + '" value="YES" checked aria-label="เลือกรายการที่ ' + (i + 1) + '">' +
+            '<input type="checkbox" class="pickup-doc-preview-chk" data-line-index="' + i + '" value="YES"' + (pay > 0 ? " checked" : "") + ' aria-label="เลือกรายการที่ ' + (i + 1) + '">' +
             "</label>" +
             '<div class="pickup-doc-preview-line__main">' +
             '<span class="pickup-doc-preview-line__name">' + pickupDocPreviewEscape(line.part_name) + "</span>" +
             (line.product ? ('<span class="pickup-doc-preview-line__product">' + pickupDocPreviewEscape(line.product) + "</span>") : "") +
+            '<span class="pickup-doc-preview-line__stock ' + stockState + '">' + stockText + " · มี " + pickupDocFmt(stock) + " / ขอ " + pickupDocFmt(req) + "</span>" +
+            paidNote +
             lineRemark +
             "</div>" +
-            '<span class="pickup-doc-preview-line__qty">' + pickupDocPreviewEscape(line.amount) + "</span>" +
+            '<div class="pickup-doc-preview-line__pay">' +
+            '<label for="pickup_doc_pay_' + i + '">จ่ายครั้งนี้</label>' +
+            '<input type="number" id="pickup_doc_pay_' + i + '" class="pickup-doc-preview-qty" data-line-index="' + i + '" min="0" step="any" inputmode="decimal" value="' + pickupDocFmt(pay) + '">' +
+            '<span class="pickup-doc-preview-line__rem" data-rem-index="' + i + '"></span>' +
+            "</div>" +
             "</li>";
     }
 
@@ -234,12 +250,132 @@ function renderPickupDocPreview(data) {
     if (techCount > 0) {
         countText += " (คลังกลาง " + (invCount || (data.line_count - techCount)) + " · คลังช่าง " + techCount + " · ตัดแล้ว)";
     }
-    countText += " · เลือกรายการคลังกลางที่จะจ่ายแล้วกดยืนยัน";
+    countText += " · ใส่จำนวนที่จ่ายครั้งนี้ ส่วนที่ไม่ได้จ่ายจะค้างไว้ในเอกสาร";
 
     body.innerHTML =
         remarksBlock +
         '<p class="pickup-doc-preview-count">' + countText + "</p>" +
-        '<ul class="pickup-doc-preview-lines">' + linesHtml + "</ul>";
+        '<ul class="pickup-doc-preview-lines">' + linesHtml + "</ul>" +
+        '<div class="pickup-doc-preview-summary" id="pickup_doc_preview_summary"></div>';
+    pickupDocPreviewUpdateSummary();
+}
+
+function pickupDocNum(value) {
+    var n = parseFloat(String(value === undefined || value === null ? "" : value).replace(/,/g, ""));
+    return isNaN(n) ? 0 : n;
+}
+
+function pickupDocFmt(value) {
+    var n = pickupDocNum(value);
+    return Math.abs(n - Math.round(n)) < 0.005 ? String(Math.round(n)) : n.toFixed(2);
+}
+
+/** สต็อกของอะไหล่ใช้ร่วมกันทุกแถวที่เป็นอะไหล่ตัวเดียวกัน — ค่าเริ่มต้นแบ่งให้ตามลำดับแถว */
+function pickupDocPreviewAllocate(data) {
+    var left = {};
+    for (var i = 0; i < data.lines.length; i++) {
+        var line = data.lines[i];
+        if (line.line_kind === "tech") {
+            continue;
+        }
+        var key = String(line.part_id);
+        if (!(key in left)) {
+            left[key] = Math.max(0, pickupDocNum(line.stock));
+        }
+        line.pay = Math.min(pickupDocNum(line.amount), left[key]);
+        left[key] -= line.pay;
+    }
+}
+
+/** จ่ายได้สูงสุดของแถว = min(จำนวนที่ขอ, สต็อก − ที่แถวอื่นของอะไหล่ตัวเดียวกันจองไว้) */
+function pickupDocPreviewMaxPay(index) {
+    var data = pickupDocPreviewData;
+    var line = data.lines[index];
+    var used = 0;
+    for (var i = 0; i < data.lines.length; i++) {
+        var other = data.lines[i];
+        if (i !== index && other.line_kind !== "tech" && String(other.part_id) === String(line.part_id)) {
+            used += other.pay || 0;
+        }
+    }
+    return Math.max(0, Math.min(pickupDocNum(line.amount), Math.max(0, pickupDocNum(line.stock)) - used));
+}
+
+function pickupDocPreviewUpdateSummary() {
+    var data = pickupDocPreviewData;
+    var box = document.getElementById("pickup_doc_preview_summary");
+    if (!data || !box) {
+        return;
+    }
+    var paid = 0;
+    var pending = 0;
+    for (var i = 0; i < data.lines.length; i++) {
+        var line = data.lines[i];
+        if (line.line_kind === "tech") {
+            continue;
+        }
+        var chk = document.querySelector('.pickup-doc-preview-chk[data-line-index="' + i + '"]');
+        var pay = chk && chk.checked ? (line.pay || 0) : 0;
+        var rest = Math.max(0, pickupDocNum(line.amount) - pay);
+        var rem = document.querySelector('[data-rem-index="' + i + '"]');
+        if (rem) {
+            rem.textContent = rest > 0.005 ? "ค้าง " + pickupDocFmt(rest) : "";
+        }
+        if (pay > 0) {
+            paid++;
+        }
+        if (rest > 0.005) {
+            pending++;
+        }
+    }
+    box.innerHTML = '<span class="is-paid">จ่ายครั้งนี้ ' + paid + " รายการ</span>" +
+        (pending > 0
+            ? '<span class="is-pending">ค้างไว้ในเอกสาร ' + pending + " รายการ</span>"
+            : '<span class="is-closed">จ่ายครบ · ปิดเอกสาร</span>');
+}
+
+function pickupDocPreviewBindInputs() {
+    var body = document.getElementById("pickup_doc_preview_body");
+    if (!body || body.getAttribute("data-bound") === "1") {
+        return;
+    }
+    body.setAttribute("data-bound", "1");
+    body.addEventListener("change", function(ev) {
+        var t = ev.target;
+        var data = pickupDocPreviewData;
+        if (!data) {
+            return;
+        }
+        var index = parseInt(t.getAttribute("data-line-index"), 10);
+        if (isNaN(index)) {
+            return;
+        }
+        var line = data.lines[index];
+        var qty = document.getElementById("pickup_doc_pay_" + index);
+        if (t.classList.contains("pickup-doc-preview-qty")) {
+            var v = Math.max(0, Math.min(pickupDocNum(t.value), pickupDocPreviewMaxPay(index)));
+            line.pay = v;
+            t.value = pickupDocFmt(v);
+            var chk = document.querySelector('.pickup-doc-preview-chk[data-line-index="' + index + '"]');
+            if (chk) {
+                chk.checked = v > 0;
+            }
+        } else if (t.classList.contains("pickup-doc-preview-chk")) {
+            if (t.checked && (line.pay || 0) <= 0) {
+                line.pay = pickupDocPreviewMaxPay(index);
+                if (line.pay <= 0) {
+                    t.checked = false;
+                    alert("อะไหล่นี้ไม่มีในคลังให้จ่าย — รายการจะค้างไว้ในเอกสาร");
+                }
+            } else if (!t.checked) {
+                line.pay = 0;
+            }
+            if (qty) {
+                qty.value = pickupDocFmt(line.pay);
+            }
+        }
+        pickupDocPreviewUpdateSummary();
+    });
 }
 
 /**
@@ -291,21 +427,20 @@ function confirmPickupDocPreview() {
                 var chkEl = document.querySelector(
                     '.pickup-doc-preview-chk[data-line-index="' + i + '"]'
                 );
-                var chk = chkEl && chkEl.checked ? "YES" : "NO";
+                var pay = chkEl && chkEl.checked ? (line.pay || 0) : 0;
+                var chk = pay > 0 ? "YES" : "NO";
                 if (chk === "YES") {
                     countCheck++;
                 }
                 logIdx++;
                 dataRow +=
-                    "&log_part" + logIdx + "=" + encodeURIComponent(line.part_id || "") +
-                    "&log_product" + logIdx + "=" + encodeURIComponent(line.product || "") +
-                    "&log_amount" + logIdx + "=" + encodeURIComponent(line.amount || "") +
-                    "&log_remarks" + logIdx + "=" + encodeURIComponent(line.remarks || "") +
+                    "&pre_running" + logIdx + "=" + encodeURIComponent(line.pre_running || "") +
+                    "&log_amount" + logIdx + "=" + encodeURIComponent(pickupDocFmt(pay)) +
                     "&check" + logIdx + "=" + encodeURIComponent(chk);
             }
 
             if (countCheck === 0) {
-                alert("กรุณาเลือกรายการที่ต้องการจ่ายอย่างน้อย 1 รายการ");
+                alert("ยังไม่มีรายการที่จ่ายได้ — เลือกรายการและใส่จำนวนจ่ายอย่างน้อย 1 รายการ");
                 return;
             }
 

@@ -293,13 +293,15 @@ function inventory_config_node_red_call_lift_visibility()
 }
 
 /**
- * IP สาธารณะของ Wi‑Fi ออฟฟิศ (คั่นด้วย comma) — เปลี่ยนเมื่อ ISP เปลี่ยน IP
+ * IP สาธารณะของ Wi‑Fi ออฟฟิศ (คั่นด้วย comma) — ใส่เป็น IP เดี่ยวหรือช่วงแบบ CIDR เช่น 183.89.0.0/16
+ *
+ * ค่าเริ่มต้นเป็นช่วง เพราะ ISP เปลี่ยน IP ออฟฟิศเป็นระยะ (เคยเป็น 183.89.61.125 → 183.89.58.154)
  *
  * @return string[]
  */
 function inventory_config_node_red_call_lift_office_ips()
 {
-    $raw = inventory_config_get('node_red_call_lift_office_ips', '183.89.61.125');
+    $raw = inventory_config_get('node_red_call_lift_office_ips', '183.89.0.0/16');
     $ips = array();
     foreach (explode(',', (string) $raw) as $ip) {
         $ip = trim($ip);
@@ -324,11 +326,37 @@ function inventory_config_client_is_office_network()
     if ($ip === '' || filter_var($ip, FILTER_VALIDATE_IP) === false) {
         return false;
     }
-    if (in_array($ip, inventory_config_node_red_call_lift_office_ips(), true)) {
-        return true;
+    foreach (inventory_config_node_red_call_lift_office_ips() as $rule) {
+        if (inventory_config_ip_matches($ip, $rule)) {
+            return true;
+        }
     }
 
     return filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false;
+}
+
+/**
+ * IP ตรงกับกฎหรือไม่ — กฎเป็น IP เดี่ยว (IPv4/IPv6) หรือช่วง IPv4 แบบ CIDR
+ *
+ * @param string $ip IP ของผู้ใช้
+ * @param string $rule เช่น 183.89.58.154 หรือ 183.89.0.0/16
+ * @return bool
+ */
+function inventory_config_ip_matches($ip, $rule)
+{
+    if (strpos($rule, '/') === false) {
+        return $ip === $rule;
+    }
+    $parts = explode('/', $rule, 2);
+    $bits = filter_var($parts[1], FILTER_VALIDATE_INT, array('options' => array('min_range' => 0, 'max_range' => 32)));
+    $ipLong = ip2long($ip);
+    $netLong = ip2long(trim($parts[0]));
+    if ($bits === false || $ipLong === false || $netLong === false) {
+        return false;
+    }
+    $mask = $bits === 0 ? 0 : ((0xFFFFFFFF << (32 - $bits)) & 0xFFFFFFFF);
+
+    return ($ipLong & $mask) === ($netLong & $mask);
 }
 
 /**

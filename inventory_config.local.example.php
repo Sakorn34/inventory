@@ -31,8 +31,9 @@ return array(
     // ไม่ใช้การ ping Node-RED (จะโดน popup ล็อกอิน ถ้า Node-RED มี Basic Auth)
     'node_red_call_lift_visibility' => 'auto',
 
-    // IP สาธารณะของ Wi‑Fi ออฟฟิศ (ค้น "what is my ip" ขณะต่อ Wi‑Fi ออฟฟิศ) คั่นหลายค่าด้วย comma
-    'node_red_call_lift_office_ips' => '183.89.61.125',
+    // IP สาธารณะของ Wi‑Fi ออฟฟิศ (ค้น "what is my ip" ขณะต่อ Wi‑Fi ออฟฟิศ) — IP เดี่ยวหรือช่วง CIDR คั่นด้วย comma
+    // ISP เปลี่ยน IP เป็นระยะ จึงใช้ช่วง 183.89.0.0/16; ถ้าจะเข้มขึ้นให้ใส่ IP เดี่ยวแทน
+    'node_red_call_lift_office_ips' => '183.89.0.0/16',
 
     // ระดับเสียงตอนแจ้งยกของ 0–100 (ส่งเป็น ?volume= ไป call_Lift) — ต้องให้ flow Node-RED ใช้ค่านี้ก่อน Cast/TTS
     // ปล่อยว่างถ้าปรับที่ลำโพงหรือใน Node-RED อย่างเดียว (ถ้าหมุนลดเสียงที่ลำโพงแล้วพูดยังดัง มักมี node “ตั้ง volume” ใน flow)

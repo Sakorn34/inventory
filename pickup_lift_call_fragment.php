@@ -75,6 +75,11 @@ $pickupLiftSectionRender = $pickupLiftCallEnabled
         || ($pickupLiftVisibility === 'auto' && inventory_config_client_is_office_network()));
 
 if (!$pickupLiftSectionRender) {
+    if ($pickupLiftCallEnabled && $pickupLiftVisibility === 'auto') {
+        // ไว้ตรวจเวลา IP ออฟฟิศเปลี่ยน: ดู view-source ว่า server เห็น IP อะไร แล้วเพิ่มใน node_red_call_lift_office_ips
+        $pickupLiftSeenIp = isset($_SERVER['REMOTE_ADDR']) ? (string) filter_var($_SERVER['REMOTE_ADDR'], FILTER_VALIDATE_IP) : '';
+        echo '<!-- pickup-lift: hidden, server sees IP ' . htmlspecialchars($pickupLiftSeenIp, ENT_QUOTES, 'UTF-8') . " -->\n";
+    }
     return;
 }
 

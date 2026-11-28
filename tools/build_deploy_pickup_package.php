@@ -86,6 +86,9 @@ $DEPLOY_WEB_RELATIVE_PATHS = array(
     'images/pickup-lift-walk-5.gif',
     'images/pickup-lift-walk-6.gif',
     'images/pickup-lift-walk-7.gif',
+    'images/inventory-icon-32.png',
+    'images/inventory-icon-192.png',
+    'images/inventory-apple-touch-icon.png',
 );
 
 /** @var string[] เอกสารอ้างอิง (ไม่บังคับ copy ขึ้น server) */

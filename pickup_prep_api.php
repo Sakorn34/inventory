@@ -9,6 +9,7 @@
  * Flow สั้น:
  * 1. GET  ?token=...&action=list
  * 2. POST ?token=...&action=set_prepared  body JSON { pre_running, prepared }
+ * 3. POST ?token=...&action=unlock  body JSON { pin } — ต้องปลดล็อกก่อนเรียก list/set_prepared (ถ้าตั้ง PIN)
  *
  * ตัวอย่าง: pickup_prep_api.php?token=SECRET&action=list
  */
@@ -428,6 +429,27 @@ pickup_prep_api_require_token();
 $action = isset($_GET['action']) ? trim((string) $_GET['action']) : '';
 if ($action === '' && isset($_POST['action'])) {
     $action = trim((string) $_POST['action']);
+}
+
+if ($action === 'unlock') {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        pickup_prep_api_json(array('ok' => false, 'message' => 'ใช้ POST เท่านั้น'), 405);
+    }
+    $body = pickup_prep_api_read_json_body();
+    $pin = isset($body['pin']) ? (string) $body['pin'] : '';
+    if (!preg_match('/^\d{1,8}$/', $pin)) {
+        pickup_prep_api_json(array('ok' => false, 'message' => 'รหัสไม่ถูกต้อง'), 400);
+    }
+    $result = pickup_prep_board_try_pin($pin, pickup_prep_board_request_token());
+    pickup_prep_api_json(array(
+        'ok' => $result['ok'],
+        'locked_for' => $result['locked_for'],
+        'tries_left' => $result['tries_left'],
+    ), $result['ok'] ? 200 : ($result['locked_for'] > 0 ? 429 : 401));
+}
+
+if (!pickup_prep_board_is_unlocked(pickup_prep_board_request_token())) {
+    pickup_prep_api_json(array('ok' => false, 'locked' => true, 'message' => 'กรุณาใส่รหัสปลดล็อก'), 401);
 }
 
 if ($action === 'list') {

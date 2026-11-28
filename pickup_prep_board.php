@@ -16,6 +16,7 @@ require_once __DIR__ . '/pickup_prep_board_auth.php';
 
 $token = pickup_prep_board_request_token();
 $tokenOk = pickup_prep_board_token_valid($token);
+$unlocked = $tokenOk && pickup_prep_board_is_unlocked($token);
 
 $h = static function ($s) {
     return htmlspecialchars((string) $s, ENT_QUOTES, 'UTF-8');
@@ -24,6 +25,7 @@ $h = static function ($s) {
 header('Content-Type: text/html; charset=UTF-8');
 header('X-Content-Type-Options: nosniff');
 header('Referrer-Policy: no-referrer');
+header('Cache-Control: no-store');
 ?>
 <!DOCTYPE html>
 <html lang="th">
@@ -37,7 +39,7 @@ header('Referrer-Policy: no-referrer');
 <link rel="apple-touch-icon" href="images/bitcombine-logo.png" />
 <?php require_once __DIR__ . '/inventory_ui_fonts.php'; ?>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mitr:wght@500&amp;display=swap" />
-<link rel="stylesheet" href="css/pickup-prep.css?v=21" />
+<link rel="stylesheet" href="css/pickup-prep.css?v=22" />
 </head>
 <body class="prep-board">
 <?php if (!$tokenOk) {
@@ -49,6 +51,220 @@ header('Referrer-Policy: no-referrer');
     <p><?php echo $h($gateHint); ?></p>
   </div>
 </div>
+<?php } elseif (!$unlocked) {
+    $pinLength = strlen(inventory_config_pickup_prep_board_pin());
+    ?>
+<div class="prep-board__sparkles" aria-hidden="true">
+  <?php foreach (array(array(8, 0), array(30, 5), array(52, 10), array(74, 2.5), array(90, 7.5)) as $sp) { ?>
+  <span class="prep-board__sparkle" style="left:<?php echo $sp[0]; ?>%;animation-delay:<?php echo $sp[1]; ?>s"></span>
+  <?php } ?>
+</div>
+<div class="prep-lock" id="prep_lock" data-token="<?php echo $h($token); ?>" data-len="<?php echo (int) $pinLength; ?>">
+  <div class="prep-lock__panel">
+    <h1 class="prep-lock__title">จัดของรอเบิก</h1>
+    <p class="prep-lock__hint">กดรหัส <?php echo (int) $pinLength; ?> หลักเพื่อเปิดตู้เซฟ</p>
+    <div class="prep-lock__stage" aria-hidden="true">
+      <div class="prep-lock__peek"><svg viewBox="0 0 32 34"><rect x="8" y="28" width="5" height="5" rx="1.5" fill="#4a2c05"/><rect x="19" y="28" width="5" height="5" rx="1.5" fill="#4a2c05"/><rect x="2" y="4" width="28" height="25" rx="5" fill="#c98a4b"/><rect x="13" y="4" width="6" height="8" fill="#e9c08f"/><circle cx="11" cy="15" r="3.6" fill="#fff"/><circle cx="21" cy="15" r="3.6" fill="#fff"/><circle cx="11.9" cy="15.6" r="1.7" fill="#2b1a07"/><circle cx="21.9" cy="15.6" r="1.7" fill="#2b1a07"/><path d="M11.5 20.5q4.5 4.5 9 0" fill="#2b1a07" stroke="#2b1a07" stroke-width="1.4" stroke-linecap="round"/><circle cx="7" cy="20" r="1.8" fill="#f2a07a" opacity=".7"/><circle cx="25" cy="20" r="1.8" fill="#f2a07a" opacity=".7"/></svg></div>
+      <div class="prep-lock__safe">
+        <span class="prep-lock__dial" id="prep_lock_dial"></span>
+        <span class="prep-lock__bolt"></span><span class="prep-lock__bolt"></span><span class="prep-lock__bolt"></span><span class="prep-lock__bolt"></span>
+        <span class="prep-lock__handle"></span>
+      </div>
+    </div>
+    <div class="prep-lock__dots" id="prep_lock_dots" role="img" aria-label="ใส่รหัสแล้ว 0 หลัก">
+      <?php for ($d = 0; $d < $pinLength; $d++) { ?><span class="prep-lock__dot"></span><?php } ?>
+    </div>
+    <p class="prep-lock__msg" id="prep_lock_msg" role="status" aria-live="polite"></p>
+    <div class="prep-lock__pad" id="prep_lock_pad">
+      <?php foreach (array('1', '2', '3', '4', '5', '6', '7', '8', '9') as $digit) { ?>
+      <button type="button" class="prep-lock__key" data-key="<?php echo $digit; ?>"><?php echo $digit; ?></button>
+      <?php } ?>
+      <button type="button" class="prep-lock__key prep-lock__key--fn" data-key="clear">ล้าง</button>
+      <button type="button" class="prep-lock__key" data-key="0">0</button>
+      <button type="button" class="prep-lock__key prep-lock__key--fn" data-key="back" aria-label="ลบตัวล่าสุด">ลบ</button>
+    </div>
+  </div>
+</div>
+<script>
+(function () {
+  "use strict";
+
+  var root = document.getElementById("prep_lock");
+  var token = root.getAttribute("data-token") || "";
+  var pinLen = parseInt(root.getAttribute("data-len"), 10) || 4;
+  var dots = document.querySelectorAll(".prep-lock__dot");
+  var dotsBox = document.getElementById("prep_lock_dots");
+  var bolts = document.querySelectorAll(".prep-lock__bolt");
+  var dial = document.getElementById("prep_lock_dial");
+  var msgEl = document.getElementById("prep_lock_msg");
+  var pad = document.getElementById("prep_lock_pad");
+  var reduceMotion = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  var code = "";
+  var busy = false;
+
+  function paint() {
+    dots.forEach(function (d, i) {
+      d.classList.toggle("is-on", i < code.length);
+    });
+    var lit = Math.round((code.length / pinLen) * bolts.length);
+    bolts.forEach(function (b, i) {
+      b.classList.toggle("is-on", i < lit);
+    });
+    dial.style.transform = "rotate(" + (code.length * 97) + "deg)";
+    dotsBox.setAttribute("aria-label", "ใส่รหัสแล้ว " + code.length + " หลัก");
+  }
+
+  function say(text, kind) {
+    msgEl.textContent = text;
+    msgEl.className = "prep-lock__msg" + (kind ? " is-" + kind : "");
+  }
+
+  function ripple(btn, ev) {
+    if (reduceMotion) {
+      return;
+    }
+    var r = btn.getBoundingClientRect();
+    var dot = document.createElement("span");
+    dot.className = "prep-lock__ripple";
+    dot.style.left = ((ev.clientX || r.left + r.width / 2) - r.left) + "px";
+    dot.style.top = ((ev.clientY || r.top + r.height / 2) - r.top) + "px";
+    btn.appendChild(dot);
+    window.setTimeout(dot.remove.bind(dot), 500);
+  }
+
+  function floatDigit(btn) {
+    if (reduceMotion) {
+      return;
+    }
+    var r = btn.getBoundingClientRect();
+    var f = document.createElement("span");
+    f.className = "prep-lock__float";
+    f.textContent = "•";
+    f.style.left = (r.left + r.width / 2 - 6) + "px";
+    f.style.top = (r.top - 8) + "px";
+    document.body.appendChild(f);
+    window.setTimeout(f.remove.bind(f), 700);
+  }
+
+  function confetti() {
+    if (reduceMotion) {
+      return;
+    }
+    var colors = ["#f59e0b", "#22c55e", "#ff8a3d", "#60a5fa", "#f472b6"];
+    for (var i = 0; i < 40; i++) {
+      var piece = document.createElement("span");
+      piece.className = "prep-board__confetti";
+      piece.style.left = Math.round(Math.random() * 100) + "vw";
+      piece.style.background = colors[i % colors.length];
+      piece.style.animationDelay = Math.round(Math.random() * 450) + "ms";
+      piece.style.setProperty("--x", Math.round(Math.random() * 80 - 40) + "px");
+      document.body.appendChild(piece);
+      window.setTimeout(piece.remove.bind(piece), 2400);
+    }
+  }
+
+  function wrong() {
+    root.classList.remove("is-wrong");
+    void root.offsetWidth;
+    root.classList.add("is-wrong");
+    if (navigator.vibrate) {
+      navigator.vibrate([120, 60, 120]);
+    }
+    window.setTimeout(function () {
+      root.classList.remove("is-wrong");
+    }, 950);
+  }
+
+  function lockout(seconds) {
+    busy = true;
+    pad.classList.add("is-disabled");
+    var endAt = Date.now() + seconds * 1000;
+    function tick() {
+      var left = Math.ceil((endAt - Date.now()) / 1000);
+      if (left <= 0) {
+        pad.classList.remove("is-disabled");
+        busy = false;
+        say("", "");
+        return;
+      }
+      say("ใส่ผิดหลายครั้ง — รอ " + left + " วินาทีแล้วลองใหม่", "wait");
+      window.setTimeout(tick, 500);
+    }
+    tick();
+  }
+
+  function submit() {
+    busy = true;
+    fetch("pickup_prep_api.php?token=" + encodeURIComponent(token) + "&action=unlock", {
+      method: "POST",
+      credentials: "same-origin",
+      cache: "no-store",
+      headers: { "Content-Type": "application/json", "X-Prep-Board-Token": token },
+      body: JSON.stringify({ pin: code })
+    })
+      .then(function (res) {
+        return res.json();
+      })
+      .then(function (body) {
+        if (body && body.ok) {
+          root.classList.add("is-open");
+          say("ถูกต้อง! กำลังเปิดตู้เซฟ…", "ok");
+          confetti();
+          window.setTimeout(function () {
+            window.location.reload();
+          }, reduceMotion ? 300 : 1700);
+          return;
+        }
+        code = "";
+        wrong();
+        window.setTimeout(paint, 450);
+        if (body && body.locked_for > 0) {
+          lockout(body.locked_for);
+          return;
+        }
+        say("รหัสไม่ถูกต้อง" + (body && body.tries_left ? " · เหลืออีก " + body.tries_left + " ครั้ง" : ""), "bad");
+        window.setTimeout(function () {
+          busy = false;
+        }, 600);
+      })
+      .catch(function () {
+        code = "";
+        paint();
+        busy = false;
+        say("เชื่อมต่อไม่ได้ ลองใหม่อีกครั้ง", "bad");
+      });
+  }
+
+  // กดได้จากปุ่มบนจอเท่านั้น — ไม่มีช่องให้พิมพ์และไม่รับคีย์บอร์ด
+  pad.addEventListener("click", function (ev) {
+    var btn = ev.target.closest(".prep-lock__key");
+    if (!btn || busy) {
+      return;
+    }
+    ripple(btn, ev);
+    var key = btn.getAttribute("data-key");
+    if (key === "clear") {
+      code = "";
+      say("", "");
+    } else if (key === "back") {
+      code = code.slice(0, -1);
+    } else if (code.length < pinLen) {
+      code += key;
+      floatDigit(btn);
+      if (navigator.vibrate) {
+        navigator.vibrate(15);
+      }
+    }
+    paint();
+    if (code.length === pinLen) {
+      busy = true;
+      window.setTimeout(submit, 220);
+    }
+  });
+
+  paint();
+})();
+</script>
 <?php } else { ?>
 <div class="prep-board__sparkles" aria-hidden="true">
   <?php foreach (array(array(8, 0), array(30, 5), array(52, 10), array(74, 2.5), array(90, 7.5)) as $sp) { ?>
@@ -656,6 +872,10 @@ header('Referrer-Policy: no-referrer');
       })
       .then(function (result) {
         doneLoading();
+        if (result.body && result.body.locked) {
+          window.location.reload();
+          return;
+        }
         if (!result.body || !result.body.ok) {
           var msg = (result.body && result.body.message) ? result.body.message : "โหลดไม่สำเร็จ";
           if (main) {
@@ -720,6 +940,10 @@ header('Referrer-Policy: no-referrer');
       .then(function (result) {
         if (rowEl) {
           rowEl.classList.remove("is-busy");
+        }
+        if (result.body && result.body.locked) {
+          window.location.reload();
+          return;
         }
         if (!result.body || !result.body.ok) {
           found.line.prepared = prev;

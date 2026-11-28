@@ -1295,6 +1295,288 @@ body.pickup-lift-dialog-open {
   transform: translate(-50%, 0) scale(1);
 }
 
+/* ─ หน้าล็อก PIN: ตู้เซฟลับ ─────────────────────────────────────────────── */
+
+.prep-lock {
+  position: relative;
+  z-index: 1;
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: calc(1.25rem + env(safe-area-inset-top, 0)) 1rem calc(1.25rem + env(safe-area-inset-bottom, 0));
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.prep-lock__panel {
+  width: 100%;
+  max-width: 340px;
+  text-align: center;
+}
+
+.prep-lock__title {
+  margin: 0;
+  font-family: var(--prep-display);
+  font-size: 1.5rem;
+  font-weight: 500;
+  color: var(--prep-header-ink);
+}
+
+.prep-lock__hint {
+  margin: 0.2rem 0 0;
+  font-size: 0.85rem;
+  color: var(--prep-muted);
+}
+
+.prep-lock__stage {
+  position: relative;
+  height: 196px;
+  display: grid;
+  place-items: center;
+  margin: 0.6rem 0 0.4rem;
+}
+
+.prep-lock__stage::before {
+  content: "";
+  position: absolute;
+  width: 196px;
+  height: 182px;
+  border-radius: 26px;
+  background: #fef3c7;
+  border: 3px dashed #f59e0b;
+}
+
+.prep-lock__safe {
+  position: relative;
+  z-index: 2;
+  width: 152px;
+  height: 152px;
+  border-radius: 22px;
+  background: linear-gradient(145deg, #b4bac4, #808893);
+  border: 5px solid #4b5563;
+  box-shadow: inset 0 0 0 7px #d1d5db, 6px 6px 0 #e9a93c;
+  transform-origin: left center;
+  transition: transform 0.9s cubic-bezier(0.5, 0, 0.3, 1);
+}
+
+.prep-lock__dial {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 72px;
+  height: 72px;
+  margin: -36px 0 0 -36px;
+  border-radius: 50%;
+  border: 5px solid #374151;
+  background:
+    repeating-conic-gradient(#9ca3af 0 2deg, transparent 2deg 30deg),
+    radial-gradient(circle, #f3f4f6 55%, #e5e7eb 56%);
+  transition: transform 0.4s var(--prep-spring);
+}
+
+.prep-lock__dial::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 4px;
+  width: 5px;
+  height: 16px;
+  margin-left: -2.5px;
+  border-radius: 3px;
+  background: #ef4444;
+}
+
+.prep-lock__bolt {
+  position: absolute;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: #4b5563;
+  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.25);
+  transition: background 0.25s ease, box-shadow 0.25s ease;
+}
+
+.prep-lock__bolt:nth-of-type(2) { left: 12px; top: 12px; }
+.prep-lock__bolt:nth-of-type(3) { right: 12px; top: 12px; }
+.prep-lock__bolt:nth-of-type(4) { right: 12px; bottom: 12px; }
+.prep-lock__bolt:nth-of-type(5) { left: 12px; bottom: 12px; }
+
+.prep-lock__bolt.is-on {
+  background: #22c55e;
+  box-shadow: 0 0 12px #22c55e, inset 0 -2px 0 rgba(0, 0, 0, 0.15);
+}
+
+.prep-lock__handle {
+  position: absolute;
+  right: -9px;
+  top: 50%;
+  width: 10px;
+  height: 46px;
+  margin-top: -23px;
+  border-radius: 5px;
+  background: #374151;
+}
+
+.prep-lock__peek {
+  position: absolute;
+  z-index: 1;
+  width: 96px;
+  height: 90px;
+  opacity: 0;
+  transform: scale(0.5);
+  transition: opacity 0.35s ease 0.45s, transform 0.5s var(--prep-spring) 0.45s;
+}
+
+.prep-lock__peek svg {
+  width: 100%;
+  height: 100%;
+}
+
+.prep-lock.is-open .prep-lock__safe {
+  transform: perspective(520px) rotateY(-80deg);
+}
+
+.prep-lock.is-open .prep-lock__peek {
+  opacity: 1;
+  transform: scale(1);
+  animation: prep-jump 0.6s var(--prep-spring) 1s 2;
+}
+
+.prep-lock.is-wrong .prep-lock__safe {
+  animation: prep-lock-rattle 0.4s ease;
+}
+
+.prep-lock.is-wrong .prep-lock__stage::before {
+  animation: prep-lock-alarm 0.45s ease 2;
+}
+
+.prep-lock__dots {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  margin: 0.4rem 0 0.2rem;
+}
+
+.prep-lock__dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid #e9a93c;
+  background: #fff;
+  transition: transform 0.2s var(--prep-spring), background 0.2s ease, border-color 0.2s ease;
+}
+
+.prep-lock__dot.is-on {
+  background: var(--prep-orange);
+  border-color: var(--prep-orange-deep);
+  transform: scale(1.2);
+}
+
+.prep-lock.is-wrong .prep-lock__dots {
+  animation: prep-lock-shake 0.45s ease;
+}
+
+.prep-lock.is-wrong .prep-lock__dot {
+  border-color: #ef4444;
+  background: #fecaca;
+}
+
+.prep-lock__msg {
+  min-height: 1.4rem;
+  margin: 0.35rem 0 0.6rem;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.prep-lock__msg.is-bad { color: #b91c1c; }
+.prep-lock__msg.is-ok { color: #15803d; }
+.prep-lock__msg.is-wait { color: #b45309; }
+
+.prep-lock__pad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  max-width: 264px;
+  margin: 0 auto;
+}
+
+.prep-lock__key {
+  position: relative;
+  overflow: hidden;
+  height: 60px;
+  border: 2px solid #f2b94a;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 4px 0 #e9a93c;
+  color: var(--prep-header-ink);
+  font-family: inherit;
+  font-size: 1.55rem;
+  font-weight: 700;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  transition: transform 0.08s ease, box-shadow 0.08s ease;
+}
+
+.prep-lock__key:active {
+  transform: translateY(4px);
+  box-shadow: 0 0 0 #e9a93c;
+}
+
+.prep-lock__key--fn {
+  background: #fff3d6;
+  font-size: 0.95rem;
+}
+
+.prep-lock__pad.is-disabled .prep-lock__key {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.prep-lock__ripple {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -6px;
+  border-radius: 50%;
+  background: rgba(255, 138, 61, 0.45);
+  pointer-events: none;
+  animation: prep-lock-ripple 0.5s ease-out forwards;
+}
+
+.prep-lock__float {
+  position: fixed;
+  z-index: 50;
+  color: var(--prep-orange);
+  font-size: 1.4rem;
+  font-weight: 700;
+  pointer-events: none;
+  animation: prep-lock-float 0.7s ease-out forwards;
+}
+
+@keyframes prep-lock-rattle {
+  25% { transform: rotate(-4deg); }
+  75% { transform: rotate(4deg); }
+}
+
+@keyframes prep-lock-alarm {
+  50% { background: #fee2e2; border-color: #ef4444; }
+}
+
+@keyframes prep-lock-shake {
+  20%, 60% { transform: translateX(-9px); }
+  40%, 80% { transform: translateX(9px); }
+}
+
+@keyframes prep-lock-ripple {
+  to { transform: scale(10); opacity: 0; }
+}
+
+@keyframes prep-lock-float {
+  to { transform: translateY(-40px); opacity: 0; }
+}
+
 /* ─ ดาวกระจาย + พลุกระดาษ (สร้างจาก JS) ─────────────────────────────────── */
 
 .prep-board__burst {

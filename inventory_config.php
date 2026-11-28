@@ -57,6 +57,7 @@ function inventory_config_env_names()
         'low_stock_mail_from' => 'INVENTORY_LOW_STOCK_MAIL_FROM',
         'low_stock_base_url' => 'INVENTORY_LOW_STOCK_BASE_URL',
         'pickup_prep_board_token' => 'INVENTORY_PICKUP_PREP_BOARD_TOKEN',
+        'pickup_prep_board_pin' => 'INVENTORY_PICKUP_PREP_BOARD_PIN',
         'node_red_call_lift_url' => 'INVENTORY_NODE_RED_CALL_LIFT_URL',
         'node_red_call_lift_prelude_url' => 'INVENTORY_NODE_RED_CALL_LIFT_PRELUDE_URL',
         'node_red_call_lift_prelude_delay_ms' => 'INVENTORY_NODE_RED_CALL_LIFT_PRELUDE_DELAY_MS',
@@ -131,6 +132,28 @@ function inventory_config_pickup_prep_board_token()
     }
 
     return inventory_config_line_stock_url_token();
+}
+
+/**
+ * รหัส PIN ปลดล็อกหน้ามือถือจัดของรอเบิก (ตัวเลข 4–8 หลัก) — ค่าว่างหรือไม่ใช่ตัวเลข = ไม่ล็อก
+ *
+ * อ่านจาก inventory_config.local.php (pickup_prep_board_pin) ก่อน แล้วจึงไฟล์ pickup_prep_board_pin.local.php
+ * (return '1234';) — ทั้งสองไฟล์ไม่เข้า git; เปลี่ยนรหัสแล้วทุกเครื่องต้องใส่ใหม่
+ *
+ * @return string
+ */
+function inventory_config_pickup_prep_board_pin()
+{
+    $pin = trim((string) inventory_config_get('pickup_prep_board_pin', ''));
+    if ($pin === '') {
+        $pinFile = __DIR__ . '/pickup_prep_board_pin.local.php';
+        if (is_readable($pinFile)) {
+            $loaded = include $pinFile;
+            $pin = is_scalar($loaded) ? trim((string) $loaded) : '';
+        }
+    }
+
+    return preg_match('/^\d{4,8}$/', $pin) ? $pin : '';
 }
 
 /**

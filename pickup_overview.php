@@ -232,7 +232,6 @@ function renderPickupDocPreview(data) {
             '<input type="checkbox" class="pickup-doc-preview-chk" data-line-index="' + i + '" value="YES"' + (pay > 0 ? " checked" : "") + ' aria-label="เลือกรายการที่ ' + (i + 1) + '">' +
             "</label>" +
             '<div class="pickup-doc-preview-line__main">' +
-            pickupDocLocBadge(line) +
             '<span class="pickup-doc-preview-line__name">' + pickupDocPreviewEscape(line.part_name) + "</span>" +
             (line.product ? ('<span class="pickup-doc-preview-line__product">' + pickupDocPreviewEscape(line.product) + "</span>") : "") +
             '<span class="pickup-doc-preview-line__stock ' + stockState + '">' + stockText + " · มี " + pickupDocFmt(stock) + " / ขอ " + pickupDocFmt(req) + "</span>" +
@@ -259,17 +258,6 @@ function renderPickupDocPreview(data) {
         '<ul class="pickup-doc-preview-lines">' + linesHtml + "</ul>" +
         '<div class="pickup-doc-preview-summary" id="pickup_doc_preview_summary"></div>';
     pickupDocPreviewUpdateSummary();
-}
-
-/**
- * ป้ายตำแหน่งเก็บในห้องคลัง (ชั้น-ระดับ · หมายเหตุ) — แถวถูกเรียงตามตำแหน่งมาจาก pickup_document_lines.php แล้ว
- */
-function pickupDocLocBadge(line) {
-    if (!line.location) {
-        return '<span class="inv-loc inv-loc--none" title="ยังไม่ระบุตำแหน่งเก็บ">ไม่ระบุตำแหน่ง</span>';
-    }
-    return '<span class="inv-loc" title="ตำแหน่งเก็บ: ชั้นวาง-ระดับ">' + pickupDocPreviewEscape(line.location) + "</span>" +
-        (line.location_note ? '<span class="inv-loc-note">' + pickupDocPreviewEscape(line.location_note) + "</span>" : "");
 }
 
 function pickupDocNum(value) {

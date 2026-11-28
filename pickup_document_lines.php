@@ -8,7 +8,6 @@
 
 require_once __DIR__ . '/connect.php';
 require_once __DIR__ . '/pickup_pre_stock_tech.php';
-require_once __DIR__ . '/part_location_lib.php';
 
 header('Content-Type: application/json; charset=UTF-8');
 header('X-Content-Type-Options: nosniff');
@@ -33,25 +32,15 @@ if ($preId === '' || !pickup_document_lines_valid_pre_id($preId)) {
     exit;
 }
 
-// ตำแหน่งเก็บในห้องคลัง (part_location) — เรียงแถวตามทางเดิน ชั้น → ระดับ ที่ยังไม่มีตำแหน่งไปท้าย
-$locReady = part_location_db_ready($connect);
-$locCols = $locReady
-    ? 'COALESCE(pl.`shelf`, ""), COALESCE(pl.`level`, 0), COALESCE(pl.`note`, "")'
-    : '"", 0, ""';
-$locJoin = $locReady ? 'LEFT JOIN `part_location` pl ON pl.`part_id` = ps.`pre_part`' : '';
-$locOrder = $locReady ? '(pl.`part_id` IS NULL), pl.`shelf`, pl.`level`, ' : '';
-
 // paid_amount = ยอดที่จ่ายไปแล้วจากแถวนี้ (จ่ายบางส่วน) — ดูจาก log_stock ของเอกสาร/อะไหล่/สินค้าเดียวกัน
 $sql = 'SELECT ps.`pre_running`, ps.`pre_date`, ps.`pre_by`, ps.`pre_type`, ps.`pre_product`, ps.`pre_amount`, ps.`pre_remarks`,
                ps.`ts_mtn_number`, ps.`pre_part`, p.`part_name`, p.`part_amount`,
                (SELECT COALESCE(SUM(ls.`log_amount`), 0) FROM `log_stock` ls
-                WHERE ls.`pre_id` = ps.`pre_id` AND ls.`log_part` = p.`part_name` AND ls.`log_product` = ps.`pre_product`) AS `paid_amount`,
-               ' . $locCols . '
+                WHERE ls.`pre_id` = ps.`pre_id` AND ls.`log_part` = p.`part_name` AND ls.`log_product` = ps.`pre_product`) AS `paid_amount`
         FROM `pre_stock` ps
         INNER JOIN `part` p ON ps.`pre_part` = p.`part_id`
-        ' . $locJoin . '
         WHERE ps.`pre_id` = ? AND ps.`pre_status` = ?
-        ORDER BY ' . $locOrder . 'ps.`pre_running` ASC';
+        ORDER BY ps.`pre_running` ASC';
 
 $stmt = mysqli_prepare($connect, $sql);
 if ($stmt === false) {
@@ -77,10 +66,7 @@ mysqli_stmt_bind_result(
     $prePart,
     $partName,
     $partStock,
-    $paidAmount,
-    $locShelf,
-    $locLevel,
-    $locNote
+    $paidAmount
 );
 
 $lines = array();
@@ -111,8 +97,6 @@ while (mysqli_stmt_fetch($stmt)) {
         'product' => (string) $preProduct,
         'amount' => (string) $preAmount,
         'remarks' => $lineRemark,
-        'location' => part_location_code($locShelf, $locLevel),
-        'location_note' => (string) $locNote,
     );
 }
 

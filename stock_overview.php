@@ -3,7 +3,6 @@ require_once __DIR__ . '/connect.php';
 require_once __DIR__ . '/function.php';
 require_once __DIR__ . '/line_stock_alert.php';
 require_once __DIR__ . '/stock_flash.php';
-require_once __DIR__ . '/part_location_lib.php';
 
 $stockOverviewFlash = stock_flash_consume();
 
@@ -155,18 +154,6 @@ $parts = array();
 $execChart = db_exec($connect, $sql) or die('Error Query');
 while ($rowChart = db_fetch_array($execChart)) {
     $parts[] = $rowChart;
-}
-
-// ตำแหน่งเก็บในห้องคลัง (ชั้น-ระดับ) แสดงในคอลัมน์ "ตำแหน่ง"
-$partLocations = array();
-if (part_location_db_ready($connect)) {
-    $locRes = mysqli_query($connect, 'SELECT `part_id`, `shelf`, `level`, `note` FROM `part_location`');
-    if ($locRes !== false) {
-        while ($locRow = mysqli_fetch_assoc($locRes)) {
-            $partLocations[(int) $locRow['part_id']] = $locRow;
-        }
-        mysqli_free_result($locRes);
-    }
 }
 
 $totalParts = count($parts);
@@ -627,7 +614,6 @@ function invInitStockDashboard(payload){
             <th class="inv-col-num">No.</th>
             <th><?php echo $h($lblCategory); ?> Product</th>
             <th><?php echo $h($lblPartName); ?> Part</th>
-            <th title="ชั้นวาง-ระดับ · หมายเหตุ">ตำแหน่ง</th>
             <th class="inv-col-num"><?php echo $h($lblMinStock); ?></th>
             <th class="inv-col-num"><?php echo $h($lblInStock); ?></th>
             <th><?php echo $h($lblStatus); ?></th>
@@ -660,12 +646,6 @@ if (isset($search)) {
             <td class="inv-col-num"><?php echo $num; ?></td>
             <td><?php echo $h($result['ct_name']); ?></td>
             <td><a class="inv-link-part" target="_blank" rel="noopener" href="part_edit.php?part_id=<?php echo $pid; ?>"><?php echo $h($result['part_name']); ?></a></td>
-            <td class="inv-col-loc"><?php
-            $loc = isset($partLocations[$pid]) ? $partLocations[$pid] : array('shelf' => '', 'level' => 0, 'note' => '');
-            echo part_location_code($loc['shelf'], $loc['level']) === ''
-                ? '<span class="inv-loc-empty" title="ยังไม่ระบุตำแหน่ง">' . $dash . '</span>'
-                : part_location_badge_html($loc['shelf'], $loc['level'], $loc['note']);
-            ?></td>
             <td class="inv-col-num"><?php echo $h($result['part_min_alert']); ?></td>
             <td class="inv-col-num"><span class="<?php echo $qc; ?>"><?php echo $h($result['part_amount']); ?></span></td>
             <td><span class="inv-badge <?php echo $bc; ?>"><?php echo $h($sl); ?></span></td>
@@ -685,10 +665,10 @@ if (isset($search)) {
         $num++;
     }
     if ($rows === 0) {
-        echo '<tr><td colspan="9" class="inv-empty"><i class="fa fa-inbox"></i> ' . $h($lblEmpty) . '</td></tr>';
+        echo '<tr><td colspan="8" class="inv-empty"><i class="fa fa-inbox"></i> ' . $h($lblEmpty) . '</td></tr>';
     }
 } else {
-    echo '<tr><td colspan="9" class="inv-empty">' . $h($lblEmpty) . '</td></tr>';
+    echo '<tr><td colspan="8" class="inv-empty">' . $h($lblEmpty) . '</td></tr>';
 }
 ?>
         </tbody>

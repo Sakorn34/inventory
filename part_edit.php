@@ -1,7 +1,6 @@
 <?php
 require_once __DIR__ . '/connect.php';
 require_once __DIR__ . '/inventory_session_actor.php';
-require_once __DIR__ . '/part_location_lib.php';
 header('Content-Type: text/html; charset=UTF-8');
 @setlocale(LC_TIME, 'th_TH.UTF-8', 'th_TH', 'tha');
 ?>
@@ -369,32 +368,6 @@ $arrLengthCt = count($arrayCt);
   <tr> <td align="right" valign="center"> จำนวน Stock : </td> 
     <td > <input type="number" name="part_amount" id="part_amount"  value="<?=$resultPart['part_amount']; ?>" > </td> 
   <td align="right" valign="center"> รูปภาพ : </td> <td > <input type="text" name="part_image" id="part_image" value="<?=$resultPart['part_image']; ?>" > </td></tr>
-<?php
-$partLoc = part_location_get($connect, (int) $part_id);
-$partLocShelf = $partLoc ? $partLoc['shelf'] : '';
-$partLocLevel = $partLoc ? (int) $partLoc['level'] : 0;
-$partLocNote = $partLoc ? $partLoc['note'] : '';
-?>
-  <tr>
-  <td align="right" valign="center"> ตำแหน่งเก็บ : </td>
-  <td colspan="3">
-    <input type="hidden" name="loc_present" value="1">
-    ชั้นวาง <select name="loc_shelf" id="loc_shelf" style="width:auto">
-      <option value="">— ไม่ระบุ —</option>
-      <?php foreach (range('A', 'Z') as $locLetter) { ?>
-      <option value="<?= $locLetter; ?>"<?= $locLetter === $partLocShelf ? ' selected' : ''; ?>><?= $locLetter; ?></option>
-      <?php } ?>
-    </select>
-    ระดับ <select name="loc_level" id="loc_level" style="width:auto">
-      <option value="">—</option>
-      <?php for ($locLv = 1; $locLv <= PART_LOCATION_MAX_LEVEL; $locLv++) { ?>
-      <option value="<?= $locLv; ?>"<?= $locLv === $partLocLevel ? ' selected' : ''; ?>><?= $locLv; ?></option>
-      <?php } ?>
-    </select>
-    หมายเหตุ <input type="text" name="loc_note" id="loc_note" maxlength="100" style="width:16em" placeholder="กล่องฟ้า ซ้ายสุด" value="<?= htmlspecialchars($partLocNote, ENT_QUOTES, 'UTF-8'); ?>">
-    <small style="color:#888">(ระดับ 1 = ล่างสุด)</small>
-  </td>
-  </tr>
     <tr>
     <td colspan="4" ><hr /></td>
    </tr>

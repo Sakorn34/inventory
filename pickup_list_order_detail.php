@@ -10,7 +10,6 @@
  */
 require 'connect.php';
 require_once __DIR__ . '/inventory_session_actor.php';
-require_once __DIR__ . '/part_location_lib.php';
 
 if (session_status() !== PHP_SESSION_ACTIVE) {
     ini_set('session.cookie_httponly', '1');
@@ -64,18 +63,12 @@ $query_error = '';
 $csrf_token = pickup_list_order_detail_csrf_token();
 
 if ($id2 !== '') {
-    // ตำแหน่งเก็บ (part_location) — เรียงตามทางเดินในห้องคลัง ที่ยังไม่มีตำแหน่งไปท้าย
-    $locReady = part_location_db_ready($connect);
-    $locCols = $locReady ? "COALESCE(pl.shelf, ''), COALESCE(pl.level, 0), COALESCE(pl.note, '')" : "'', 0, ''";
-    $locJoin = $locReady ? 'LEFT JOIN part_location pl ON pl.part_id = pre_stock.pre_part' : '';
-    $locOrder = $locReady ? '(pl.part_id IS NULL), pl.shelf, pl.level, ' : '';
     $sql = "SELECT pre_stock.pre_running, pre_stock.pre_product, pre_stock.pre_part, pre_stock.pre_type,
-                   pre_stock.pre_amount, pre_stock.pre_remarks, pre_stock.pre_status, part.part_name, $locCols
+                   pre_stock.pre_amount, pre_stock.pre_remarks, pre_stock.pre_status, part.part_name
             FROM pre_stock
             INNER JOIN part ON pre_stock.pre_part = part.part_id
-            $locJoin
             WHERE pre_stock.pre_id = ? AND pre_stock.pre_status = 'pre'
-            ORDER BY {$locOrder}pre_stock.pre_running ASC";
+            ORDER BY pre_stock.pre_running ASC";
     $stmt = mysqli_prepare($connect, $sql);
 
     if ($stmt === false) {
@@ -97,10 +90,7 @@ if ($id2 !== '') {
                 $row_pre_amount,
                 $row_pre_remarks,
                 $row_pre_status,
-                $row_part_name,
-                $row_loc_shelf,
-                $row_loc_level,
-                $row_loc_note
+                $row_part_name
             );
 
             while (mysqli_stmt_fetch($stmt)) {
@@ -113,9 +103,6 @@ if ($id2 !== '') {
                     'pre_remarks' => $row_pre_remarks,
                     'pre_status' => $row_pre_status,
                     'part_name' => $row_part_name,
-                    'loc_shelf' => $row_loc_shelf,
-                    'loc_level' => $row_loc_level,
-                    'loc_note' => $row_loc_note,
                 );
             }
         }
@@ -955,7 +942,7 @@ if (!empty($rows)) {
     <input type="hidden" id="<?= "pre_running" . $num; ?>" name="<?= "pre_running" . $num; ?>" value="<?= (int) $result['pre_running']; ?>">
     <input type="hidden" id="<?= "pre_pd" . $num; ?>" name="<?= "pre_pd" . $num; ?>" value="<?= h($result["pre_product"]); ?>">
     </td>
-    <td><?= part_location_badge_html($result["loc_shelf"], $result["loc_level"], $result["loc_note"]); ?> <?= h($result["part_name"]); ?>
+    <td><?= h($result["part_name"]); ?>
     <input type="hidden" id="<?= "pre_part" . $num; ?>" name="<?= "pre_part" . $num; ?>" value="<?= h($result["pre_part"]); ?>"></td>
     <td class="inv-col-num">
     <input class="amount-input js-doc-edit-field" min="1" max="999" type="number" id="<?= "pre_amount" . $num; ?>" name="<?= "pre_amount" . $num; ?>" value="<?= h($result["pre_amount"]); ?>" data-original-amount="<?= h($result["pre_amount"]); ?>">

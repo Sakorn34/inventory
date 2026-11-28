@@ -41,8 +41,6 @@ $DEPLOY_WEB_ROOT_FILES = array(
     'search_cusname.php',
     'part_add.php',
     'part_save.php',
-    'part_edit.php',
-    'part_location_lib.php',
     'production_pre_pickup.php',
     'list_stock.php',
     'title-h.php',

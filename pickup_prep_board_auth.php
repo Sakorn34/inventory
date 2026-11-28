@@ -142,11 +142,103 @@ function pickup_prep_board_set_unlocked($token)
     );
 }
 
-function pickup_prep_board_pin_state_file()
+/**
+ * ครั้งที่ใส่ผิดต่อ IP — เก็บในฐานข้อมูล (ตาราง prep_board_pin_attempt สร้างเองถ้ายังไม่มี)
+ * ถ้าใช้ฐานข้อมูลไม่ได้ ใช้ไฟล์ใน temp แทน (บาง host เขียน temp ไม่ได้ จึงไม่ใช้เป็นหลัก)
+ */
+function pickup_prep_board_pin_ip_key()
 {
     $ip = isset($_SERVER['REMOTE_ADDR']) ? (string) $_SERVER['REMOTE_ADDR'] : 'unknown';
 
-    return rtrim(sys_get_temp_dir(), '/\\') . DIRECTORY_SEPARATOR . 'inv_prep_pin_' . md5($ip . '|' . __DIR__) . '.json';
+    return hash('sha256', $ip . '|' . __DIR__);
+}
+
+function pickup_prep_board_pin_db_ready($conn)
+{
+    static $ready = null;
+    if ($ready !== null) {
+        return $ready;
+    }
+    $ready = ($conn instanceof mysqli) && mysqli_query(
+        $conn,
+        'CREATE TABLE IF NOT EXISTS `prep_board_pin_attempt` (
+            `ip_key` CHAR(64) NOT NULL,
+            `fails` INT NOT NULL DEFAULT 0,
+            `lock_until` INT NOT NULL DEFAULT 0,
+            `updated_at` INT NOT NULL DEFAULT 0,
+            PRIMARY KEY (`ip_key`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4'
+    ) !== false;
+
+    return $ready;
+}
+
+/**
+ * @return array{fails:int, lock_until:int}
+ */
+function pickup_prep_board_pin_load_state($conn)
+{
+    $state = array('fails' => 0, 'lock_until' => 0);
+    $key = pickup_prep_board_pin_ip_key();
+    if (pickup_prep_board_pin_db_ready($conn)) {
+        $stmt = mysqli_prepare($conn, 'SELECT `fails`, `lock_until` FROM `prep_board_pin_attempt` WHERE `ip_key` = ? LIMIT 1');
+        if ($stmt) {
+            mysqli_stmt_bind_param($stmt, 's', $key);
+            mysqli_stmt_execute($stmt);
+            mysqli_stmt_bind_result($stmt, $fails, $lockUntil);
+            if (mysqli_stmt_fetch($stmt)) {
+                $state = array('fails' => (int) $fails, 'lock_until' => (int) $lockUntil);
+            }
+            mysqli_stmt_close($stmt);
+
+            return $state;
+        }
+    }
+    $file = rtrim(sys_get_temp_dir(), '/\\') . DIRECTORY_SEPARATOR . 'inv_prep_pin_' . $key . '.json';
+    if (is_readable($file)) {
+        $decoded = json_decode((string) @file_get_contents($file), true);
+        if (is_array($decoded)) {
+            $state = array(
+                'fails' => isset($decoded['fails']) ? (int) $decoded['fails'] : 0,
+                'lock_until' => isset($decoded['lock_until']) ? (int) $decoded['lock_until'] : 0,
+            );
+        }
+    }
+
+    return $state;
+}
+
+function pickup_prep_board_pin_save_state($conn, $fails, $lockUntil)
+{
+    $key = pickup_prep_board_pin_ip_key();
+    $now = time();
+    if (pickup_prep_board_pin_db_ready($conn)) {
+        $stmt = mysqli_prepare(
+            $conn,
+            'INSERT INTO `prep_board_pin_attempt` (`ip_key`, `fails`, `lock_until`, `updated_at`) VALUES (?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE `fails` = VALUES(`fails`), `lock_until` = VALUES(`lock_until`), `updated_at` = VALUES(`updated_at`)'
+        );
+        if ($stmt) {
+            mysqli_stmt_bind_param($stmt, 'siii', $key, $fails, $lockUntil, $now);
+            $ok = mysqli_stmt_execute($stmt);
+            mysqli_stmt_close($stmt);
+            if ($ok) {
+                return;
+            }
+        }
+    }
+    $file = rtrim(sys_get_temp_dir(), '/\\') . DIRECTORY_SEPARATOR . 'inv_prep_pin_' . $key . '.json';
+    @file_put_contents($file, json_encode(array('fails' => $fails, 'lock_until' => $lockUntil)), LOCK_EX);
+}
+
+/**
+ * วินาทีที่ IP นี้ยังถูกล็อกอยู่ (0 = ใส่รหัสได้)
+ */
+function pickup_prep_board_pin_locked_for($conn)
+{
+    $state = pickup_prep_board_pin_load_state($conn);
+
+    return max(0, $state['lock_until'] - time());
 }
 
 /**
@@ -154,41 +246,35 @@ function pickup_prep_board_pin_state_file()
  *
  * @return array{ok:bool, locked_for:int, tries_left:int}
  */
-function pickup_prep_board_try_pin($pin, $token)
+function pickup_prep_board_try_pin($conn, $pin, $token)
 {
-    $file = pickup_prep_board_pin_state_file();
-    $state = array('fails' => 0, 'lock_until' => 0);
-    if (is_readable($file)) {
-        $decoded = json_decode((string) @file_get_contents($file), true);
-        if (is_array($decoded)) {
-            $state = array_merge($state, $decoded);
-        }
-    }
+    $state = pickup_prep_board_pin_load_state($conn);
     $now = time();
-    if ((int) $state['lock_until'] > $now) {
-        return array('ok' => false, 'locked_for' => (int) $state['lock_until'] - $now, 'tries_left' => 0);
+    if ($state['lock_until'] > $now) {
+        return array('ok' => false, 'locked_for' => $state['lock_until'] - $now, 'tries_left' => 0);
     }
 
     if (hash_equals(inventory_config_pickup_prep_board_pin(), (string) $pin)) {
-        @unlink($file);
+        pickup_prep_board_pin_save_state($conn, 0, 0);
         pickup_prep_board_set_unlocked($token);
 
         return array('ok' => true, 'locked_for' => 0, 'tries_left' => PICKUP_PREP_PIN_MAX_FAILS);
     }
 
-    $state['fails'] = (int) $state['fails'] + 1;
+    $fails = $state['fails'] + 1;
+    $lockUntil = 0;
     $lockedFor = 0;
-    if ($state['fails'] >= PICKUP_PREP_PIN_MAX_FAILS) {
-        $state['fails'] = 0;
-        $state['lock_until'] = $now + PICKUP_PREP_PIN_LOCK_SECONDS;
+    if ($fails >= PICKUP_PREP_PIN_MAX_FAILS) {
+        $fails = 0;
+        $lockUntil = $now + PICKUP_PREP_PIN_LOCK_SECONDS;
         $lockedFor = PICKUP_PREP_PIN_LOCK_SECONDS;
     }
-    @file_put_contents($file, json_encode($state), LOCK_EX);
+    pickup_prep_board_pin_save_state($conn, $fails, $lockUntil);
 
     return array(
         'ok' => false,
         'locked_for' => $lockedFor,
-        'tries_left' => $lockedFor > 0 ? 0 : PICKUP_PREP_PIN_MAX_FAILS - $state['fails'],
+        'tries_left' => $lockedFor > 0 ? 0 : PICKUP_PREP_PIN_MAX_FAILS - $fails,
     );
 }
 

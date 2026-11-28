@@ -440,7 +440,7 @@ if ($action === 'unlock') {
     if (!preg_match('/^\d{1,8}$/', $pin)) {
         pickup_prep_api_json(array('ok' => false, 'message' => 'รหัสไม่ถูกต้อง'), 400);
     }
-    $result = pickup_prep_board_try_pin($pin, pickup_prep_board_request_token());
+    $result = pickup_prep_board_try_pin($connect, $pin, pickup_prep_board_request_token());
     pickup_prep_api_json(array(
         'ok' => $result['ok'],
         'locked_for' => $result['locked_for'],

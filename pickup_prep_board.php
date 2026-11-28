@@ -53,13 +53,17 @@ header('Cache-Control: no-store');
 </div>
 <?php } elseif (!$unlocked) {
     $pinLength = strlen(inventory_config_pickup_prep_board_pin());
+    // ยังอยู่ในช่วงล็อกจากการใส่ผิด — รีเฟรชหน้าแล้วต้องยังนับถอยหลังต่อ
+    require_once __DIR__ . '/connect.php';
+    $pinLockedFor = pickup_prep_board_pin_locked_for($connect);
+    db_close($connect);
     ?>
 <div class="prep-board__sparkles" aria-hidden="true">
   <?php foreach (array(array(8, 0), array(30, 5), array(52, 10), array(74, 2.5), array(90, 7.5)) as $sp) { ?>
   <span class="prep-board__sparkle" style="left:<?php echo $sp[0]; ?>%;animation-delay:<?php echo $sp[1]; ?>s"></span>
   <?php } ?>
 </div>
-<div class="prep-lock" id="prep_lock" data-token="<?php echo $h($token); ?>" data-len="<?php echo (int) $pinLength; ?>">
+<div class="prep-lock" id="prep_lock" data-token="<?php echo $h($token); ?>" data-len="<?php echo (int) $pinLength; ?>" data-locked-for="<?php echo (int) $pinLockedFor; ?>">
   <div class="prep-lock__panel">
     <h1 class="prep-lock__title">จัดของรอเบิก</h1>
     <p class="prep-lock__hint">กดรหัส <?php echo (int) $pinLength; ?> หลักเพื่อเปิดตู้เซฟ</p>
@@ -263,6 +267,10 @@ header('Cache-Control: no-store');
   });
 
   paint();
+  var lockedOnLoad = parseInt(root.getAttribute("data-locked-for"), 10) || 0;
+  if (lockedOnLoad > 0) {
+    lockout(lockedOnLoad);
+  }
 })();
 </script>
 <?php } else { ?>

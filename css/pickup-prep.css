@@ -1884,3 +1884,531 @@ body.pickup-lift-dialog-open {
     left: 1rem;
   }
 }
+
+/* ─ แท็บ รอจ่าย / ตำแหน่งอะไหล่ ─────────────────────────────────────────── */
+
+.prep-board__tabs {
+  display: flex;
+  gap: 0.4rem;
+  margin: 1rem 1rem 0;
+}
+
+.prep-board__tab {
+  flex: 1 1 0;
+  min-height: 46px;
+  border: 2px solid var(--prep-edge);
+  border-radius: 13px;
+  background: var(--prep-surface);
+  color: var(--prep-muted);
+  font-family: var(--prep-display);
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  transition: background 0.2s var(--prep-ease), color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+}
+
+.prep-board__tab:active {
+  transform: scale(0.97);
+}
+
+.prep-board__tab.is-active {
+  background: var(--prep-header);
+  color: var(--prep-header-ink);
+  box-shadow: 3px 3px 0 var(--prep-hard);
+}
+
+.prep-board__tab-badge {
+  min-width: 1.4rem;
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  background: var(--prep-orange);
+  color: #fff;
+  font-family: var(--prep-font);
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.4rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.prep-board__tab-badge[hidden] {
+  display: none;
+}
+
+/* ─ ป้ายตำแหน่ง (การ์ดรอจ่าย + รายการในแท็บตำแหน่ง) ─────────────────────── */
+
+.prep-board__loc {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  max-width: 100%;
+  margin: 0 0 0.35rem;
+  padding: 0.2rem 0.65rem 0.2rem 0.45rem;
+  border: 1.5px solid #86efac;
+  border-radius: 999px;
+  background: #dcfce7;
+  color: #166534;
+  font-family: inherit;
+  font-size: 0.8rem;
+  line-height: 1.3;
+  cursor: pointer;
+  text-align: left;
+}
+
+.prep-board__loc svg {
+  flex: 0 0 auto;
+  width: 15px;
+  height: 15px;
+  color: #16a34a;
+}
+
+.prep-board__loc b {
+  font-family: var(--prep-display);
+  font-size: 0.98rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.prep-board__loc span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.prep-board__loc.is-none {
+  border-style: dashed;
+  border-color: #fdba74;
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+.prep-board__loc.is-none svg {
+  color: #fb923c;
+}
+
+/* ─ แท็บตำแหน่งอะไหล่ ────────────────────────────────────────────────── */
+
+.prep-loc {
+  padding: 0.85rem 1rem 0;
+}
+
+.prep-loc[hidden],
+.prep-board__main[hidden],
+.prep-board__filters[hidden] {
+  display: none;
+}
+
+.prep-loc__progress {
+  padding: 0.75rem 0.9rem;
+  border: 2px solid var(--prep-edge);
+  border-radius: var(--prep-radius);
+  background: var(--prep-surface);
+  box-shadow: 3px 3px 0 var(--prep-hard);
+}
+
+.prep-loc__progress-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 0.4rem;
+  font-size: 0.88rem;
+  color: var(--prep-muted);
+}
+
+.prep-loc__progress-row b {
+  font-family: var(--prep-display);
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: var(--prep-header-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.prep-loc__search {
+  width: 100%;
+  min-height: 46px;
+  margin-top: 0.75rem;
+  padding: 0.5rem 0.9rem;
+  border: 2px solid var(--prep-border);
+  border-radius: 13px;
+  background: var(--prep-surface);
+  color: var(--prep-text);
+  font-family: inherit;
+  font-size: 16px;
+}
+
+.prep-loc__search:focus {
+  outline: none;
+  border-color: var(--prep-edge);
+}
+
+.prep-loc__chips {
+  display: flex;
+  gap: 0.4rem;
+  margin: 0.65rem -1rem 0;
+  padding: 0 1rem 0.2rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.prep-loc__chips::-webkit-scrollbar {
+  display: none;
+}
+
+.prep-loc__chips button {
+  flex: 0 0 auto;
+  min-height: 36px;
+  padding: 0.3rem 0.85rem;
+  border: 1.5px solid var(--prep-border);
+  border-radius: 999px;
+  background: var(--prep-surface);
+  color: var(--prep-muted);
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.prep-loc__chips button.is-active {
+  border-color: var(--prep-edge);
+  background: var(--prep-header);
+  color: var(--prep-header-ink);
+}
+
+.prep-loc__list {
+  margin-top: 0.65rem;
+  border: 2px solid var(--prep-edge);
+  border-radius: var(--prep-radius);
+  background: var(--prep-surface);
+  box-shadow: 4px 4px 0 var(--prep-hard);
+  overflow: hidden;
+}
+
+.prep-loc__list > .prep-board__state {
+  margin: 0;
+}
+
+.prep-loc__row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  min-height: 60px;
+  padding: 0.6rem 0.9rem;
+  border: 0;
+  border-bottom: 1.5px solid var(--prep-divider);
+  background: transparent;
+  color: var(--prep-text);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.prep-loc__row:last-child {
+  border-bottom: 0;
+}
+
+.prep-loc__row:active {
+  background: var(--prep-accent-soft);
+}
+
+.prep-loc__row-body {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.prep-loc__row-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.prep-loc__row-sub {
+  font-size: 0.76rem;
+  color: var(--prep-muted);
+}
+
+.prep-loc__row .prep-board__loc {
+  flex: 0 0 auto;
+  margin: 0;
+}
+
+/* ─ แผ่นเลือกชั้น/ระดับ (bottom sheet) ─────────────────────────────────── */
+
+body.is-sheet-open {
+  overflow: hidden;
+}
+
+.prep-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+}
+
+.prep-sheet[hidden] {
+  display: none;
+}
+
+.prep-sheet__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(61, 38, 6, 0.42);
+  opacity: 0;
+  transition: opacity 0.24s ease;
+}
+
+.prep-sheet__panel {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 100%;
+  max-width: 520px;
+  max-height: 92dvh;
+  overflow-y: auto;
+  padding: 0.5rem 1rem calc(1rem + env(safe-area-inset-bottom, 0));
+  border: 2px solid var(--prep-edge);
+  border-bottom: 0;
+  border-radius: 22px 22px 0 0;
+  background: var(--prep-bg);
+  transform: translate(-50%, 100%);
+  transition: transform 0.28s var(--prep-ease);
+}
+
+.prep-sheet.is-open .prep-sheet__backdrop {
+  opacity: 1;
+}
+
+.prep-sheet.is-open .prep-sheet__panel {
+  transform: translate(-50%, 0);
+}
+
+.prep-sheet__panel.is-busy {
+  pointer-events: none;
+  opacity: 0.75;
+}
+
+.prep-sheet__grip {
+  width: 42px;
+  height: 5px;
+  margin: 0 auto 0.6rem;
+  border-radius: 3px;
+  background: var(--prep-hard);
+}
+
+.prep-sheet__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.prep-sheet__title {
+  font-family: var(--prep-display);
+  font-size: 1.1rem;
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.prep-sheet__sub {
+  font-size: 0.8rem;
+  color: var(--prep-muted);
+}
+
+.prep-sheet__x {
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  border: 1.5px solid var(--prep-border);
+  border-radius: 50%;
+  background: var(--prep-surface);
+  color: var(--prep-muted);
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.prep-sheet__preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 58px;
+  margin: 0.75rem 0 0.25rem;
+  padding: 0.5rem 0.9rem;
+  border: 2px solid #86efac;
+  border-radius: 14px;
+  background: #dcfce7;
+  color: #166534;
+  font-size: 0.9rem;
+}
+
+.prep-sheet__preview svg {
+  width: 22px;
+  height: 22px;
+  color: #16a34a;
+}
+
+.prep-sheet__preview b {
+  font-family: var(--prep-display);
+  font-size: 1.7rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+.prep-sheet__preview.is-none {
+  border-style: dashed;
+  border-color: var(--prep-hard);
+  background: var(--prep-surface);
+  color: var(--prep-muted);
+}
+
+.prep-sheet__label {
+  margin: 0.75rem 0 0.35rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--prep-header-ink);
+}
+
+.prep-sheet__label small {
+  font-weight: 400;
+  color: var(--prep-muted);
+}
+
+.prep-sheet__keys {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
+  gap: 0.4rem;
+}
+
+.prep-sheet__key {
+  min-height: 50px;
+  border: 2px solid var(--prep-border);
+  border-radius: 12px;
+  background: var(--prep-surface);
+  color: var(--prep-header-ink);
+  font-family: var(--prep-display);
+  font-size: 1.25rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: transform 0.12s ease, background 0.15s ease, border-color 0.15s ease;
+}
+
+.prep-sheet__key:active {
+  transform: scale(0.94);
+}
+
+.prep-sheet__key.is-on {
+  border-color: var(--prep-orange-deep);
+  background: var(--prep-orange);
+  color: #fff;
+  box-shadow: 2px 2px 0 var(--prep-orange-deep);
+}
+
+.prep-sheet__key--add {
+  border-style: dashed;
+  color: var(--prep-muted);
+}
+
+.prep-sheet__notes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 0.45rem;
+}
+
+.prep-sheet__notes button {
+  min-height: 34px;
+  padding: 0.2rem 0.75rem;
+  border: 1.5px solid var(--prep-border);
+  border-radius: 999px;
+  background: var(--prep-surface);
+  color: var(--prep-muted);
+  font-family: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.prep-sheet__note {
+  width: 100%;
+  min-height: 46px;
+  padding: 0.5rem 0.9rem;
+  border: 2px solid var(--prep-border);
+  border-radius: 12px;
+  background: var(--prep-surface);
+  color: var(--prep-text);
+  font-family: inherit;
+  font-size: 16px;
+}
+
+.prep-sheet__note:focus {
+  outline: none;
+  border-color: var(--prep-edge);
+}
+
+.prep-sheet__msg {
+  min-height: 1.2rem;
+  margin: 0.4rem 0 0;
+  color: #b91c1c;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.prep-sheet__actions {
+  display: grid;
+  grid-template-columns: auto 1fr 1.5fr;
+  gap: 0.45rem;
+  margin-top: 0.35rem;
+}
+
+.prep-sheet__btn {
+  min-height: 52px;
+  padding: 0.4rem 0.75rem;
+  border: 2px solid var(--prep-edge);
+  border-radius: 13px;
+  background: var(--prep-surface);
+  color: var(--prep-header-ink);
+  font-family: var(--prep-display);
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.prep-sheet__btn:active {
+  transform: scale(0.97);
+}
+
+.prep-sheet__btn--main {
+  border-color: var(--prep-success-deep);
+  background: var(--prep-success);
+  color: #fff;
+  box-shadow: 3px 3px 0 var(--prep-success-deep);
+}
+
+.prep-sheet__btn--ghost {
+  border-color: transparent;
+  background: transparent;
+  color: #b91c1c;
+  font-family: var(--prep-font);
+  font-size: 0.85rem;
+}
+
+.prep-sheet__btn[hidden] {
+  display: none;
+}
+
+.prep-sheet__actions:has(.prep-sheet__btn--ghost[hidden]) {
+  grid-template-columns: 1fr 1.5fr;
+}
+
+.prep-sheet__actions:has(.prep-sheet__btn--main[hidden]) {
+  grid-template-columns: auto 1fr;
+}
+
+/* ตอนเปิดแผ่นเลือกตำแหน่ง ย้าย toast ขึ้นด้านบน ไม่ให้บังปุ่มบันทึก */
+body.is-sheet-open .prep-board__toast {
+  top: calc(0.9rem + env(safe-area-inset-top, 0));
+  bottom: auto;
+}

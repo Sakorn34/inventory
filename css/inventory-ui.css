@@ -3386,3 +3386,43 @@ body.inv-app .ui-widget button {
     width: 100%;
   }
 }
+
+/* ─ ป้ายตำแหน่งเก็บในห้องคลัง (ชั้นวาง-ระดับ) — part_location_badge_html() / pickupDocLocBadge() ─ */
+
+.inv-loc {
+  align-self: flex-start;
+  display: inline-block;
+  padding: 0.05rem 0.5rem;
+  border: 1px solid #86efac;
+  border-radius: 999px;
+  background: #dcfce7;
+  color: #166534;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.inv-loc--none {
+  border-style: dashed;
+  border-color: #fdba74;
+  background: #fff7ed;
+  color: #c2410c;
+  font-family: inherit;
+  font-weight: 600;
+}
+
+.inv-loc-note {
+  align-self: flex-start;
+  color: #166534;
+  font-size: 0.76rem;
+}
+
+.inv-app .inv-table td.inv-col-loc {
+  white-space: nowrap;
+}
+
+.inv-loc-empty {
+  color: #cbd5e1;
+}

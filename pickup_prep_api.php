@@ -10,6 +10,8 @@
  * 1. GET  ?token=...&action=list
  * 2. POST ?token=...&action=set_prepared  body JSON { pre_running, prepared }
  * 3. POST ?token=...&action=unlock  body JSON { pin } — ต้องปลดล็อกก่อนเรียก list/set_prepared (ถ้าตั้ง PIN)
+ * 4. GET  ?token=...&action=parts — อะไหล่ทั้งหมดพร้อมตำแหน่งเก็บ (แท็บตำแหน่งอะไหล่)
+ * 5. POST ?token=...&action=set_location  body JSON { part_id, shelf, level, note } — shelf/level ว่าง = ลบตำแหน่ง
  *
  * ตัวอย่าง: pickup_prep_api.php?token=SECRET&action=list
  */
@@ -17,6 +19,7 @@
 require_once __DIR__ . '/connect.php';
 require_once __DIR__ . '/pickup_prep_board_auth.php';
 require_once __DIR__ . '/pickup_pre_stock_tech.php';
+require_once __DIR__ . '/part_location_lib.php';
 
 header('Content-Type: application/json; charset=UTF-8');
 header('X-Content-Type-Options: nosniff');
@@ -155,15 +158,23 @@ function pickup_prep_api_empty_hint($conn)
  */
 function pickup_prep_api_fetch_list($conn)
 {
+    $locReady = part_location_db_ready($conn);
+    $locCols = $locReady
+        ? 'COALESCE(pl.`shelf`, "") AS `loc_shelf`, COALESCE(pl.`level`, 0) AS `loc_level`, COALESCE(pl.`note`, "") AS `loc_note`'
+        : '"" AS `loc_shelf`, 0 AS `loc_level`, "" AS `loc_note`';
+    $locJoin = $locReady ? 'LEFT JOIN `part_location` pl ON pl.`part_id` = ps.`pre_part`' : '';
+
     $sql = 'SELECT ps.`pre_running`, ps.`pre_id`, ps.`pre_date`, ps.`pre_by`, ps.`pre_type`,
                    ps.`pre_product`, ps.`pre_amount`, ps.`pre_remarks`, ps.`pre_check`,
                    ps.`pre_part`,
                    COALESCE(NULLIF(TRIM(p.`part_name`), ""), CONCAT("Part ", ps.`pre_part`)) AS `part_name`,
                    COALESCE(p.`part_amount`, 0) AS `part_stock`,
                    (SELECT COALESCE(SUM(ls.`log_amount`), 0) FROM `log_stock` ls
-                    WHERE ls.`pre_id` = ps.`pre_id` AND ls.`log_part` = p.`part_name` AND ls.`log_product` = ps.`pre_product`) AS `paid_amount`
+                    WHERE ls.`pre_id` = ps.`pre_id` AND ls.`log_part` = p.`part_name` AND ls.`log_product` = ps.`pre_product`) AS `paid_amount`,
+                   ' . $locCols . '
             FROM `pre_stock` ps
             LEFT JOIN `part` p ON ps.`pre_part` = p.`part_id`
+            ' . $locJoin . '
             WHERE TRIM(ps.`pre_status`) = ?
             ORDER BY ps.`pre_date` DESC, ps.`pre_id` DESC, ps.`pre_running` ASC';
 
@@ -195,7 +206,10 @@ function pickup_prep_api_fetch_list($conn)
         $prePart,
         $partName,
         $partStock,
-        $paidAmount
+        $paidAmount,
+        $locShelf,
+        $locLevel,
+        $locNote
     );
 
     $documents = array();
@@ -235,6 +249,10 @@ function pickup_prep_api_fetch_list($conn)
             'prepared' => $isPrepared,
             'stock' => (float) $partStock,
             'paid_amount' => (float) $paidAmount,
+            'loc_shelf' => (string) $locShelf,
+            'loc_level' => (int) $locLevel,
+            'loc_note' => (string) $locNote,
+            'loc_sort' => part_location_sort_key($locShelf, $locLevel),
         );
     }
 
@@ -242,6 +260,11 @@ function pickup_prep_api_fetch_list($conn)
 
     $documentList = array();
     foreach ($documents as $doc) {
+        // เรียงรายการในเอกสารตามทางเดินในห้องคลัง (ชั้น → ระดับ) ที่ไม่มีตำแหน่งไปท้าย
+        usort($doc['lines'], static function ($a, $b) {
+            $cmp = strcmp($a['loc_sort'], $b['loc_sort']);
+            return $cmp !== 0 ? $cmp : ($a['pre_running'] - $b['pre_running']);
+        });
         $preparedCount = 0;
         foreach ($doc['lines'] as $line) {
             if (!empty($line['prepared'])) {
@@ -373,6 +396,57 @@ function pickup_prep_api_tech_part_groups($conn, array $preIds)
 }
 
 /**
+ * อะไหล่ทั้งหมดพร้อมตำแหน่งเก็บ สำหรับแท็บ "ตำแหน่งอะไหล่"
+ *
+ * @param mysqli $conn connection
+ * @return array<int, array<string, mixed>>
+ */
+function pickup_prep_api_fetch_parts($conn)
+{
+    if (!part_location_db_ready($conn)) {
+        pickup_prep_api_json(array('ok' => false, 'message' => 'ไม่สามารถเตรียมตารางตำแหน่งได้'), 500);
+    }
+    $sql = 'SELECT p.`part_id`, p.`part_name`, COALESCE(p.`part_product`, ""), COALESCE(p.`part_amount`, 0),
+                   COALESCE(pl.`shelf`, ""), COALESCE(pl.`level`, 0), COALESCE(pl.`note`, "")
+            FROM `part` p
+            LEFT JOIN `part_location` pl ON pl.`part_id` = p.`part_id`
+            WHERE TRIM(COALESCE(p.`part_name`, "")) <> ""
+            ORDER BY p.`part_name` ASC';
+    $result = mysqli_query($conn, $sql);
+    if ($result === false) {
+        error_log('pickup_prep_api parts: ' . mysqli_error($conn));
+        pickup_prep_api_json(array('ok' => false, 'message' => 'ไม่สามารถโหลดรายการอะไหล่ได้'), 500);
+    }
+    $parts = array();
+    while ($row = mysqli_fetch_row($result)) {
+        $parts[] = array(
+            'part_id' => (int) $row[0],
+            'part_name' => (string) $row[1],
+            'part_product' => (string) $row[2],
+            'stock' => (float) $row[3],
+            'shelf' => (string) $row[4],
+            'level' => (int) $row[5],
+            'note' => (string) $row[6],
+        );
+    }
+    mysqli_free_result($result);
+
+    return $parts;
+}
+
+/**
+ * ตรวจว่ามีอะไหล่ part_id นี้จริง
+ *
+ * @param mysqli $conn connection
+ * @param int $partId
+ * @return bool
+ */
+function pickup_prep_api_part_exists($conn, $partId)
+{
+    return pickup_prep_api_count_query($conn, 'SELECT COUNT(*) FROM `part` WHERE `part_id` = ?', 'i', array((int) $partId)) > 0;
+}
+
+/**
  * อัปเดตสถานะจัดเตรียมของแถว pre_stock
  *
  * @param mysqli $conn connection
@@ -486,6 +560,43 @@ if ($action === 'set_prepared') {
         'ok' => true,
         'pre_running' => $preRunning,
         'prepared' => $prepared,
+    ));
+}
+
+if ($action === 'parts') {
+    pickup_prep_api_json(array(
+        'ok' => true,
+        'max_level' => PART_LOCATION_MAX_LEVEL,
+        'parts' => pickup_prep_api_fetch_parts($connect),
+    ));
+}
+
+if ($action === 'set_location') {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        pickup_prep_api_json(array('ok' => false, 'message' => 'ใช้ POST เท่านั้น'), 405);
+    }
+    $body = pickup_prep_api_read_json_body();
+    $partId = isset($body['part_id']) ? (int) $body['part_id'] : 0;
+    if ($partId <= 0 || !pickup_prep_api_part_exists($connect, $partId)) {
+        pickup_prep_api_json(array('ok' => false, 'message' => 'ไม่พบอะไหล่รายการนี้'), 400);
+    }
+    $loc = part_location_normalize(
+        isset($body['shelf']) && is_scalar($body['shelf']) ? $body['shelf'] : '',
+        isset($body['level']) && is_scalar($body['level']) ? $body['level'] : '',
+        isset($body['note']) && is_scalar($body['note']) ? $body['note'] : ''
+    );
+    if (!$loc['ok']) {
+        pickup_prep_api_json(array('ok' => false, 'message' => $loc['message']), 400);
+    }
+    if (!part_location_save($connect, $partId, $loc, 'มือถือจัดของ')) {
+        pickup_prep_api_json(array('ok' => false, 'message' => 'บันทึกตำแหน่งไม่สำเร็จ'), 500);
+    }
+    pickup_prep_api_json(array(
+        'ok' => true,
+        'part_id' => $partId,
+        'shelf' => $loc['clear'] ? '' : $loc['shelf'],
+        'level' => $loc['clear'] ? 0 : $loc['level'],
+        'note' => $loc['clear'] ? '' : $loc['note'],
     ));
 }
 

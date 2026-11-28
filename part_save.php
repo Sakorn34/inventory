@@ -16,6 +16,7 @@
 require_once __DIR__ . '/connect.php';
 require_once __DIR__ . '/inventory_session_actor.php';
 require_once __DIR__ . '/line_stock_alert.php';
+require_once __DIR__ . '/part_location_lib.php';
 
 header('Content-Type: text/html; charset=UTF-8');
 header('X-Content-Type-Options: nosniff');
@@ -536,6 +537,33 @@ function part_save_update($conn)
         throw new Exception('แก้ไข Part ไม่สำเร็จ');
     }
     mysqli_stmt_close($stmt);
+
+    part_save_apply_location($conn, $partId);
+}
+
+/**
+ * บันทึกตำแหน่งเก็บ (ชั้นวาง/ระดับ/หมายเหตุ) จากฟอร์มแก้ไข Part — ส่งมาเฉพาะเมื่อฟอร์มมีช่องตำแหน่ง
+ *
+ * @param mysqli $conn
+ * @param int $partId
+ * @return void
+ */
+function part_save_apply_location($conn, $partId)
+{
+    if (empty($_POST['loc_present'])) {
+        return;
+    }
+    $loc = part_location_normalize(
+        part_save_text('loc_shelf', 4),
+        part_save_text('loc_level', 2),
+        part_save_text('loc_note', 100)
+    );
+    if (!$loc['ok']) {
+        throw new Exception('บันทึก Part แล้ว แต่ตำแหน่งเก็บไม่ถูกต้อง: ' . $loc['message']);
+    }
+    if (!part_location_save($conn, $partId, $loc, inventory_actor_name_for_save(100))) {
+        throw new Exception('บันทึก Part แล้ว แต่บันทึกตำแหน่งเก็บไม่สำเร็จ');
+    }
 }
 
 // ─ Main ─────────────────────────────────────────────────────────────────────

@@ -58,6 +58,8 @@ $DEPLOY_WEB_ROOT_FILES = array(
     'pickup_set_repair_tech.php',
     'pickup_ma_production_catalog.php',
     'pickup_prep_board.php',
+    'head-favicon.php',
+    'index.html',
     'pickup_prep_board_auth.php',
     'pickup_prep_board_status.php',
     'pickup_prep_api.php',
@@ -86,6 +88,10 @@ $DEPLOY_WEB_RELATIVE_PATHS = array(
     'images/pickup-lift-walk-5.gif',
     'images/pickup-lift-walk-6.gif',
     'images/pickup-lift-walk-7.gif',
+    'images/inventory-icon-32.png',
+    'images/inventory-icon-192.png',
+    'images/inventory-icon-512.png',
+    'images/inventory-apple-touch-icon.png',
 );
 
 /** @var string[] เอกสารอ้างอิง (ไม่บังคับ copy ขึ้น server) */

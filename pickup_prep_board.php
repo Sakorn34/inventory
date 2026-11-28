@@ -35,8 +35,9 @@ header('Cache-Control: no-store');
 <meta name="theme-color" content="#ffd98a" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <title>จัดของรอเบิก</title>
-<link rel="icon" type="image/png" href="images/bitcombine-logo.png" />
-<link rel="apple-touch-icon" href="images/bitcombine-logo.png" />
+<link rel="icon" type="image/png" sizes="32x32" href="images/inventory-icon-32.png" />
+<link rel="icon" type="image/png" sizes="192x192" href="images/inventory-icon-192.png" />
+<link rel="apple-touch-icon" sizes="180x180" href="images/inventory-apple-touch-icon.png" />
 <?php require_once __DIR__ . '/inventory_ui_fonts.php'; ?>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mitr:wght@500&amp;display=swap" />
 <link rel="stylesheet" href="css/pickup-prep.css?v=23" />

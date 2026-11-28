@@ -59,7 +59,6 @@ $DEPLOY_WEB_ROOT_FILES = array(
     'pickup_ma_production_catalog.php',
     'pickup_prep_board.php',
     'pickup_prep_board_auth.php',
-    'pickup_prep_board_pin.local.php',
     'pickup_prep_board_status.php',
     'pickup_prep_api.php',
     'pickup_lift_call_fragment.php',

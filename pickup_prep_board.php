@@ -39,7 +39,7 @@ header('Cache-Control: no-store');
 <link rel="apple-touch-icon" href="images/bitcombine-logo.png" />
 <?php require_once __DIR__ . '/inventory_ui_fonts.php'; ?>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mitr:wght@500&amp;display=swap" />
-<link rel="stylesheet" href="css/pickup-prep.css?v=22" />
+<link rel="stylesheet" href="css/pickup-prep.css?v=23" />
 </head>
 <body class="prep-board">
 <?php if (!$tokenOk) {
@@ -68,27 +68,43 @@ header('Cache-Control: no-store');
 <div class="prep-lock" id="prep_lock" data-token="<?php echo $h($token); ?>" data-len="<?php echo (int) $pinLength; ?>" data-locked-for="<?php echo (int) $pinLockedFor; ?>" data-tries-left="<?php echo (int) $pinTriesLeft; ?>">
   <div class="prep-lock__panel">
     <h1 class="prep-lock__title">จัดของรอเบิก</h1>
-    <p class="prep-lock__hint">กดรหัส <?php echo (int) $pinLength; ?> หลักเพื่อเปิดตู้เซฟ</p>
-    <div class="prep-lock__stage" aria-hidden="true">
-      <div class="prep-lock__peek"><svg viewBox="0 0 32 34"><rect x="8" y="28" width="5" height="5" rx="1.5" fill="#4a2c05"/><rect x="19" y="28" width="5" height="5" rx="1.5" fill="#4a2c05"/><rect x="2" y="4" width="28" height="25" rx="5" fill="#c98a4b"/><rect x="13" y="4" width="6" height="8" fill="#e9c08f"/><circle cx="11" cy="15" r="3.6" fill="#fff"/><circle cx="21" cy="15" r="3.6" fill="#fff"/><circle cx="11.9" cy="15.6" r="1.7" fill="#2b1a07"/><circle cx="21.9" cy="15.6" r="1.7" fill="#2b1a07"/><path d="M11.5 20.5q4.5 4.5 9 0" fill="#2b1a07" stroke="#2b1a07" stroke-width="1.4" stroke-linecap="round"/><circle cx="7" cy="20" r="1.8" fill="#f2a07a" opacity=".7"/><circle cx="25" cy="20" r="1.8" fill="#f2a07a" opacity=".7"/></svg></div>
-      <div class="prep-lock__safe">
-        <span class="prep-lock__dial" id="prep_lock_dial"></span>
-        <span class="prep-lock__bolt"></span><span class="prep-lock__bolt"></span><span class="prep-lock__bolt"></span><span class="prep-lock__bolt"></span>
-        <span class="prep-lock__handle"></span>
+    <p class="prep-lock__hint">ใส่รหัส <?php echo (int) $pinLength; ?> หลักเพื่อเข้าห้องคลัง</p>
+    <div class="prep-lock__mascot" aria-hidden="true">
+      <div class="prep-lock__mascot-body">
+        <span class="prep-lock__mascot-eye prep-lock__mascot-eye--l"><i></i></span>
+        <span class="prep-lock__mascot-eye prep-lock__mascot-eye--r"><i></i></span>
+        <span class="prep-lock__mascot-cheek prep-lock__mascot-cheek--l"></span>
+        <span class="prep-lock__mascot-cheek prep-lock__mascot-cheek--r"></span>
+        <span class="prep-lock__mascot-mouth"></span>
       </div>
+      <span class="prep-lock__mascot-arm prep-lock__mascot-arm--l"></span>
+      <span class="prep-lock__mascot-arm prep-lock__mascot-arm--r"></span>
+      <span class="prep-lock__mascot-feet"><span></span><span></span></span>
     </div>
     <div class="prep-lock__dots" id="prep_lock_dots" role="img" aria-label="ใส่รหัสแล้ว 0 หลัก">
       <?php for ($d = 0; $d < $pinLength; $d++) { ?><span class="prep-lock__dot"></span><?php } ?>
     </div>
     <p class="prep-lock__msg" id="prep_lock_msg" role="status" aria-live="polite"></p>
     <div class="prep-lock__pad" id="prep_lock_pad">
-      <?php foreach (array('1', '2', '3', '4', '5', '6', '7', '8', '9') as $digit) { ?>
-      <button type="button" class="prep-lock__key" data-key="<?php echo $digit; ?>"><?php echo $digit; ?></button>
+      <?php
+      $padLetters = array('2' => 'ABC', '3' => 'DEF', '4' => 'GHI', '5' => 'JKL', '6' => 'MNO', '7' => 'PQRS', '8' => 'TUV', '9' => 'WXYZ');
+      foreach (array('1', '2', '3', '4', '5', '6', '7', '8', '9') as $digit) { ?>
+      <button type="button" class="prep-lock__key" data-key="<?php echo $digit; ?>"><?php echo $digit; ?><?php if (isset($padLetters[$digit])) { ?><small aria-hidden="true"><?php echo $padLetters[$digit]; ?></small><?php } ?></button>
       <?php } ?>
-      <button type="button" class="prep-lock__key prep-lock__key--fn" data-key="clear">ล้าง</button>
+      <button type="button" class="prep-lock__key prep-lock__key--ghost" data-key="clear">ล้าง</button>
       <button type="button" class="prep-lock__key" data-key="0">0</button>
-      <button type="button" class="prep-lock__key prep-lock__key--fn" data-key="back" aria-label="ลบตัวล่าสุด">ลบ</button>
+      <button type="button" class="prep-lock__key prep-lock__key--ghost" data-key="back" aria-label="ลบตัวล่าสุด">ลบ</button>
     </div>
+  </div>
+  <div class="prep-lock__done" aria-hidden="true">
+    <span class="prep-lock__ring"></span>
+    <svg class="prep-lock__padlock" viewBox="0 0 120 140">
+      <g class="prep-lock__shackle"><path d="M32 64V42a28 28 0 0 1 56 0v38" fill="none" stroke="#4a2c05" stroke-width="12" stroke-linecap="round"/></g>
+      <rect x="16" y="58" width="88" height="72" rx="16" fill="#ff8a3d" stroke="#4a2c05" stroke-width="5"/>
+      <circle cx="60" cy="88" r="9" fill="#4a2c05"/>
+      <rect x="56" y="92" width="8" height="18" rx="4" fill="#4a2c05"/>
+    </svg>
+    <span class="prep-lock__welcome">ยินดีต้อนรับ!</span>
   </div>
 </div>
 <script>
@@ -100,56 +116,25 @@ header('Cache-Control: no-store');
   var pinLen = parseInt(root.getAttribute("data-len"), 10) || 4;
   var dots = document.querySelectorAll(".prep-lock__dot");
   var dotsBox = document.getElementById("prep_lock_dots");
-  var bolts = document.querySelectorAll(".prep-lock__bolt");
-  var dial = document.getElementById("prep_lock_dial");
   var msgEl = document.getElementById("prep_lock_msg");
   var pad = document.getElementById("prep_lock_pad");
   var reduceMotion = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   var code = "";
   var busy = false;
 
+  // น้องกล่องปิดตาตอนกำลังกด แง้มดูตอนกดครบ
   function paint() {
     dots.forEach(function (d, i) {
       d.classList.toggle("is-on", i < code.length);
     });
-    var lit = Math.round((code.length / pinLen) * bolts.length);
-    bolts.forEach(function (b, i) {
-      b.classList.toggle("is-on", i < lit);
-    });
-    dial.style.transform = "rotate(" + (code.length * 97) + "deg)";
+    root.classList.toggle("is-shy", code.length > 0 && code.length < pinLen);
+    root.classList.toggle("is-peek", code.length === pinLen);
     dotsBox.setAttribute("aria-label", "ใส่รหัสแล้ว " + code.length + " หลัก");
   }
 
   function say(text, kind) {
     msgEl.textContent = text;
     msgEl.className = "prep-lock__msg" + (kind ? " is-" + kind : "");
-  }
-
-  function ripple(btn, ev) {
-    if (reduceMotion) {
-      return;
-    }
-    var r = btn.getBoundingClientRect();
-    var dot = document.createElement("span");
-    dot.className = "prep-lock__ripple";
-    dot.style.left = ((ev.clientX || r.left + r.width / 2) - r.left) + "px";
-    dot.style.top = ((ev.clientY || r.top + r.height / 2) - r.top) + "px";
-    btn.appendChild(dot);
-    window.setTimeout(dot.remove.bind(dot), 500);
-  }
-
-  function floatDigit(btn) {
-    if (reduceMotion) {
-      return;
-    }
-    var r = btn.getBoundingClientRect();
-    var f = document.createElement("span");
-    f.className = "prep-lock__float";
-    f.textContent = "•";
-    f.style.left = (r.left + r.width / 2 - 6) + "px";
-    f.style.top = (r.top - 8) + "px";
-    document.body.appendChild(f);
-    window.setTimeout(f.remove.bind(f), 700);
   }
 
   function confetti() {
@@ -170,15 +155,16 @@ header('Cache-Control: no-store');
   }
 
   function wrong() {
-    root.classList.remove("is-wrong");
+    root.classList.remove("is-shy", "is-peek", "is-wrong");
     void root.offsetWidth;
     root.classList.add("is-wrong");
     if (navigator.vibrate) {
-      navigator.vibrate([120, 60, 120]);
+      navigator.vibrate([90, 50, 90]);
     }
     window.setTimeout(function () {
       root.classList.remove("is-wrong");
-    }, 950);
+      paint();
+    }, 1000);
   }
 
   function lockout(seconds) {
@@ -213,17 +199,17 @@ header('Cache-Control: no-store');
       })
       .then(function (body) {
         if (body && body.ok) {
+          root.classList.remove("is-shy", "is-peek");
           root.classList.add("is-open");
-          say("ถูกต้อง! กำลังเปิดตู้เซฟ…", "ok");
+          say("ถูกต้อง!", "ok");
           confetti();
           window.setTimeout(function () {
             window.location.reload();
-          }, reduceMotion ? 300 : 1700);
+          }, reduceMotion ? 300 : 3000);
           return;
         }
         code = "";
         wrong();
-        window.setTimeout(paint, 450);
         if (body && body.locked_for > 0) {
           lockout(body.locked_for);
           return;
@@ -247,7 +233,6 @@ header('Cache-Control: no-store');
     if (!btn || busy) {
       return;
     }
-    ripple(btn, ev);
     var key = btn.getAttribute("data-key");
     if (key === "clear") {
       code = "";
@@ -256,15 +241,14 @@ header('Cache-Control: no-store');
       code = code.slice(0, -1);
     } else if (code.length < pinLen) {
       code += key;
-      floatDigit(btn);
       if (navigator.vibrate) {
-        navigator.vibrate(15);
+        navigator.vibrate(12);
       }
     }
     paint();
     if (code.length === pinLen) {
       busy = true;
-      window.setTimeout(submit, 220);
+      window.setTimeout(submit, 350);
     }
   });
 

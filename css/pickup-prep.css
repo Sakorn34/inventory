@@ -1295,7 +1295,7 @@ body.pickup-lift-dialog-open {
   transform: translate(-50%, 0) scale(1);
 }
 
-/* ─ หน้าล็อก PIN: ตู้เซฟลับ ─────────────────────────────────────────────── */
+/* ─ หน้าล็อก PIN: แป้นแบบ iOS + น้องกล่องปิดตา + แม่กุญแจปลดตอนสำเร็จ ─────── */
 
 .prep-lock {
   position: relative;
@@ -1304,7 +1304,8 @@ body.pickup-lift-dialog-open {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: calc(1.25rem + env(safe-area-inset-top, 0)) 1rem calc(1.25rem + env(safe-area-inset-bottom, 0));
+  padding: calc(1rem + env(safe-area-inset-top, 0)) 1rem calc(1rem + env(safe-area-inset-bottom, 0));
+  background: linear-gradient(180deg, #fff3d6 0%, var(--prep-bg) 45%);
   user-select: none;
   -webkit-user-select: none;
 }
@@ -1312,180 +1313,184 @@ body.pickup-lift-dialog-open {
 .prep-lock__panel {
   width: 100%;
   max-width: 340px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   text-align: center;
 }
 
 .prep-lock__title {
   margin: 0;
   font-family: var(--prep-display);
-  font-size: 1.5rem;
+  font-size: 1.45rem;
   font-weight: 500;
   color: var(--prep-header-ink);
 }
 
 .prep-lock__hint {
-  margin: 0.2rem 0 0;
+  margin: 0.15rem 0 0;
   font-size: 0.85rem;
   color: var(--prep-muted);
 }
 
-.prep-lock__stage {
+/* น้องกล่อง */
+.prep-lock__mascot {
   position: relative;
-  height: 196px;
-  display: grid;
-  place-items: center;
-  margin: 0.6rem 0 0.4rem;
+  width: 104px;
+  height: 100px;
+  margin: 1rem 0 0.35rem;
 }
 
-.prep-lock__stage::before {
-  content: "";
+.prep-lock__mascot-body {
   position: absolute;
-  width: 196px;
-  height: 182px;
-  border-radius: 26px;
-  background: #fef3c7;
-  border: 3px dashed #f59e0b;
+  left: 9px;
+  top: 10px;
+  width: 86px;
+  height: 76px;
+  border-radius: 15px;
+  background: var(--prep-box);
+  box-shadow: inset 0 -7px 0 rgba(74, 44, 5, 0.14);
 }
 
-.prep-lock__safe {
-  position: relative;
-  z-index: 2;
-  width: 152px;
-  height: 152px;
-  border-radius: 22px;
-  background: linear-gradient(145deg, #b4bac4, #808893);
-  border: 5px solid #4b5563;
-  box-shadow: inset 0 0 0 7px #d1d5db, 6px 6px 0 #e9a93c;
-  transform-origin: left center;
-  transition: transform 0.9s cubic-bezier(0.5, 0, 0.3, 1);
-}
-
-.prep-lock__dial {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 72px;
-  height: 72px;
-  margin: -36px 0 0 -36px;
-  border-radius: 50%;
-  border: 5px solid #374151;
-  background:
-    repeating-conic-gradient(#9ca3af 0 2deg, transparent 2deg 30deg),
-    radial-gradient(circle, #f3f4f6 55%, #e5e7eb 56%);
-  transition: transform 0.4s var(--prep-spring);
-}
-
-.prep-lock__dial::after {
+.prep-lock__mascot-body::before {
   content: "";
   position: absolute;
   left: 50%;
-  top: 4px;
-  width: 5px;
-  height: 16px;
-  margin-left: -2.5px;
-  border-radius: 3px;
-  background: #ef4444;
+  top: 0;
+  width: 15px;
+  height: 20px;
+  margin-left: -7.5px;
+  background: var(--prep-box-tape);
 }
 
-.prep-lock__bolt {
+.prep-lock__mascot-eye {
   position: absolute;
-  width: 13px;
-  height: 13px;
+  top: 26px;
+  width: 18px;
+  height: 19px;
   border-radius: 50%;
-  background: #4b5563;
-  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.25);
-  transition: background 0.25s ease, box-shadow 0.25s ease;
+  background: #fff;
+  animation: prep-blink 4s infinite;
 }
 
-.prep-lock__bolt:nth-of-type(2) { left: 12px; top: 12px; }
-.prep-lock__bolt:nth-of-type(3) { right: 12px; top: 12px; }
-.prep-lock__bolt:nth-of-type(4) { right: 12px; bottom: 12px; }
-.prep-lock__bolt:nth-of-type(5) { left: 12px; bottom: 12px; }
+.prep-lock__mascot-eye--l { left: 18px; }
+.prep-lock__mascot-eye--r { left: 50px; }
 
-.prep-lock__bolt.is-on {
-  background: #22c55e;
-  box-shadow: 0 0 12px #22c55e, inset 0 -2px 0 rgba(0, 0, 0, 0.15);
-}
-
-.prep-lock__handle {
+.prep-lock__mascot-eye i {
   position: absolute;
-  right: -9px;
-  top: 50%;
+  left: 5px;
+  top: 5px;
+  width: 8px;
+  height: 9px;
+  border-radius: 50%;
+  background: #2b1a07;
+  transition: transform 0.2s ease;
+}
+
+.prep-lock__mascot-cheek {
+  position: absolute;
+  top: 48px;
   width: 10px;
-  height: 46px;
-  margin-top: -23px;
-  border-radius: 5px;
-  background: #374151;
+  height: 6px;
+  border-radius: 50%;
+  background: #f2a07a;
+  opacity: 0.7;
 }
 
-.prep-lock__peek {
+.prep-lock__mascot-cheek--l { left: 9px; }
+.prep-lock__mascot-cheek--r { right: 9px; }
+
+.prep-lock__mascot-mouth {
   position: absolute;
-  z-index: 1;
-  width: 96px;
-  height: 90px;
-  opacity: 0;
-  transform: scale(0.5);
-  transition: opacity 0.35s ease 0.45s, transform 0.5s var(--prep-spring) 0.45s;
+  left: 50%;
+  top: 52px;
+  width: 20px;
+  height: 9px;
+  margin-left: -10px;
+  border: 3px solid #2b1a07;
+  border-top: 0;
+  border-radius: 0 0 12px 12px;
+  transition: transform 0.25s ease, height 0.25s ease, background 0.25s ease, top 0.25s ease;
 }
 
-.prep-lock__peek svg {
-  width: 100%;
-  height: 100%;
+.prep-lock__mascot-arm {
+  position: absolute;
+  top: 60px;
+  width: 24px;
+  height: 32px;
+  border-radius: 12px;
+  border: 2px solid #8a5a17;
+  background: #b87a3c;
+  transform-origin: 50% 90%;
+  transition: transform 0.35s var(--prep-spring), top 0.35s var(--prep-spring);
 }
 
-.prep-lock.is-open .prep-lock__safe {
-  transform: perspective(520px) rotateY(-80deg);
+.prep-lock__mascot-arm--l { left: 0; }
+.prep-lock__mascot-arm--r { right: 0; }
+
+.prep-lock__mascot-feet {
+  position: absolute;
+  left: 26px;
+  bottom: 0;
+  width: 52px;
+  display: flex;
+  justify-content: space-between;
 }
 
-.prep-lock.is-open .prep-lock__peek {
-  opacity: 1;
-  transform: scale(1);
-  animation: prep-jump 0.6s var(--prep-spring) 1s 2;
+.prep-lock__mascot-feet span {
+  width: 15px;
+  height: 11px;
+  border-radius: 4px;
+  background: var(--prep-header-ink);
 }
 
-.prep-lock.is-wrong .prep-lock__safe {
-  animation: prep-lock-rattle 0.4s ease;
-}
+.prep-lock.is-shy .prep-lock__mascot-arm { top: 24px; }
+.prep-lock.is-shy .prep-lock__mascot-arm--l { transform: translateX(17px) rotate(-8deg); }
+.prep-lock.is-shy .prep-lock__mascot-arm--r { transform: translateX(-17px) rotate(8deg); }
 
-.prep-lock.is-wrong .prep-lock__stage::before {
-  animation: prep-lock-alarm 0.45s ease 2;
-}
+.prep-lock.is-peek .prep-lock__mascot-arm--l { top: 24px; transform: translateX(17px) rotate(-8deg); }
+.prep-lock.is-peek .prep-lock__mascot-arm--r { top: 44px; transform: translateX(-6px) rotate(18deg); }
 
+.prep-lock.is-wrong .prep-lock__mascot { animation: prep-lock-sway 0.45s ease 2; }
+.prep-lock.is-wrong .prep-lock__mascot-mouth { top: 56px; transform: rotate(180deg); }
+.prep-lock.is-wrong .prep-lock__mascot-eye i { transform: translateY(3px); }
+
+.prep-lock.is-open .prep-lock__mascot { animation: prep-jump 0.55s var(--prep-spring) 3; }
+.prep-lock.is-open .prep-lock__mascot-arm { top: 4px; }
+.prep-lock.is-open .prep-lock__mascot-arm--l { transform: rotate(-30deg); }
+.prep-lock.is-open .prep-lock__mascot-arm--r { transform: rotate(30deg); }
+.prep-lock.is-open .prep-lock__mascot-mouth { height: 13px; background: #2b1a07; }
+
+/* จุดรหัส */
 .prep-lock__dots {
   display: flex;
   justify-content: center;
-  gap: 14px;
-  margin: 0.4rem 0 0.2rem;
+  gap: 16px;
+  margin: 0.55rem 0 0.15rem;
 }
 
 .prep-lock__dot {
-  width: 16px;
-  height: 16px;
+  width: 15px;
+  height: 15px;
   border-radius: 50%;
-  border: 2px solid #e9a93c;
-  background: #fff;
-  transition: transform 0.2s var(--prep-spring), background 0.2s ease, border-color 0.2s ease;
+  border: 2px solid #d9a24a;
+  transition: transform 0.18s var(--prep-spring), background 0.15s ease, border-color 0.15s ease;
 }
 
 .prep-lock__dot.is-on {
   background: var(--prep-orange);
-  border-color: var(--prep-orange-deep);
-  transform: scale(1.2);
+  border-color: var(--prep-orange);
+  transform: scale(1.18);
 }
 
-.prep-lock.is-wrong .prep-lock__dots {
-  animation: prep-lock-shake 0.45s ease;
-}
-
-.prep-lock.is-wrong .prep-lock__dot {
-  border-color: #ef4444;
-  background: #fecaca;
-}
+.prep-lock.is-wrong .prep-lock__dots { animation: prep-lock-shake 0.32s ease; }
+.prep-lock.is-wrong .prep-lock__dot { background: #ef4444; border-color: #ef4444; }
+.prep-lock.is-open .prep-lock__dot { background: var(--prep-success); border-color: var(--prep-success); }
 
 .prep-lock__msg {
-  min-height: 1.4rem;
-  margin: 0.35rem 0 0.6rem;
-  font-size: 0.86rem;
+  min-height: 1.35rem;
+  margin: 0.35rem 0 0.75rem;
+  font-size: 0.84rem;
   font-weight: 700;
 }
 
@@ -1493,88 +1498,148 @@ body.pickup-lift-dialog-open {
 .prep-lock__msg.is-ok { color: #15803d; }
 .prep-lock__msg.is-wait { color: #b45309; }
 
+/* แป้นตัวเลข */
 .prep-lock__pad {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-  max-width: 264px;
-  margin: 0 auto;
+  grid-template-columns: repeat(3, 72px);
+  gap: 14px 22px;
+  justify-content: center;
 }
 
 .prep-lock__key {
-  position: relative;
-  overflow: hidden;
-  height: 60px;
-  border: 2px solid #f2b94a;
-  border-radius: 18px;
+  width: 72px;
+  height: 72px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
   background: #fff;
-  box-shadow: 0 4px 0 #e9a93c;
-  color: var(--prep-header-ink);
+  box-shadow: 0 2px 0 rgba(217, 162, 74, 0.45), 0 8px 18px -10px rgba(122, 77, 16, 0.5);
+  color: var(--prep-text);
   font-family: inherit;
-  font-size: 1.55rem;
-  font-weight: 700;
+  font-size: 1.75rem;
+  font-weight: 500;
+  line-height: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
-  transition: transform 0.08s ease, box-shadow 0.08s ease;
+  transition: transform 0.08s ease, background 0.12s ease;
+}
+
+.prep-lock__key small {
+  margin-top: 2px;
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: #a07335;
 }
 
 .prep-lock__key:active {
-  transform: translateY(4px);
-  box-shadow: 0 0 0 #e9a93c;
+  transform: scale(0.92);
+  background: #ffe3c2;
 }
 
-.prep-lock__key--fn {
-  background: #fff3d6;
-  font-size: 0.95rem;
+.prep-lock__key--ghost {
+  background: transparent;
+  box-shadow: none;
+  font-size: 0.85rem;
+  color: var(--prep-muted);
+}
+
+.prep-lock__key--ghost:active {
+  background: rgba(255, 138, 61, 0.12);
 }
 
 .prep-lock__pad.is-disabled .prep-lock__key {
-  opacity: 0.45;
+  opacity: 0.4;
   pointer-events: none;
 }
 
-.prep-lock__ripple {
-  position: absolute;
-  width: 12px;
-  height: 12px;
-  margin: -6px 0 0 -6px;
-  border-radius: 50%;
-  background: rgba(255, 138, 61, 0.45);
-  pointer-events: none;
-  animation: prep-lock-ripple 0.5s ease-out forwards;
-}
-
-.prep-lock__float {
+/* ตอนปลดล็อกสำเร็จ */
+.prep-lock__done {
   position: fixed;
-  z-index: 50;
-  color: var(--prep-orange);
-  font-size: 1.4rem;
-  font-weight: 700;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   pointer-events: none;
-  animation: prep-lock-float 0.7s ease-out forwards;
+  transition: background 0.3s ease;
 }
 
-@keyframes prep-lock-rattle {
-  25% { transform: rotate(-4deg); }
-  75% { transform: rotate(4deg); }
+.prep-lock.is-open .prep-lock__done {
+  background: rgba(255, 248, 236, 0.9);
 }
 
-@keyframes prep-lock-alarm {
-  50% { background: #fee2e2; border-color: #ef4444; }
+.prep-lock__padlock {
+  width: 124px;
+  height: 144px;
+  overflow: visible;
+  opacity: 0;
+  transform: scale(0.4);
+  transition: opacity 0.25s ease, transform 0.45s var(--prep-spring);
+}
+
+.prep-lock.is-open .prep-lock__padlock {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* หมุนรอบขาขวา — ขาขวายังเสียบอยู่ในตัวกุญแจ ขาซ้ายเด้งหลุด */
+.prep-lock__shackle {
+  transform-box: view-box;
+  transform-origin: 88px 80px;
+  transition: transform 0.6s var(--prep-spring) 0.45s;
+}
+
+.prep-lock.is-open .prep-lock__shackle {
+  transform: translateY(-16px) rotate(32deg);
+}
+
+.prep-lock__ring {
+  position: absolute;
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  border: 4px solid var(--prep-success);
+  opacity: 0;
+}
+
+.prep-lock.is-open .prep-lock__ring {
+  animation: prep-lock-ring 0.9s ease-out 0.7s;
+}
+
+.prep-lock__welcome {
+  margin-top: 0.6rem;
+  font-family: var(--prep-display);
+  font-size: 1.25rem;
+  color: #15803d;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.4s ease 0.9s, transform 0.4s ease 0.9s;
+}
+
+.prep-lock.is-open .prep-lock__welcome {
+  opacity: 1;
+  transform: none;
 }
 
 @keyframes prep-lock-shake {
-  20%, 60% { transform: translateX(-9px); }
-  40%, 80% { transform: translateX(9px); }
+  20%, 60% { transform: translateX(-10px); }
+  40%, 80% { transform: translateX(10px); }
 }
 
-@keyframes prep-lock-ripple {
-  to { transform: scale(10); opacity: 0; }
+@keyframes prep-lock-sway {
+  50% { transform: rotate(-8deg); }
 }
 
-@keyframes prep-lock-float {
-  to { transform: translateY(-40px); opacity: 0; }
+@keyframes prep-lock-ring {
+  0% { opacity: 0.9; transform: scale(0.6); }
+  100% { opacity: 0; transform: scale(1.6); }
 }
 
 /* ─ ดาวกระจาย + พลุกระดาษ (สร้างจาก JS) ─────────────────────────────────── */

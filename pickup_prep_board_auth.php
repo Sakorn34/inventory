@@ -232,13 +232,20 @@ function pickup_prep_board_pin_save_state($conn, $fails, $lockUntil)
 }
 
 /**
- * วินาทีที่ IP นี้ยังถูกล็อกอยู่ (0 = ใส่รหัสได้)
+ * สถานะสำหรับแสดงบนหน้าล็อกตอนเปิด/รีเฟรช
+ *
+ * @return array{locked_for:int, tries_left:int, has_fails:bool}
  */
-function pickup_prep_board_pin_locked_for($conn)
+function pickup_prep_board_pin_status($conn)
 {
     $state = pickup_prep_board_pin_load_state($conn);
+    $lockedFor = max(0, $state['lock_until'] - time());
 
-    return max(0, $state['lock_until'] - time());
+    return array(
+        'locked_for' => $lockedFor,
+        'tries_left' => $lockedFor > 0 ? 0 : max(0, PICKUP_PREP_PIN_MAX_FAILS - $state['fails']),
+        'has_fails' => $state['fails'] > 0,
+    );
 }
 
 /**
